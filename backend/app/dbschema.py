@@ -35,7 +35,7 @@ DEFINITIONS: dict[str, dict] = {
     "doctors": {
         "validator": _schema(
             {"id": NUM, "nombre": STR, "especialidad": STR, "estado": STR},
-            {"telefono": STR, "created_at": "date"},
+            {"telefono": STR, "celular": STR, "correo": STR, "created_at": "date"},
         ),
         "indexes": [("id", True), ("estado", False)],
     },
@@ -59,11 +59,10 @@ DEFINITIONS: dict[str, dict] = {
     "operators": {
         "validator": _schema(
             {"id": NUM, "nombre": STR, "turno": STR, "estado": STR},
-<<<<<<< HEAD
             # "foto" no es requerida aquí (a nivel de MongoDB) para no romper
             # operadores que ya existían antes de esta función; la API
             # (schemas.py) sí la exige para operadores nuevos.
-            {"extension": STR, "foto": STR, "created_at": "date"},
+            {"extension": STR, "foto": STR, "celular": STR, "correo": STR, "created_at": "date"},
         ),
         "indexes": [("id", True), ("estado", False)],
     },
@@ -78,12 +77,6 @@ DEFINITIONS: dict[str, dict] = {
         ),
         "indexes": [("operador", False), ("momento", False)],
     },
-=======
-            {"extension": STR, "created_at": "date"},
-        ),
-        "indexes": [("id", True), ("estado", False)],
-    },
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
     # Contadores internos para los id autoincrementales (sin validación)
     "counters": {"validator": None, "indexes": []},
 }

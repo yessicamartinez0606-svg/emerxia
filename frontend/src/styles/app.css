@@ -108,6 +108,20 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .login-form .btn-primary { margin-top: 6px; }
 .forgot { margin-top: 16px; font-size: 12.5px; color: var(--red-700); text-decoration: none; }
 .forgot:hover { text-decoration: underline; }
+.login-links { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; }
+.login-links .forgot { margin-top: 0; }
+
+/* ───────── Recuperar / restablecer contraseña ───────── */
+.reset-result { display: flex; flex-direction: column; gap: 4px; }
+.reset-result .field-hint.warn { margin-bottom: 6px; }
+.reset-link-box {
+  display: flex; align-items: center; gap: 8px; background: var(--red-50); border: 1px solid var(--red-100);
+  border-radius: 8px; padding: 10px 12px; margin-bottom: 16px; color: var(--red-800);
+}
+.reset-link-box code { font-size: 11.5px; overflow-wrap: anywhere; line-height: 1.5; }
+.reset-result .btn-primary { width: 100%; justify-content: center; display: inline-flex; gap: 8px; align-items: center; margin-bottom: 4px; }
+.reset-result .btn-ghost.tall { width: 100%; justify-content: center; margin-bottom: 4px; }
+.reset-result .form-error { display: flex; align-items: center; gap: 6px; }
 
 /* ───────── Shell ───────── */
 .app-shell { display: grid; grid-template-columns: 240px 1fr; min-height: 100%; }
@@ -174,10 +188,6 @@ select.input { appearance: none; background-image: linear-gradient(45deg, transp
 .banner-text { display: flex; flex-direction: column; flex: 1; min-width: 0; }
 .banner-text strong { font-size: 12.5px; color: var(--red-700); }
 .banner-text span { font-size: 11px; color: var(--muted); }
-<<<<<<< HEAD
-=======
-.banner-clock { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--muted); text-align: right; color: var(--red-800); }
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
 
 /* ───────── Módulos ───────── */
 .view-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
@@ -200,7 +210,6 @@ tbody tr:hover { background: #fcfcfd; }
 .field label { display: block; font-size: 12px; font-weight: 600; margin-bottom: 6px; }
 .wide { grid-column: 1 / -1; }
 
-<<<<<<< HEAD
 .form-group-title {
   grid-column: 1 / -1;
   font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em;
@@ -233,8 +242,6 @@ tbody tr:hover { background: #fcfcfd; }
 .face-message.fail, .face-message.error { color: var(--red-700); }
 .face-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
 
-=======
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px; align-items: start; }
 .panel-title { font-size: 14px; font-weight: 700; margin-bottom: 14px; }
 .panel-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
@@ -243,13 +250,18 @@ tbody tr:hover { background: #fcfcfd; }
 .kv dt { color: var(--muted); }
 .kv dd { margin: 0; font-weight: 500; overflow-wrap: anywhere; }
 
-<<<<<<< HEAD
 /* ───────── Filas clicables (ir al perfil) ───────── */
 .row-link { cursor: pointer; transition: background-color .12s; }
 .row-link:hover { background: var(--red-50); }
 .row-link:focus-visible { outline: 2px solid var(--red-600); outline-offset: -2px; }
 .row-link-arrow { width: 28px; text-align: center; color: var(--muted); font-size: 16px; font-weight: 700; }
 .row-link:hover .row-link-arrow { color: var(--red-700); }
+.row-avatar-cell { width: 46px; }
+.row-avatar {
+  display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; flex: none;
+  background: linear-gradient(160deg, var(--red-600), var(--red-800)); color: #fff;
+}
+.row-avatar img { width: 100%; height: 100%; object-fit: cover; }
 
 /* ───────── Pantalla dedicada: nuevo registro / perfil ───────── */
 .record-screen { display: flex; flex-direction: column; gap: 18px; width: min(920px, 100%); margin: 0 auto; padding-bottom: 24px; }
@@ -321,8 +333,6 @@ tbody tr:hover { background: #fcfcfd; }
 .clock-widget-text strong { font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .clock-widget-text small { font-size: 10.5px; color: rgba(255,255,255,.85); text-transform: capitalize; }
 
-=======
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
 /* ───────── Responsive ───────── */
 @media (max-width: 900px) {
   .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -342,7 +352,6 @@ tbody tr:hover { background: #fcfcfd; }
   .topbar { padding: 10px 16px; }
   .user-meta { display: none; }
   .view-head { flex-direction: column; align-items: flex-start; }
-<<<<<<< HEAD
   .profile-hero { flex-direction: column; align-items: flex-start; }
   .clock-widget { right: 12px; bottom: 12px; padding: 7px 12px 7px 9px; }
 }
@@ -350,10 +359,6 @@ tbody tr:hover { background: #fcfcfd; }
   .module-grid { grid-template-columns: 1fr; }
   .clock-widget-text small { display: none; }
 }
-=======
-}
-@media (max-width: 480px) { .module-grid { grid-template-columns: 1fr; } .banner-clock { display: none; } }
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }

@@ -56,6 +56,22 @@ async function descriptorFromDataUrl(dataUrl) {
 }
 
 /**
+ * Verifica que en la foto sí se vea un rostro (para no aceptar una foto de
+ * referencia en blanco, de un objeto, o mal encuadrada). Devuelve:
+ *  - { ok: false, reason: 'models' } si no se pudieron cargar los modelos
+ *  - { ok: true, hasFace: boolean }
+ */
+export async function detectFace(dataUrl) {
+  let descriptor
+  try {
+    descriptor = await descriptorFromDataUrl(dataUrl)
+  } catch {
+    return { ok: false, reason: 'models' }
+  }
+  return { ok: true, hasFace: !!descriptor }
+}
+
+/**
  * Compara la foto de referencia (con la que se registró el operador) contra
  * una foto recién tomada. Devuelve:
  *  - { ok: false, reason: 'no-face-reference' | 'no-face-capture' | 'models' }

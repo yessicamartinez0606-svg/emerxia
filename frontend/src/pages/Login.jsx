@@ -1,12 +1,13 @@
 import { useState } from 'react'
+import { Link, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react'
-import { Logo } from '../components/Logo.jsx'
-import Heartbeat from '../components/Heartbeat.jsx'
-import ambulancePhoto from '../assets/ambulance.jpg'
+import AuthAside from '../components/AuthAside.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 export default function Login() {
   const { login } = useAuth()
+  const location = useLocation()
+  const notice = location.state?.notice
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
@@ -29,20 +30,14 @@ export default function Login() {
   return (
     <div className="login-stage">
       <section className="login-card">
-        <aside className="login-brand">
-          <img className="brand-photo" src={ambulancePhoto} alt="" />
-          <div className="brand-tint" aria-hidden="true" />
-          <Heartbeat />
-          <div className="brand-lockup">
-            <Logo size={46} />
-            <p>Conectando profesionales,<br />salvando vidas</p>
-          </div>
-        </aside>
+        <AuthAside />
 
         <div className="login-form-wrap">
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Iniciar sesión</h1>
             <p className="lead">Ingresa tus credenciales para acceder al sistema</p>
+
+            {notice && <p className="notice ok" role="status">{notice}</p>}
 
             <label htmlFor="username"><User size={14} /> Usuario</label>
             <input
@@ -82,9 +77,10 @@ export default function Login() {
             <button className="btn-primary" type="submit" disabled={busy || !username || !password}>
               {busy ? 'Ingresando…' : <>Iniciar sesión <ArrowRight size={16} /></>}
             </button>
-            <a className="forgot" href="#recuperar" onClick={(e) => e.preventDefault()}>
-              ¿Olvidaste tu contraseña?
-            </a>
+            <div className="login-links">
+              <Link className="forgot" to="/recuperar">¿Olvidaste tu contraseña?</Link>
+              <Link className="forgot" to="/registro">Crear una cuenta</Link>
+            </div>
           </form>
         </div>
 

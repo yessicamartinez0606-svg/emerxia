@@ -1,11 +1,25 @@
   [OK]  Python 3.12.3  (linux)
+  [!]   Estás dentro de WSL
+         → El frontend y el backend deben correr AMBOS dentro de WSL (o ambos en Windows), no mezclados. Un backend viejo en Windows puede quedarse con el puerto 8000
   [OK]  Paquetes de Python instalados
-  [!]   Tienes PySpark 3.5.3; el proyecto está probado con 4.0.1
-         → Ejecuta: pip install -r requirements.txt   para igualar la versión probada
+  [OK]  PySpark 4.0.1
   [OK]  Java encontrado: openjdk version "21.0.12" 2026-07-21
-  [OK]  El backend responde en el puerto 8000
-  [OK]  El backend está conectado a MongoDB
-  [OK]  MongoDB 8.0.32 conectado en mongodb+srv://al222411609_db_user:***@cluster0.hujbcuw.mongodb.net/emergexia?appName=Cluster0
-  [OK]  Base de datos de la app: 'emergexia' → {'ambulances': 0, 'doctors': 0, 'emergencies': 0, 'operators': 0, 'users': 1}
-  [OK]  Spark 3.5.0 arrancó (master: local[*])
-  [OK]  Spark pudo escribir y leer datos (1 fila)
+  [X]   El backend NO está corriendo (nadie escucha en el puerto 8000)
+         → Ábrelo en OTRA terminal: uvicorn app.main:app --reload --port 8000   y déjala abierta
+  [X]   No se pudo resolver o interpretar MONGO_URI (The resolution lifetime expired after 21.124 seconds: Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.; Server Do53:10.255.255.254@53 answered The DNS operation timed out.). Revisa que esté bien copiada, tu conexión a internet/VPN y que la contraseña no tenga símbolos sin codificar.
+         → Abre MongoDB Compass: si conecta ahí, copia su cadena de conexión a MONGO_URI en backend/.env
+  [!]   Spark no arrancó (la app funciona sin él; solo afecta al resumen y a Configuración). Causa:
+Traceback (most recent call last):
+  File "/home/yessi/emergexia/emergexia/backend/diagnostico.py", line 202, in <module>
+    spark = get_spark()
+            ^^^^^^^^^^^
+  File "/home/yessi/emergexia/emergexia/backend/app/spark.py", line 39, in get_spark
+    _spark = builder.getOrCreate()
+             ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yessi/emergexia/emergexia/backend/.venv/lib/python3.12/site-packages/pyspark/sql/session.py", line 559, in getOrCreate
+    session = SparkSession(sc, options=self._options)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/yessi/emergexia/emergexia/backend/.venv/lib/python3.12/site-packages/pyspark/sql/session.py", line 635, in __init__
+    jSparkSessionClass.getDefaultSession().isDefined()
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+TypeError: 'JavaPackage' object is not callable

@@ -2,6 +2,12 @@ import { Ambulance, CircleDot, Headset, Settings, Siren, Stethoscope, UserRound,
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
+// Formato: correo con "@" y dominio; celular exactamente 10 dígitos (se aceptan espacios/guiones
+// al escribir, pero al final deben quedar 10 números). El backend valida lo mismo — esto es solo
+// para avisarle al usuario al momento, sin esperar a que el servidor lo rechace.
+export const EMAIL_PATTERN = { re: /^[^\s@]+@[^\s@]+\.[^\s@]+$/, message: 'Escribe un correo válido, con "@" y dominio (ej. nombre@correo.com).' }
+export const CELULAR_PATTERN = { re: /^\d{10}$/, message: 'El celular debe tener exactamente 10 dígitos (ej. 5512345678).', normalize: (v) => v.replace(/[\s()-]/g, '') }
+
 // Cada módulo alimenta: tarjeta de inicio, menú lateral, tabla y formulario.
 export const MODULES = [
   {
@@ -15,7 +21,6 @@ export const MODULES = [
     columns: [
       { key: 'nombre', label: 'Nombre' },
       { key: 'especialidad', label: 'Especialidad' },
-<<<<<<< HEAD
       { key: 'celular', label: 'Celular' },
       { key: 'turno', label: 'Turno' },
       { key: 'estado', label: 'Estado', badge: true },
@@ -26,8 +31,8 @@ export const MODULES = [
       { key: 'apellidos', label: 'Apellidos', required: true, group: 'Datos personales' },
       { key: 'fecha_nacimiento', label: 'Fecha de nacimiento', type: 'date', group: 'Datos personales' },
       { key: 'direccion', label: 'Dirección', group: 'Datos personales' },
-      { key: 'celular', label: 'Celular', required: true, group: 'Datos personales' },
-      { key: 'correo', label: 'Correo electrónico', group: 'Datos personales' },
+      { key: 'celular', label: 'Celular (10 dígitos)', required: true, type: 'tel', pattern: CELULAR_PATTERN, group: 'Datos personales' },
+      { key: 'correo', label: 'Correo electrónico', required: true, type: 'email', pattern: EMAIL_PATTERN, group: 'Datos personales' },
       { key: 'contacto_emergencia', label: 'Contacto de emergencia', group: 'Datos personales' },
 
       // Datos profesionales
@@ -46,16 +51,6 @@ export const MODULES = [
         group: 'Verificación',
         hint: 'Se usa para verificar por reconocimiento facial que es el mismo doctor antes de asignarlo a una emergencia.',
       },
-=======
-      { key: 'telefono', label: 'Teléfono' },
-      { key: 'estado', label: 'Estado', badge: true },
-    ],
-    fields: [
-      { key: 'nombre', label: 'Nombre completo', required: true },
-      { key: 'especialidad', label: 'Especialidad', required: true },
-      { key: 'telefono', label: 'Teléfono' },
-      { key: 'estado', label: 'Estado', options: ['Activo', 'En guardia', 'Descanso'] },
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
     ],
   },
   {
@@ -89,26 +84,20 @@ export const MODULES = [
     nuevo: 'Nueva',
     columns: [
       { key: 'folio', label: 'Folio' },
-<<<<<<< HEAD
       { key: 'paciente_nombre', label: 'Paciente' },
       { key: 'descripcion', label: 'Descripción' },
       { key: 'prioridad', label: 'Prioridad', badge: true },
       { key: 'doctor', label: 'Doctor' },
       { key: 'operador', label: 'Operador' },
-=======
-      { key: 'descripcion', label: 'Descripción' },
-      { key: 'prioridad', label: 'Prioridad', badge: true },
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
       { key: 'ambulancia', label: 'Ambulancia' },
       { key: 'estado', label: 'Estado', badge: true },
     ],
     fields: [
-<<<<<<< HEAD
       // Datos del paciente
       { key: 'paciente_nombre', label: 'Nombre completo del paciente', required: true, group: 'Paciente' },
       { key: 'paciente_edad', label: 'Edad', group: 'Paciente' },
       { key: 'paciente_sexo', label: 'Sexo', options: ['Masculino', 'Femenino', 'Otro'], group: 'Paciente' },
-      { key: 'paciente_telefono', label: 'Teléfono de contacto', group: 'Paciente' },
+      { key: 'paciente_telefono', label: 'Teléfono de contacto (10 dígitos)', type: 'tel', pattern: CELULAR_PATTERN, group: 'Paciente' },
       { key: 'direccion', label: 'Dirección / ubicación de la emergencia', required: true, group: 'Paciente' },
 
       // Datos de la emergencia
@@ -155,12 +144,6 @@ export const MODULES = [
         allowEmpty: true,
         emptyLabel: 'Sin ambulancia asignada',
       },
-=======
-      { key: 'descripcion', label: 'Descripción', required: true },
-      { key: 'prioridad', label: 'Prioridad', options: ['Alta', 'Media', 'Baja'] },
-      { key: 'ambulancia', label: 'Ambulancia asignada (placa)' },
-      { key: 'estado', label: 'Estado', options: ['Pendiente', 'Asignada', 'En curso', 'Cerrada'] },
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
     ],
   },
   {
@@ -178,11 +161,13 @@ export const MODULES = [
       { key: 'estado', label: 'Estado', badge: true },
     ],
     fields: [
-      { key: 'nombre', label: 'Nombre completo', required: true },
-      { key: 'turno', label: 'Turno', options: ['Matutino', 'Vespertino', 'Nocturno'] },
-      { key: 'extension', label: 'Extensión' },
-      { key: 'estado', label: 'Estado', options: ['En línea', 'Desconectado'] },
-<<<<<<< HEAD
+      { key: 'nombres', label: 'Nombre(s)', required: true, group: 'Datos personales' },
+      { key: 'apellidos', label: 'Apellidos', required: true, group: 'Datos personales' },
+      { key: 'celular', label: 'Celular (10 dígitos)', required: true, type: 'tel', pattern: CELULAR_PATTERN, group: 'Datos personales' },
+      { key: 'correo', label: 'Correo electrónico', required: true, type: 'email', pattern: EMAIL_PATTERN, group: 'Datos personales' },
+      { key: 'turno', label: 'Turno', options: ['Matutino', 'Vespertino', 'Nocturno'], group: 'Datos personales' },
+      { key: 'extension', label: 'Extensión', group: 'Datos personales' },
+      { key: 'estado', label: 'Estado', options: ['En línea', 'Desconectado'], group: 'Datos personales' },
       {
         key: 'foto',
         label: 'Foto de referencia (rostro)',
@@ -190,8 +175,6 @@ export const MODULES = [
         required: true,
         hint: 'Se usa para verificar por reconocimiento facial que es el mismo operador antes de que salga una ambulancia.',
       },
-=======
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
     ],
   },
   {

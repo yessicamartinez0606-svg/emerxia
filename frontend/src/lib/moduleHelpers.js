@@ -4,6 +4,23 @@ import { api } from './api.js'
 export const slug = (v) =>
   String(v).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
 
+// Claves habituales bajo las que puede venir guardada una foto en MongoDB,
+// aunque el módulo no declare un campo tipo "photo" en modules.js.
+export const PHOTO_KEYS = ['foto', 'photo', 'imagen', 'foto_perfil', 'avatar']
+
+// Foto de un registro: usa el campo que el módulo declara como tipo "photo"
+// (p. ej. Operadores/Doctores) o, si el documento trae una foto guardada bajo
+// otra clave habitual, esa. Se usa tanto en la tabla como en el perfil, para
+// que un mismo ícono/avatar se vea igual en toda la app.
+export function getPhoto(mod, item) {
+  const declaredPhotoField = mod.fields.find((f) => f.type === 'photo')
+  return (
+    (declaredPhotoField && item[declaredPhotoField.key]) ||
+    PHOTO_KEYS.map((k) => item[k]).find(Boolean) ||
+    null
+  )
+}
+
 export function emptyForm(fields) {
   return Object.fromEntries(fields.map((f) => [f.key, f.options ? f.options[0] : '']))
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, AlertTriangle, RefreshCw, X } from 'lucide-react'
-import { compareFaces } from '../lib/faceVerify.js'
+import { compareFaces, detectFace } from '../lib/faceVerify.js'
 
 const REASON_MESSAGE = {
   'no-face-reference': 'No se detectó un rostro en la foto registrada. Vuelve a tomarla en el módulo de Operadores.',
@@ -58,8 +58,26 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, o
     setCaptured(dataUrl)
 
     if (mode === 'register') {
-      setStatus('ok')
-      setMessage('Foto capturada.')
+      // No se acepta como foto de referencia cualquier imagen: se valida
+      // primero que face-api.js detecte un rostro real (no una pared, una
+      // mano, una foto borrosa o de espaldas). Si no hay rostro, se rechaza
+      // y se deja volver a tomar la foto.
+      setStatus('checking')
+      setMessage('Verificando que se vea un rostro…')
+      detectFace(dataUrl).then((result) => {
+        if (!result.ok) {
+          setStatus('error')
+          setMessage(REASON_MESSAGE.models)
+          return
+        }
+        if (!result.hasFace) {
+          setStatus('fail')
+          setMessage(REASON_MESSAGE['no-face-capture'])
+          return
+        }
+        setStatus('ok')
+        setMessage('Rostro detectado: foto lista para usarse como referencia.')
+      })
       return
     }
 

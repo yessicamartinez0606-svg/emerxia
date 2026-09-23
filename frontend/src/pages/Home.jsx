@@ -1,11 +1,5 @@
-<<<<<<< HEAD
 import { Link } from 'react-router-dom'
 import { ArrowRight, HeartPulse } from 'lucide-react'
-=======
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowRight, Clock, HeartPulse } from 'lucide-react'
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
 import { useAuth } from '../lib/auth.jsx'
 import { MODULES } from '../lib/modules.js'
 
@@ -45,25 +39,8 @@ function HeroArt() {
   )
 }
 
-<<<<<<< HEAD
 export default function Home() {
   const { user } = useAuth()
-=======
-function useNow() {
-  const [now, setNow] = useState(() => new Date())
-  useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), 30_000)
-    return () => clearInterval(id)
-  }, [])
-  return now
-}
-
-export default function Home() {
-  const { user } = useAuth()
-  const now = useNow()
-  const date = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'long', year: 'numeric' }).format(now)
-  const time = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now)
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
   const firstName = user?.full_name?.split(' ')[0]
 
   return (
@@ -91,13 +68,6 @@ export default function Home() {
           <strong>Tu trabajo hace la diferencia</strong>
           <span>Un sistema más conectado, una atención más rápida.</span>
         </div>
-<<<<<<< HEAD
-=======
-        <div className="banner-clock">
-          <Clock size={16} />
-          <span>{date}<br />{time}</span>
-        </div>
->>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
       </footer>
     </div>
   )

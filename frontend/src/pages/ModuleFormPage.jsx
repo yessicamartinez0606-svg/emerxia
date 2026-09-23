@@ -139,6 +139,19 @@ function FormView({ mod }) {
       return
     }
 
+    // Formato de campos como correo/celular: se avisa aquí mismo, sin esperar a que
+    // el servidor lo rechace. Los campos vacíos y no obligatorios se dejan pasar.
+    for (const f of mod.fields) {
+      if (!f.pattern) continue
+      const raw = (form[f.key] ?? '').trim()
+      if (!raw) continue
+      const value = f.pattern.normalize ? f.pattern.normalize(raw) : raw
+      if (!f.pattern.re.test(value)) {
+        setFormError(f.pattern.message)
+        return
+      }
+    }
+
     // Salida de la ambulancia: si la emergencia queda "En curso" con un
     // operador asignado, se vuelve a verificar su identidad justo antes de
     // guardar, aunque ya se haya verificado al asignarlo.
@@ -220,9 +233,10 @@ function FormView({ mod }) {
                         {f.options.map((o) => <option key={o}>{o}</option>)}
                       </select>
                     ) : (
-                      <input id={f.key} className="input" value={form[f.key]} required={f.required}
+                      <input id={f.key} className="input" type={f.type || 'text'} value={form[f.key]} required={f.required}
                              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
                     )}
+                    {f.pattern && <p className="field-hint">{f.type === 'tel' ? 'Solo números, 10 dígitos.' : 'Debe verse como un correo real.'}</p>}
                     {f.source && list && list.length === 0 && (
                       <p className="field-hint">
                         No hay {sourceLabel(f.source).toLowerCase()} registrados todavía —

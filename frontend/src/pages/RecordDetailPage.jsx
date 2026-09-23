@@ -3,14 +3,11 @@ import { Link, Navigate, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowUpRight, CalendarClock } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
-import { slug } from '../lib/moduleHelpers.js'
+import { getPhoto, slug } from '../lib/moduleHelpers.js'
 
 // Campo que se usa como título principal del perfil, por módulo.
 const TITLE_KEY = { doctores: 'nombre', ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
 const SUBTITLE_KEY = { emergencias: 'paciente_nombre' }
-// Claves habituales bajo las que puede venir guardada una foto en MongoDB,
-// aunque el módulo no declare un campo tipo "photo" en modules.js.
-const PHOTO_KEYS = ['foto', 'photo', 'imagen', 'foto_perfil', 'avatar']
 
 function formatDate(value) {
   if (!value) return null
@@ -107,16 +104,7 @@ function DetailView({ mod, id }) {
   const subtitleKey = SUBTITLE_KEY[mod.key]
   const statusValue = item.estado
   const priorityValue = item.prioridad
-  // La foto puede venir del campo que el módulo declara como tipo "photo"
-  // (Operadores) o, si el documento en MongoDB ya trae una foto guardada bajo
-  // otra clave habitual (p. ej. un doctor al que le agregaron "foto" a mano
-  // o por otro flujo), se usa esa. Así nunca se pierde una foto real por
-  // no estar declarada en modules.js.
-  const declaredPhotoField = mod.fields.find((f) => f.type === 'photo')
-  const photo =
-    (declaredPhotoField && item[declaredPhotoField.key]) ||
-    PHOTO_KEYS.map((k) => item[k]).find(Boolean) ||
-    null
+  const photo = getPhoto(mod, item)
   const Icon = mod.icon
   const created = formatDate(item.created_at)
   const groups = groupFields(mod.fields)

@@ -7,6 +7,8 @@ export const clearToken = () => localStorage.removeItem(TOKEN_KEY)
 let onUnauthorized = () => {}
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn }
 
+const PUBLIC_PATHS = ['/auth/login', '/auth/register', '/auth/forgot-password', '/auth/reset-password']
+
 export async function api(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' }
   const token = getToken()
@@ -19,7 +21,7 @@ export async function api(path, { method = 'GET', body } = {}) {
     throw new Error('No se pudo conectar con el servidor. Verifica que el backend esté en marcha.')
   }
 
-  if (res.status === 401 && path !== '/auth/login') onUnauthorized()
+  if (res.status === 401 && !PUBLIC_PATHS.includes(path)) onUnauthorized()
 
   const data = await res.json().catch(() => null)
 
