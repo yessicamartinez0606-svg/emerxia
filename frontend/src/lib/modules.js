@@ -82,6 +82,9 @@ export const MODULES = [
     navIcon: CircleDot,
     singular: 'emergencia',
     nuevo: 'Nueva',
+    // Al terminar el registro se manda automáticamente a la ventana del operador
+    // (pages/OperatorValidationPage.jsx), donde se valida su Face ID.
+    afterSave: (saved) => `/operadores/validar/${saved.id}`,
     columns: [
       { key: 'folio', label: 'Folio' },
       { key: 'paciente_nombre', label: 'Paciente' },
@@ -128,11 +131,11 @@ export const MODULES = [
         optionLabel: (r) => `${r.nombre} · turno ${r.turno}${r.estado === 'Desconectado' ? ' (desconectado)' : ''}`,
         allowEmpty: true,
         emptyLabel: 'Sin operador asignado',
-        // Antes de asignarlo, se le pide al despachador tomar una foto del
-        // operador y se compara por reconocimiento facial contra la foto
-        // con la que ese operador se registró. Se vuelve a pedir al marcar
-        // la emergencia como "En curso" (salida de la ambulancia).
-        requireFaceVerification: true,
+        // No se elige en el formulario de registro: al guardar la emergencia se
+        // abre la ventana del operador, que lo identifica por Face ID (comparando
+        // su rostro contra la foto con la que se registró) y lo asigna solo.
+        // El campo se sigue mostrando en el perfil y en la tabla.
+        hideInForm: true,
       },
       {
         key: 'ambulancia',

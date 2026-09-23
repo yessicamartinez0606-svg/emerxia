@@ -363,3 +363,18 @@ tbody tr:hover { background: #fcfcfd; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* ───────── Ventana del operador: validación por Face ID ───────── */
+.record-screen-cta { margin-left: auto; display: inline-flex; align-items: center; gap: 7px; text-decoration: none; }
+.validation-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.validation-lead { margin: 0 0 14px; line-height: 1.5; }
+.validation-done { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.validation-done strong { font-size: 15px; }
+.validation-done p { margin: 3px 0 0; font-size: 12.5px; }
+.validation-done-icon {
+  display: grid; place-items: center; flex: none; width: 46px; height: 46px; border-radius: 50%;
+  background: #e5f6ec; color: #1a7a41;
+}
+.validation-error { margin-top: 12px; }
+.validation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
+.validation-actions .btn-ghost { text-decoration: none; }

@@ -3,12 +3,14 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError, WriteError
 
-from ..repository import insert_row, list_rows, source_name
-from ..schemas import AmbulanceIn, DoctorIn, EmergencyIn, OperatorIn
+from ..repository import insert_row, list_rows, source_name, update_row
+from ..schemas import AmbulanceIn, DoctorIn, EmergencyIn, EmergencyPatch, OperatorIn
 from ..security import current_username
 
 
-def build_router(path: str, collection: str, model: type[BaseModel], derive=None) -> APIRouter:
+def build_router(
+    path: str, collection: str, model: type[BaseModel], derive=None, patch_model: type[BaseModel] | None = None
+) -> APIRouter:
     router = APIRouter(prefix=f"/api/{path}", tags=[path], dependencies=[Depends(current_username)])
 
     @router.get("")
@@ -32,6 +34,15 @@ def build_router(path: str, collection: str, model: type[BaseModel], derive=None
         except WriteError as exc:
             raise HTTPException(422, f"MongoDB rechazó el documento: {exc}")
 
+    if patch_model is not None:
+        @router.patch("/{item_id}")
+        def patch_item(item_id: int, body: patch_model):  # type: ignore[valid-type]
+            changes = body.model_dump(exclude_unset=True)
+            updated = update_row(collection, item_id, changes)
+            if updated is None:
+                raise HTTPException(404, "No se encontró ese registro.")
+            return {**updated, "saved_in": source_name(collection)}
+
     return router
 
 
@@ -41,7 +52,7 @@ routers = [
         derive=lambda d: {"nombre": f"{d['nombres']} {d['apellidos']}".strip()},
     ),
     build_router("ambulancias", "ambulances", AmbulanceIn),
-    build_router("emergencias", "emergencies", EmergencyIn),
+    build_router("emergencias", "emergencies", EmergencyIn, patch_model=EmergencyPatch),
     build_router(
         "operadores", "operators", OperatorIn,
         derive=lambda d: {"nombre": f"{d['nombres']} {d['apellidos']}".strip()},

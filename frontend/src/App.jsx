@@ -10,6 +10,7 @@ import ModulePage from './pages/ModulePage.jsx'
 import ModuleFormPage from './pages/ModuleFormPage.jsx'
 import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
+import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
@@ -33,6 +34,7 @@ export default function App() {
       <Route element={<Protected><Layout /></Protected>}>
         <Route index element={<Home />} />
         <Route path="configuracion" element={<SettingsPage />} />
+        <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />
         <Route path=":module/nuevo" element={<ModuleFormPage />} />
         <Route path=":module/:id" element={<RecordDetailPage />} />
         <Route path=":module" element={<ModulePage />} />

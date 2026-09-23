@@ -42,6 +42,15 @@ def insert_row(name: str, data: dict) -> dict:
     return doc
 
 
+def update_row(name: str, row_id: int, changes: dict) -> dict | None:
+    """Actualiza solo los campos indicados de un registro. Regresa el documento
+    completo ya actualizado, o None si no existe ese id."""
+    db = get_db()
+    if changes:
+        db[name].update_one({"id": row_id}, {"$set": {**changes, "updated_at": _now()}})
+    return db[name].find_one({"id": row_id}, {"_id": 0})
+
+
 def source_name(name: str) -> str:
     """'base.colección', para mostrar dónde viven los datos."""
     return f"{get_db().name}.{name}"

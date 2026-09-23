@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Camera, CheckCircle2, X } from 'lucide-react'
 import { api } from '../lib/api.js'
@@ -43,7 +43,11 @@ function FormView({ mod }) {
   const [form, setForm] = useState(() => emptyForm(mod.fields))
   const [saving, setSaving] = useState(false)
   const [formError, setFormError] = useState('')
-  const { options: sourcedOptions, loading: sourcedLoading } = useSourcedOptions(mod.fields)
+  // Campos con `hideInForm` (p. ej. el operador de una emergencia) no se piden aquí:
+  // se llenan en otro paso. useMemo mantiene la misma referencia entre renders, porque
+  // useSourcedOptions vuelve a leer las listas cada vez que cambia el arreglo recibido.
+  const formFields = useMemo(() => mod.fields.filter((f) => !f.hideInForm), [mod.fields])
+  const { options: sourcedOptions, loading: sourcedLoading } = useSourcedOptions(formFields)
 
   // Verificación por reconocimiento facial: modal de cámara abierto y, por
   // cada campo que la requiere (operador, doctor…), qué valor quedó
@@ -120,7 +124,10 @@ function FormView({ mod }) {
       }
       const done = mod.nuevo === 'Nueva' ? 'guardada' : 'guardado'
       const name = mod.singular.charAt(0).toUpperCase() + mod.singular.slice(1)
-      navigate(`/${mod.key}`, {
+      // Si el módulo define `afterSave`, ese paso va justo después de guardar
+      // (Emergencias → ventana del operador para validar su Face ID); si no, se
+      // regresa a la lista con el aviso de guardado.
+      navigate(mod.afterSave ? mod.afterSave(saved) : `/${mod.key}`, {
         state: { notice: { kind: 'ok', text: `✓ ${name} ${done} en MongoDB (${saved.saved_in}), id ${saved.id}.` } },
       })
     } catch (err) {
@@ -133,7 +140,7 @@ function FormView({ mod }) {
     e.preventDefault()
     setFormError('')
 
-    const missingPhoto = mod.fields.find((f) => f.type === 'photo' && f.required && !form[f.key])
+    const missingPhoto = formFields.find((f) => f.type === 'photo' && f.required && !form[f.key])
     if (missingPhoto) {
       setFormError(`Falta tomar la foto: "${missingPhoto.label}".`)
       return
@@ -141,7 +148,7 @@ function FormView({ mod }) {
 
     // Formato de campos como correo/celular: se avisa aquí mismo, sin esperar a que
     // el servidor lo rechace. Los campos vacíos y no obligatorios se dejan pasar.
-    for (const f of mod.fields) {
+    for (const f of formFields) {
       if (!f.pattern) continue
       const raw = (form[f.key] ?? '').trim()
       if (!raw) continue
@@ -152,34 +159,10 @@ function FormView({ mod }) {
       }
     }
 
-    // Salida de la ambulancia: si la emergencia queda "En curso" con un
-    // operador asignado, se vuelve a verificar su identidad justo antes de
-    // guardar, aunque ya se haya verificado al asignarlo.
-    if (mod.key === 'emergencias' && form.estado === 'En curso' && form.operador) {
-      const row = sourcedOptions.operador?.find((o) => o.value === form.operador)
-      const foto = row?.raw?.foto
-      if (!foto) {
-        setFormError(`"${form.operador}" no tiene foto de referencia; no se puede confirmar la salida de la ambulancia.`)
-        return
-      }
-      setFaceModal({
-        mode: 'verify',
-        title: `Confirmar salida de la ambulancia · ${form.operador}`,
-        reference: foto,
-        onSuccess: () => {
-          logVerification(form.operador, 'salida', { match: true })
-          setFaceModal(null)
-          doSave()
-        },
-        onCancel: () => setFaceModal(null),
-      })
-      return
-    }
-
     await doSave()
   }
 
-  const groups = groupFields(mod.fields)
+  const groups = groupFields(formFields)
   const Icon = mod.icon
 
   return (

@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, CalendarClock } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, CalendarClock, ScanFace } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
@@ -128,6 +128,11 @@ function DetailView({ mod, id }) {
           <h1>{(titleKey && item[titleKey]) || `${mod.singular} #${item.id}`}</h1>
           {subtitleKey && item[subtitleKey] && <p>{item[subtitleKey]}</p>}
         </div>
+        {mod.key === 'emergencias' && !item.operador && (
+          <Link to={`/operadores/validar/${item.id}`} className="btn-primary compact record-screen-cta">
+            <ScanFace size={16} /> Validar operador
+          </Link>
+        )}
       </header>
 
       <div className="panel profile-hero">

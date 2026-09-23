@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, AlertTriangle, RefreshCw, X } from 'lucide-react'
-import { compareFaces, detectFace } from '../lib/faceVerify.js'
+import { compareFaces, detectFace, identifyFace } from '../lib/faceVerify.js'
 
 const REASON_MESSAGE = {
   'no-face-reference': 'No se detectó un rostro en la foto registrada. Vuelve a tomarla en el módulo de Operadores.',
   'no-face-capture': 'No se detectó un rostro claro en la foto. Acércate a la cámara, busca buena luz e inténtalo de nuevo.',
+  'no-candidates': 'Ningún operador tiene una foto de referencia con rostro detectable. Registra o repite la foto en el módulo de Operadores.',
   models: 'No se pudieron cargar los modelos de reconocimiento facial. Revisa tu conexión a internet e inténtalo de nuevo.',
 }
 
@@ -13,14 +14,19 @@ const REASON_MESSAGE = {
  * mode="verify": toma una foto y la compara contra `reference` (foto base64 ya guardada).
  *   Si no coincide, deja reintentar tomando la foto de nuevo (no avanza hasta que coincida
  *   o el usuario cancele).
+ * mode="identify": toma una foto y busca a quién de `candidates` ([{ foto, ... }]) se parece.
+ *   Sirve cuando no se sabe de antemano quién es (p. ej. el operador que se presenta a validar
+ *   una emergencia). Al confirmar, `onSuccess(foto, resultado)` recibe el candidato reconocido
+ *   en `resultado.candidate`.
  */
-export default function FaceCapture({ open, title, mode = 'verify', reference, onSuccess, onCancel }) {
+export default function FaceCapture({ open, title, mode = 'verify', reference, candidates, onSuccess, onCancel }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [captured, setCaptured] = useState(null)
   const [status, setStatus] = useState('camera') // camera | checking | ok | fail | error
   const [message, setMessage] = useState('')
   const [cameraError, setCameraError] = useState('')
+  const [result, setResult] = useState(null)
 
   useEffect(() => {
     if (!open) return undefined
@@ -28,6 +34,7 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, o
     setStatus('camera')
     setMessage('')
     setCameraError('')
+    setResult(null)
 
     let cancelled = false
     navigator.mediaDevices?.getUserMedia({ video: { facingMode: 'user' }, audio: false })
@@ -81,6 +88,27 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, o
       return
     }
 
+    if (mode === 'identify') {
+      setStatus('checking')
+      setMessage('Buscando coincidencia entre los operadores registrados…')
+      identifyFace(dataUrl, candidates ?? []).then((res) => {
+        if (!res.ok) {
+          setStatus('error')
+          setMessage(REASON_MESSAGE[res.reason] ?? 'No se pudo comparar el rostro.')
+          return
+        }
+        if (res.match) {
+          setResult(res)
+          setStatus('ok')
+          setMessage(`Identidad verificada: coincide con ${res.candidate.label ?? 'un operador registrado'}.`)
+        } else {
+          setStatus('fail')
+          setMessage('El rostro no coincide con ningún operador registrado. Vuelve a tomar la foto.')
+        }
+      })
+      return
+    }
+
     setStatus('checking')
     setMessage('Comparando rostro…')
     compareFaces(reference, dataUrl).then((result) => {
@@ -99,8 +127,8 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, o
     })
   }
 
-  const retake = () => { setCaptured(null); setStatus('camera'); setMessage('') }
-  const confirm = () => onSuccess?.(captured)
+  const retake = () => { setCaptured(null); setStatus('camera'); setMessage(''); setResult(null) }
+  const confirm = () => onSuccess?.(captured, result)
 
   return (
     <div className="modal-backdrop" role="dialog" aria-modal="true">

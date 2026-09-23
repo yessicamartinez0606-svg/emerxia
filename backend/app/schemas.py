@@ -103,6 +103,16 @@ class EmergencyIn(BaseModel):
     doctor: str | None = None
 
 
+class EmergencyPatch(BaseModel):
+    """Cambios parciales sobre una emergencia ya registrada (solo se aplican los
+    campos que vienen en la petición). Se usa, por ejemplo, para asignar al
+    operador una vez que su rostro fue validado."""
+    operador: str | None = None
+    ambulancia: str | None = None
+    doctor: str | None = None
+    estado: Literal["Pendiente", "Asignada", "En curso", "Cerrada"] | None = None
+
+
 class OperatorIn(BaseModel):
     nombres: str = Field(min_length=2)
     apellidos: str = Field(min_length=2)
