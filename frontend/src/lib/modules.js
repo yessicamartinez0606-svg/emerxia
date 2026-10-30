@@ -1,4 +1,4 @@
-import { Ambulance, CircleDot, Headset, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
+import { Ambulance, CircleDot, Dna, Headset, Hospital, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
@@ -187,6 +187,15 @@ export const MODULES = [
     description: 'Encuentra la ruta de la ambulancia evitando el tráfico con búsqueda ciega',
     icon: TrafficCone,
     navIcon: Route,
+    custom: true,
+  },
+  {
+    // Pantalla propia (pages/DespachoPage.jsx): algoritmo genético para elegir el hospital.
+    key: 'despacho',
+    label: 'Despacho',
+    description: 'Elige con un algoritmo genético de qué hospital sale la ambulancia',
+    icon: Dna,
+    navIcon: Hospital,
     custom: true,
   },
   {

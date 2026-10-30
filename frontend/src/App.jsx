@@ -12,6 +12,7 @@ import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 import RutasPage from './pages/RutasPage.jsx'
+import DespachoPage from './pages/DespachoPage.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
@@ -36,6 +37,7 @@ export default function App() {
         <Route index element={<Home />} />
         <Route path="configuracion" element={<SettingsPage />} />
         <Route path="rutas" element={<RutasPage />} />
+        <Route path="despacho" element={<DespachoPage />} />
         <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />
         <Route path=":module/nuevo" element={<ModuleFormPage />} />
         <Route path=":module/:id" element={<RecordDetailPage />} />
