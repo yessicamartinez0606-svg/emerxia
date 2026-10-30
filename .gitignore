@@ -9,3 +9,4 @@ backend/spark-warehouse/
 backend/metastore_db/
 derby.log
 .DS_Store
+.env.local

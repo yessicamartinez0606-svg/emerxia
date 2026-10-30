@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Minus, Plus, Maximize2 } from 'lucide-react'
 
-// Mapa real con teselas de OpenStreetMap (estilo CARTO Voyager), sin librerías extra.
+// Mapa real con teselas de OpenStreetMap, sin librerías extra.
 // Proyección Web Mercator: el mundo mide 256·2^zoom píxeles; las líneas se proyectan una
 // vez por nivel de zoom y al arrastrar solo se mueve el dibujo.
 //
@@ -11,7 +11,14 @@ import { Minus, Plus, Maximize2 } from 'lucide-react'
 //   encuadre  [[lat, lng], …]  puntos que deben verse al cargar (se re-encuadra si cambian)
 //   onClick   (lat, lng) => void   opcional
 
-const TESELAS = ['a', 'b', 'c', 'd']
+// Teselas: por defecto las de OpenStreetMap, que no piden llave. Para usar otro proveedor con
+// tu API key (MapTiler, Thunderforest, etc.) pon en frontend/.env.local:
+//   VITE_MAPA_TESELAS=https://api.maptiler.com/maps/streets-v2/{z}/{x}/{y}.png?key=TU_LLAVE
+//   VITE_MAPA_CREDITO=© MapTiler © OpenStreetMap
+// {s} se reemplaza por a, b o c (subdominios), {r} por @2x en pantallas retina.
+const TESELAS = import.meta.env.VITE_MAPA_TESELAS || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
+const CREDITO_EXTRA = import.meta.env.VITE_MAPA_CREDITO || ''
+const SUBDOMINIOS = ['a', 'b', 'c']
 const ZOOM_MIN = 11
 const ZOOM_MAX = 18
 const TOLUCA = { lat: 19.285, lng: -99.65 }
@@ -83,7 +90,7 @@ export default function MapaToluca({ lineas = [], marcadores = [], encuadre, onC
         const x = ((tx % n) + n) % n
         teselas.push({
           key: `${zoom}-${tx}-${ty}`,
-          src: `https://${TESELAS[(x + ty) % 4]}.basemaps.cartocdn.com/rastertiles/voyager/${zoom}/${x}/${ty}${retina}.png`,
+          src: TESELAS.replace('{s}', SUBDOMINIOS[(x + ty) % 3]).replace('{z}', zoom).replace('{x}', x).replace('{y}', ty).replace('{r}', retina),
           left: tx * 256 - origenX,
           top: ty * 256 - origenY,
         })
@@ -220,7 +227,7 @@ export default function MapaToluca({ lineas = [], marcadores = [], encuadre, onC
         )}
       </div>
       <div className="mapa-credito">
-        © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> · © <a href="https://carto.com/attributions" target="_blank" rel="noreferrer">CARTO</a>
+        {CREDITO_EXTRA ? `${CREDITO_EXTRA} · ` : ''}© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>
       </div>
     </div>
   )
