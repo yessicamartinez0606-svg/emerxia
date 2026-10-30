@@ -378,3 +378,99 @@ tbody tr:hover { background: #fcfcfd; }
 .validation-error { margin-top: 12px; }
 .validation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
 .validation-actions .btn-ghost { text-decoration: none; }
+
+/* ───────── Rutas y tráfico: búsqueda ciega ───────── */
+.rutas {
+  --t-libre: #2f9e5b;
+  --t-moderado: #e0a21a;
+  --t-denso: #e0612a;
+  --t-bloqueado: #3b3b45;
+  --ruta: #1f5fd1;
+  --frontera: #1f5fd1;
+}
+.rutas-head-icon { color: var(--red-600); flex: none; }
+.rutas-controles { display: flex; flex-direction: column; gap: 14px; }
+.rutas-fila { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.rutas-acciones { display: flex; flex-wrap: wrap; gap: 8px; }
+.segmentado { display: inline-flex; flex-wrap: wrap; background: var(--field); border-radius: 9px; padding: 3px; gap: 2px; }
+.segmentado button { border: 0; background: none; border-radius: 7px; padding: 7px 14px; font-weight: 600; color: var(--muted); }
+.segmentado button:hover { color: var(--ink); }
+.segmentado button.on { background: var(--card); color: var(--red-700); box-shadow: 0 1px 3px rgba(23, 23, 28, .12); }
+
+.rutas-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(280px, 1fr); gap: 16px; align-items: start; }
+.rutas-grid > * { min-width: 0; }
+.rutas-lado .panel:last-child { margin-bottom: 16px; }
+@media (max-width: 1100px) { .rutas-grid { grid-template-columns: 1fr; } }
+.rutas-tip { font-size: 12px; }
+.rutas-mapa-wrap { overflow-x: auto; margin: 0 -6px; }
+.rutas-mapa { display: block; width: 100%; min-width: 560px; height: auto; user-select: none; }
+
+.calle { cursor: pointer; outline: none; }
+.calle .hit { stroke: transparent; stroke-width: 30; }
+.calle .via { stroke-width: 11; stroke-linecap: round; transition: stroke .2s; }
+.calle.t-libre .via { stroke: var(--t-libre); }
+.calle.t-moderado .via { stroke: var(--t-moderado); }
+.calle.t-denso .via { stroke: var(--t-denso); }
+.calle.t-bloqueado .via { stroke: var(--t-bloqueado); stroke-dasharray: 3 14; opacity: .55; }
+.calle:hover .via, .calle:focus-visible .via { stroke-width: 15; }
+.calle:focus-visible .hit { stroke: rgba(200, 32, 47, .15); }
+.calle .ruta { stroke: var(--ruta); stroke-width: 5; stroke-linecap: round; pointer-events: none; }
+.calle .sentido { stroke: transparent; stroke-width: 2; pointer-events: none; }
+.flecha { fill: #fff; }
+.calle .min { font-size: 13px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 4px; pointer-events: none; font-variant-numeric: tabular-nums; }
+.bloqueo circle { fill: var(--t-bloqueado); stroke: #fff; stroke-width: 3; }
+.bloqueo path { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
+
+.nodo .halo { fill: transparent; stroke: transparent; stroke-width: 4; }
+.nodo .punto { fill: #fff; stroke: var(--ink); stroke-width: 2.5; }
+.nodo .id { font-size: 11px; font-weight: 700; fill: var(--ink); }
+.nodo .etiqueta { font-size: 13px; font-weight: 600; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.nodo .rol { font-size: 11px; font-weight: 700; letter-spacing: .08em; fill: var(--red-700); paint-order: stroke; stroke: #fff; stroke-width: 4px; }
+.nodo.n-base .punto { fill: var(--red-600); stroke: var(--red-800); }
+.nodo.n-base .id { fill: #fff; }
+.nodo.n-hospital .punto { fill: #fff; stroke: var(--red-600); }
+.nodo .cruz { fill: var(--red-600); }
+.nodo.en-ruta .punto { stroke: var(--ruta); stroke-width: 4; }
+.nodo.expandido .punto { fill: #e3e7ef; }
+.nodo.frontera .halo { stroke: var(--frontera); stroke-dasharray: 4 3; }
+.nodo.actual .halo { stroke: var(--red-600); stroke-width: 5; stroke-dasharray: none; }
+.nodo.meta .halo, .nodo.inicial .halo { fill: rgba(200, 32, 47, .08); }
+
+.rutas-leyenda { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 12px; color: var(--muted); }
+.rutas-leyenda li { display: inline-flex; align-items: center; gap: 6px; }
+.rutas-leyenda small { color: #9a9aa6; }
+.swatch { width: 20px; height: 6px; border-radius: 3px; display: inline-block; }
+.swatch.t-libre { background: var(--t-libre); }
+.swatch.t-moderado { background: var(--t-moderado); }
+.swatch.t-denso { background: var(--t-denso); }
+.swatch.t-bloqueado { background: repeating-linear-gradient(90deg, var(--t-bloqueado) 0 3px, transparent 3px 7px); }
+.swatch.ruta { background: var(--ruta); }
+.dot { width: 12px; height: 12px; border-radius: 50%; display: inline-block; border: 2px solid var(--ink); background: #fff; }
+.dot.actual { box-shadow: 0 0 0 3px var(--red-600); }
+.dot.frontera { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--frontera); }
+.dot.expandido { background: #e3e7ef; }
+
+.rutas-cifras { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; font-variant-numeric: tabular-nums; }
+.rutas-cifras b { display: block; font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
+.rutas-cifras span { font-size: 11px; color: var(--muted); }
+.rutas-pasos-ruta { margin: 0; padding: 0 0 0 4px; list-style: none; display: grid; gap: 2px; font-size: 13px; }
+.rutas-pasos-ruta li { display: grid; padding-left: 16px; border-left: 3px solid var(--ruta); padding-block: 3px; }
+.rutas-pasos-ruta li strong { color: var(--ruta); margin-right: 4px; }
+.rutas-pasos-ruta .via { font-size: 11px; color: var(--muted); }
+.rutas-kv { grid-template-columns: 110px 1fr; font-size: 13px; }
+
+.rutas-slider { display: flex; align-items: center; gap: 14px; margin-bottom: 10px; font-variant-numeric: tabular-nums; }
+.rutas-slider label { font-weight: 600; white-space: nowrap; min-width: 110px; }
+.rutas-slider input { flex: 1; min-width: 0; accent-color: var(--red-600); }
+.rutas-narra { margin: 0 0 14px; padding: 10px 12px; border-radius: 8px; background: var(--field); line-height: 1.5; }
+.rutas-tabla { margin: 0 -20px; border-top: 1px solid var(--line); }
+.rutas-tabla td, .rutas-tabla th { padding: 9px 14px; font-variant-numeric: tabular-nums; }
+.rutas-tabla td .badge { margin-left: 8px; }
+.rutas-tabla tbody tr { cursor: pointer; }
+.rutas-tabla tbody tr.sel { background: var(--red-50); }
+.rutas-tabla .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+.rutas .panel > .field-hint:last-child { margin-top: 12px; }
+@media (max-width: 720px) {
+  .rutas-tabla { margin: 0 -20px; }
+  .rutas-cifras b { font-size: 16px; }
+}

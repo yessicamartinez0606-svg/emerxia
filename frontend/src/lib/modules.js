@@ -1,4 +1,4 @@
-import { Ambulance, CircleDot, Headset, Settings, Siren, Stethoscope, UserRound, House } from 'lucide-react'
+import { Ambulance, CircleDot, Headset, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
@@ -179,6 +179,15 @@ export const MODULES = [
         hint: 'Se usa para verificar por reconocimiento facial que es el mismo operador antes de que salga una ambulancia.',
       },
     ],
+  },
+  {
+    // Pantalla propia (pages/RutasPage.jsx): búsqueda ciega sobre el espacio de estados.
+    key: 'rutas',
+    label: 'Rutas y tráfico',
+    description: 'Encuentra la ruta de la ambulancia evitando el tráfico con búsqueda ciega',
+    icon: TrafficCone,
+    navIcon: Route,
+    custom: true,
   },
   {
     key: 'configuracion',
