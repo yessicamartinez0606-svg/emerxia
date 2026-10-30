@@ -64,7 +64,7 @@ def ruta_emergencia(emergencia_id: int, hora: int | None = Hora):
         hospital = {"lat": red_vial.HOSPITAL["lat"], "lng": red_vial.HOSPITAL["lng"]}
         punto = {"lat": lugar["lat"], "lng": lugar["lng"]}
         ida = red_vial.calcular_ruta(hospital, punto, hora)
-        regreso = red_vial.calcular_ruta(punto, hospital, ida["hora"], algoritmos=("costo_uniforme",))
+        regreso = red_vial.calcular_ruta(punto, hospital, ida["hora"])
         return {
             "emergencia": {"id": emergencia["id"], "folio": emergencia.get("folio"),
                            "direccion": emergencia.get("direccion"), "prioridad": emergencia.get("prioridad")},
@@ -74,7 +74,9 @@ def ruta_emergencia(emergencia_id: int, hora: int | None = Hora):
             "periodo": ida["periodo"],
             "periodo_nombre": ida["periodo_nombre"],
             "ida": ida,
-            "regreso": regreso["resultados"][0],
+            # La ficha deja elegir el algoritmo (BFS, DFS, UCS, greedy, A*) también de regreso.
+            "regreso_algoritmos": regreso["resultados"],
+            "regreso": next(r for r in regreso["resultados"] if r["algoritmo"] == "costo_uniforme"),
         }
 
     return _errores(armar)

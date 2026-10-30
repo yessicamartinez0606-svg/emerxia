@@ -32,6 +32,7 @@ export default function RutaAmbulancia({ emergencia }) {
   const [error, setError] = useState('')
   const [cargando, setCargando] = useState(true)
   const [tramo, setTramo] = useState('ida')          // ida | regreso
+  const [algoritmo, setAlgoritmo] = useState('costo_uniforme')   // UCS: la ruta más rápida
   const [intento, setIntento] = useState(0)
   const [minuto, setMinuto] = useState(0)            // minutos simulados desde que salió
   const [corriendo, setCorriendo] = useState(true)
@@ -50,8 +51,9 @@ export default function RutaAmbulancia({ emergencia }) {
     return () => { vigente = false }
   }, [emergencia?.id, emergencia?.direccion, hora, intento])
 
-  const ida = datos?.ida?.resultados.find((r) => r.algoritmo === 'costo_uniforme')
-  const regreso = datos?.regreso
+  // Ruta del algoritmo elegido. Respuestas viejas del backend solo traen UCS de regreso.
+  const ida = datos?.ida?.resultados.find((r) => r.algoritmo === algoritmo)
+  const regreso = (datos?.regreso_algoritmos ?? [datos?.regreso]).find((r) => r?.algoritmo === algoritmo)
   const actual = tramo === 'ida' ? ida : regreso
   const total = actual?.encontrado ? actual.tramos.reduce((s, t) => s + (t.minutos ?? 0), 0) : 0
   const simulable = total > 0
@@ -83,9 +85,11 @@ export default function RutaAmbulancia({ emergencia }) {
   const lugar = datos?.lugar
 
   const lineas = []
-  if (ida?.encontrado && regreso?.encontrado) {
-    const otra = tramo === 'ida' ? regreso : ida
+  const otra = tramo === 'ida' ? regreso : ida
+  if (otra?.encontrado) {
     lineas.push({ id: 'otra', coords: otra.coords, color: '#1d5fd6', ancho: 3, opacidad: 0.55, punteada: true })
+  }
+  if (actual?.encontrado) {
     actual.tramos.forEach((t, i) => lineas.push({
       id: `t${i}`, coords: t.coords, color: NIVEL_COLOR[t.nivel], ancho: 7, borde: true, titulo: NIVEL_LABEL[t.nivel],
     }))
@@ -109,7 +113,7 @@ export default function RutaAmbulancia({ emergencia }) {
     lineas.push({ id: 'acc-a', coords: [a, ini], color: '#45454f', ancho: 2.5, punteada: true })
     lineas.push({ id: 'acc-b', coords: [fin, b], color: '#45454f', ancho: 2.5, punteada: true })
   }
-  const encuadre = datos ? [...(ida?.encontrado ? ida.coords : []), [h.lat, h.lng], [lugar.lat, lugar.lng]] : null
+  const encuadre = datos ? [...(actual?.encontrado ? actual.coords : []), [h.lat, h.lng], [lugar.lat, lugar.lng]] : null
 
   return (
     <div className="panel ruta-amb">
@@ -176,6 +180,21 @@ export default function RutaAmbulancia({ emergencia }) {
               <button type="button" className={tramo === 'regreso' ? 'on' : ''} aria-pressed={tramo === 'regreso'} onClick={() => setTramo('regreso')}>Regreso al hospital</button>
             </div>
 
+            <div className="ruta-algoritmo">
+              <span>Algoritmo</span>
+              <div className="segmentado" role="group" aria-label="Algoritmo de búsqueda">
+                {ALGORITMOS.map((a) => (
+                  <button key={a.key} type="button" title={a.label} className={algoritmo === a.key ? 'on' : ''} aria-pressed={algoritmo === a.key} onClick={() => setAlgoritmo(a.key)}>
+                    {a.corto}
+                  </button>
+                ))}
+              </div>
+              <p>
+                <strong>{ALGORITMOS.find((a) => a.key === algoritmo).label}:</strong>{' '}
+                {ALGORITMOS.find((a) => a.key === algoritmo).garantiza}.
+              </p>
+            </div>
+
             {actual?.encontrado ? (
               <>
                 <div className="ruta-eta">
@@ -222,7 +241,14 @@ export default function RutaAmbulancia({ emergencia }) {
               <p className="ruta-error">No hay ruta por calles abiertas para este trayecto.</p>
             )}
 
-            {tramo === 'ida' && datos.ida && <Comparacion ida={datos.ida} />}
+            {datos.ida && (
+              <Comparacion
+                resultados={tramo === 'ida' ? datos.ida.resultados : datos.regreso_algoritmos ?? [datos.regreso]}
+                esquinas={datos.ida.esquinas}
+                algoritmo={algoritmo}
+                onAlgoritmo={setAlgoritmo}
+              />
+            )}
           </div>
         </div>
       )}
@@ -282,26 +308,29 @@ function Encabezado({ children }) {
   )
 }
 
-function Comparacion({ ida }) {
+function Comparacion({ resultados, esquinas, algoritmo, onAlgoritmo }) {
+  const encontrados = resultados.filter((r) => r?.encontrado)
+  const mejor = encontrados.length ? Math.min(...encontrados.map((r) => r.minutos)) : null
   return (
     <details className="ruta-comparacion">
       <summary>
-        ¿Cómo se eligió esta ruta? <ChevronDown size={15} aria-hidden="true" />
+        Comparar los algoritmos <ChevronDown size={15} aria-hidden="true" />
       </summary>
       <p>
-        Cada esquina es un estado y cada calle abierta es un operador. Se probaron cinco
-        algoritmos sobre {ida.esquinas.toLocaleString('es-MX')} esquinas de la zona; se usa el de menor tiempo.
+        Cada esquina es un estado y cada calle abierta es un operador. Se probaron los cinco
+        algoritmos sobre {esquinas.toLocaleString('es-MX')} esquinas de la zona. Toca uno para ver su ruta en el mapa.
       </p>
       <table>
         <thead><tr><th>Algoritmo</th><th>Tiempo</th><th>Esquinas revisadas</th></tr></thead>
         <tbody>
           {ALGORITMOS.map((a) => {
-            const r = ida.resultados.find((x) => x.algoritmo === a.key)
+            const r = resultados.find((x) => x?.algoritmo === a.key)
+            if (!r) return null
             return (
-              <tr key={a.key} className={a.key === ida.mas_rapido ? 'sel' : ''}>
-                <td>{a.label}</td>
-                <td>{r?.encontrado ? fmtMin(r.minutos) : 'sin ruta'}</td>
-                <td>{r?.expandidos?.toLocaleString('es-MX') ?? '—'}</td>
+              <tr key={a.key} className={a.key === algoritmo ? 'sel' : ''} onClick={() => onAlgoritmo(a.key)}>
+                <td>{a.corto} · {a.label}</td>
+                <td>{r.encontrado ? fmtMin(r.minutos) : 'sin ruta'}{r.encontrado && r.minutos === mejor && <em className="ruta-mejor"> más rápida</em>}</td>
+                <td>{r.expandidos?.toLocaleString('es-MX') ?? '—'}</td>
               </tr>
             )
           })}

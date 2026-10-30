@@ -571,3 +571,11 @@ tbody tr:hover { background: #fcfcfd; }
 .despacho-grafica .promedio { stroke: #9aa0a6; stroke-width: 1.5; }
 @media (max-width: 720px) { .despacho .rutas-barra .segmentado { width: 100%; } .despacho .rutas-barra .segmentado button { flex: 1; } }
 .rutas-algo .nombre i.tipo { font-style: normal; font-size: 10px; font-weight: 600; color: var(--c); border: 1px solid var(--c); padding: 0 6px; border-radius: 999px; }
+.ruta-algoritmo { margin-top: 12px; display: grid; gap: 6px; }
+.ruta-algoritmo > span { font-size: 11.5px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.ruta-algoritmo .segmentado { display: flex; }
+.ruta-algoritmo .segmentado button { flex: 1; padding: 6px 4px; }
+.ruta-algoritmo p { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.ruta-algoritmo p strong { color: var(--ink); }
+.ruta-comparacion tbody tr { cursor: pointer; }
+.ruta-comparacion .ruta-mejor { font-style: normal; font-size: 11px; color: #1a7a41; }

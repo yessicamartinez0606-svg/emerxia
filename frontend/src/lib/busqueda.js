@@ -19,11 +19,11 @@ export const NIVEL_COLOR = {
 }
 
 export const ALGORITMOS = [
-  { key: 'costo_uniforme', label: 'Costo uniforme', frontera: 'ordenada por minutos acumulados g(n): sale primero la esquina más barata', garantiza: 'la ruta más rápida con el tráfico' },
-  { key: 'anchura', label: 'Anchura', frontera: 'cola (FIFO): sale primero la esquina que entró primero', garantiza: 'la ruta con menos tramos de calle' },
-  { key: 'profundidad', label: 'Profundidad', frontera: 'pila (LIFO): sale primero la última esquina que entró', garantiza: 'una ruta cualquiera, sin buscar la mejor' },
-  { key: 'greedy', label: 'Voraz (greedy)', heuristico: true, frontera: 'ordenada por h(n), los minutos estimados que faltan: sale primero la esquina que parece más cerca', garantiza: 'decidir rápido, pero no la ruta más rápida (se deja llevar por lo que parece cerca)' },
-  { key: 'a_estrella', label: 'A*', heuristico: true, frontera: 'ordenada por f(n) = g(n) + h(n): minutos recorridos + minutos estimados que faltan', garantiza: 'la ruta más rápida con el tráfico, revisando menos esquinas que costo uniforme' },
+  { key: 'costo_uniforme', label: 'Costo uniforme', corto: 'UCS', frontera: 'ordenada por minutos acumulados g(n): sale primero la esquina más barata', garantiza: 'la ruta más rápida con el tráfico' },
+  { key: 'anchura', label: 'Anchura', corto: 'BFS', frontera: 'cola (FIFO): sale primero la esquina que entró primero', garantiza: 'la ruta con menos tramos de calle' },
+  { key: 'profundidad', label: 'Profundidad', corto: 'DFS', frontera: 'pila (LIFO): sale primero la última esquina que entró', garantiza: 'una ruta cualquiera, sin buscar la mejor' },
+  { key: 'greedy', label: 'Voraz (greedy)', corto: 'Greedy', heuristico: true, frontera: 'ordenada por h(n), los minutos estimados que faltan: sale primero la esquina que parece más cerca', garantiza: 'decidir rápido, pero no la ruta más rápida (se deja llevar por lo que parece cerca)' },
+  { key: 'a_estrella', label: 'A*', corto: 'A*', heuristico: true, frontera: 'ordenada por f(n) = g(n) + h(n): minutos recorridos + minutos estimados que faltan', garantiza: 'la ruta más rápida con el tráfico, revisando menos esquinas que costo uniforme' },
 ]
 
 export const ALGORITMO_COLOR = { costo_uniforme: '#1d5fd6', anchura: '#7a3fd1', profundidad: '#6b7280', greedy: '#d97706', a_estrella: '#0f8a6c' }
