@@ -5,6 +5,7 @@ import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { emptyForm, useSourcedOptions } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
+import PanelLogica from '../components/PanelLogica.jsx'
 
 const OLD_BACKEND =
   'El servidor no confirmó que guardó en MongoDB: seguramente hay una versión ANTIGUA del backend corriendo en el puerto 8000. ' +
@@ -241,6 +242,15 @@ function FormView({ mod }) {
             </div>
           </div>
         ))}
+
+        {mod.key === 'emergencias' && (
+          <PanelLogica
+            prioridad={form.prioridad}
+            doctor={sourcedOptions.doctor?.find((o) => o.value === form.doctor)?.raw}
+            doctorVerificado={!!form.doctor && verifiedFields.doctor === form.doctor}
+            ambulancia={sourcedOptions.ambulancia?.find((o) => o.value === form.ambulancia)?.raw}
+          />
+        )}
 
         <div className="record-form-actions">
           {formError && <p className="form-error wide">{formError}</p>}
