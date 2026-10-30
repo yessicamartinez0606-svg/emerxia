@@ -7,7 +7,7 @@ import { Minus, Plus, Maximize2 } from 'lucide-react'
 //
 // Props
 //   lineas    [{ id, coords: [[lat, lng], …], color, ancho, opacidad, punteada, borde, titulo }]
-//   marcadores [{ id, lat, lng, tipo: 'hospital' | 'emergencia' | 'punto', etiqueta }]
+//   marcadores [{ id, lat, lng, tipo: 'hospital' | 'emergencia' | 'ambulancia' | 'punto', etiqueta, icono }]
 //   encuadre  [[lat, lng], …]  puntos que deben verse al cargar (se re-encuadra si cambian)
 //   onClick   (lat, lng) => void   opcional
 
@@ -206,7 +206,7 @@ export default function MapaToluca({ lineas = [], marcadores = [], encuadre, onC
         if (x < -40 || y < -40 || x > tam.w + 40 || y > tam.h + 40) return null
         return (
           <div key={m.id} className={`mapa-pin pin-${m.tipo}`} style={{ left: x, top: y }} title={m.etiqueta}>
-            <span className="pin-icono" aria-hidden="true" />
+            <span className="pin-icono" aria-hidden="true">{m.icono}</span>
             {m.etiqueta && <span className="pin-etiqueta">{m.etiqueta}</span>}
           </div>
         )

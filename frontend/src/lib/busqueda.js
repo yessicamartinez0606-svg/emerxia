@@ -44,3 +44,40 @@ export const rutaDeEmergencia = (id, hora) => api(conHora(`/rutas/emergencias/${
 export const fmtMin = (m) => (m == null ? '—' : m < 1 ? 'menos de 1 min' : `${Math.round(m)} min`)
 export const fmtKm = (km) => (km == null ? '—' : km < 1 ? `${Math.round(km * 1000)} m` : `${km.toFixed(1)} km`)
 export const fmtHora = (h) => `${String(h).padStart(2, '0')}:00`
+
+const distanciaKm = ([lat1, lng1], [lat2, lng2]) => {
+  const rad = Math.PI / 180
+  const a = Math.sin(((lat2 - lat1) * rad) / 2) ** 2 +
+    Math.cos(lat1 * rad) * Math.cos(lat2 * rad) * Math.sin(((lng2 - lng1) * rad) / 2) ** 2
+  return 6371 * 2 * Math.asin(Math.sqrt(a))
+}
+
+// Simulación: dónde va la ambulancia después de `min` minutos sobre la ruta, avanzando
+// cada tramo al ritmo de su tráfico. Devuelve también los puntos ya recorridos.
+export function avanceEnRuta(ruta, min) {
+  let t = 0
+  let km = 0
+  const atras = []
+  for (const tr of ruta.tramos) {
+    if (min < t + tr.minutos) {
+      const objetivo = ((min - t) / tr.minutos) * tr.km
+      let acum = 0
+      for (let j = 1; j < tr.coords.length; j++) {
+        const a = tr.coords[j - 1], b = tr.coords[j]
+        const d = distanciaKm(a, b)
+        atras.push(a)
+        if (acum + d >= objetivo) {
+          const f = d ? (objetivo - acum) / d : 0
+          const punto = [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f]
+          atras.push(punto)
+          return { punto, km: km + objetivo, nivel: tr.nivel, atras, llego: false }
+        }
+        acum += d
+      }
+    }
+    atras.push(...tr.coords)
+    t += tr.minutos
+    km += tr.km
+  }
+  return { punto: ruta.coords[ruta.coords.length - 1], km: ruta.km, nivel: null, atras, llego: true }
+}

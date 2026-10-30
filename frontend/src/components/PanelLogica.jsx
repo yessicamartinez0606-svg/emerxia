@@ -1,36 +1,32 @@
 import { CheckCircle2, X } from 'lucide-react'
 import { evaluarFormulario } from '../lib/logica.js'
 
-// neutro: una proposición en falso no es un error (p. ej. una emergencia que no es Alta)
-const Fila = ({ ok, formula, texto, neutro }) => (
-  <li className={`field-hint ${ok ? 'ok' : neutro ? '' : 'warn'}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+const Fila = ({ ok, texto }) => (
+  <li className={`field-hint ${ok ? 'ok' : 'warn'}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
     {ok ? <CheckCircle2 size={14} /> : <X size={14} />}
-    <strong>{formula}</strong> {texto}
+    {texto}
   </li>
 )
 
-// Muestra, con la lógica proposicional de la emergencia, qué falta para poder asignarla.
-// El operador (q, r) no se evalúa aquí: se valida al guardar, en la ventana de Face ID.
+// Lista de requisitos para poder asignar la emergencia, en lenguaje sencillo.
+// La lógica proposicional (D = s ∧ t, M = u ∧ (p → v)) vive en lib/logica.js.
+// El operador no se evalúa aquí: se valida al guardar, en la ventana de Face ID.
 export default function PanelLogica({ prioridad, doctor, doctorVerificado, ambulancia }) {
   const r = evaluarFormulario({ prioridad, doctor, doctorVerificado, ambulancia })
+  const listo = r.doctorHabilitado && r.ambulanciaAdecuada
 
   return (
     <div className="panel form-section">
-      <h2 className="form-section-title">Lógica de asignación</h2>
+      <h2 className="form-section-title">Requisitos para asignar</h2>
       <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0', display: 'grid', gap: 4 }}>
-        <Fila ok={r.p} neutro formula="p" texto="La emergencia es de prioridad Alta" />
-        <Fila ok={r.s} formula="s" texto="El doctor está disponible (Activo o En guardia)" />
-        <Fila ok={r.t} formula="t" texto="El rostro del doctor fue verificado" />
-        <Fila ok={r.u} formula="u" texto="La ambulancia está Disponible" />
-        <Fila ok={r.v} neutro formula="v" texto="La ambulancia es Avanzada" />
-        <Fila ok={r.doctorHabilitado} formula="D = s ∧ t" texto="Doctor habilitado" />
-        <Fila ok={r.ambulanciaAdecuada} formula="M = u ∧ (p → v)" texto="Ambulancia adecuada" />
+        <Fila ok={!!doctor} texto="Se eligió un doctor" />
+        {doctor && <Fila ok={r.s} texto="El doctor está disponible (no está en descanso)" />}
+        {doctor && <Fila ok={r.t} texto="Se verificó el rostro del doctor" />}
+        <Fila ok={!!ambulancia} texto="Se eligió una ambulancia" />
+        {ambulancia && <Fila ok={r.u} texto="La ambulancia está disponible" />}
+        {ambulancia && r.p && <Fila ok={r.v} texto="La ambulancia es avanzada (obligatorio en prioridad Alta)" />}
       </ul>
-      {r.motivos.length > 0 && (
-        <ul className="field-hint warn" style={{ margin: 0, paddingLeft: 18 }}>
-          {r.motivos.map((m) => <li key={m}>{m}</li>)}
-        </ul>
-      )}
+      {listo && <p className="field-hint ok" style={{ margin: 0 }}>Todo listo: puedes guardar la emergencia.</p>}
     </div>
   )
 }

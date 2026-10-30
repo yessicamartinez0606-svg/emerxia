@@ -1,14 +1,25 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ambulance, ChevronDown, Clock, MapPin, Navigation, RefreshCw } from 'lucide-react'
+import { Ambulance, ChevronDown, Clock, MapPin, Navigation, Pause, Play, RefreshCw, RotateCcw } from 'lucide-react'
 import MapaToluca from './MapaToluca.jsx'
 import {
-  ALGORITMOS, HORAS, NIVEL_COLOR, NIVEL_LABEL, fmtHora, fmtKm, fmtMin, rutaDeEmergencia,
+  ALGORITMOS, HORAS, NIVEL_COLOR, NIVEL_LABEL, avanceEnRuta, fmtHora, fmtKm, fmtMin, rutaDeEmergencia,
 } from '../lib/busqueda.js'
 
 // Ruta de la ambulancia para una emergencia: sale del Hospital IMSS 220, llega a la
 // dirección de la emergencia y regresa al hospital. La dirección se ubica sola en el mapa
 // y la ruta la calcula el backend con búsqueda ciega (costo uniforme) sobre calles reales.
+// Sobre esa ruta se simula el avance de la ambulancia en tiempo acelerado: cada tramo se
+// recorre al ritmo de su tráfico, así se ve cuánto falta y a qué hora llega.
+
+const VELOCIDADES = [1, 10, 30, 60]
+const fmtReloj = (d) => new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d)
+const SVG_AMBULANCIA = (
+  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M10 10H6M14 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2M19 18h2a1 1 0 0 0 1-1v-3.28a1 1 0 0 0-.684-.948l-1.923-.641a1 1 0 0 1-.578-.502l-1.539-3.076A1 1 0 0 0 16.382 8H14M8 8v4M9 18h6" />
+    <circle cx="17" cy="18" r="2" /><circle cx="7" cy="18" r="2" />
+  </svg>
+)
 
 export default function RutaAmbulancia({ emergencia }) {
   const [hora, setHora] = useState(null)
@@ -17,6 +28,10 @@ export default function RutaAmbulancia({ emergencia }) {
   const [cargando, setCargando] = useState(true)
   const [tramo, setTramo] = useState('ida')          // ida | regreso
   const [intento, setIntento] = useState(0)
+  const [minuto, setMinuto] = useState(0)            // minutos simulados desde que salió
+  const [corriendo, setCorriendo] = useState(true)
+  const [velocidad, setVelocidad] = useState(10)
+  const [salida, setSalida] = useState(() => new Date())
 
   useEffect(() => {
     if (!emergencia?.id || !emergencia.direccion) return
@@ -30,6 +45,26 @@ export default function RutaAmbulancia({ emergencia }) {
     return () => { vigente = false }
   }, [emergencia?.id, emergencia?.direccion, hora, intento])
 
+  const ida = datos?.ida?.resultados.find((r) => r.algoritmo === 'costo_uniforme')
+  const regreso = datos?.regreso
+  const actual = tramo === 'ida' ? ida : regreso
+  const total = actual?.encontrado ? actual.tramos.reduce((s, t) => s + (t.minutos ?? 0), 0) : 0
+  const simulable = total > 0
+
+  // Cada vez que cambia la ruta (otro trayecto u otra hora), la ambulancia vuelve a salir.
+  useEffect(() => { setMinuto(0); setCorriendo(true); setSalida(new Date()) }, [actual])
+
+  // Reloj de la simulación: 10 cuadros por segundo bastan para verla avanzar.
+  useEffect(() => {
+    if (!simulable || !corriendo) return
+    const id = setInterval(() => {
+      setMinuto((m) => Math.min(total, m + (0.1 * velocidad) / 60))
+    }, 100)
+    return () => clearInterval(id)
+  }, [simulable, corriendo, velocidad, total])
+
+  useEffect(() => { if (simulable && minuto >= total) setCorriendo(false) }, [simulable, minuto, total])
+
   if (!emergencia?.direccion) {
     return (
       <div className="panel ruta-amb">
@@ -39,9 +74,6 @@ export default function RutaAmbulancia({ emergencia }) {
     )
   }
 
-  const ida = datos?.ida?.resultados.find((r) => r.algoritmo === 'costo_uniforme')
-  const regreso = datos?.regreso
-  const actual = tramo === 'ida' ? ida : regreso
   const h = datos?.hospital
   const lugar = datos?.lugar
 
@@ -53,10 +85,18 @@ export default function RutaAmbulancia({ emergencia }) {
       id: `t${i}`, coords: t.coords, color: NIVEL_COLOR[t.nivel], ancho: 7, borde: true, titulo: NIVEL_LABEL[t.nivel],
     }))
   }
+  const avance = simulable ? avanceEnRuta(actual, minuto) : null
+  if (avance) lineas.push({ id: 'recorrido', coords: avance.atras, color: '#9aa0a6', ancho: 7, titulo: 'Ya recorrido' })
   const marcadores = datos ? [
     { id: 'h', lat: h.lat, lng: h.lng, tipo: 'hospital', etiqueta: h.corto },
     { id: 'e', lat: lugar.lat, lng: lugar.lng, tipo: 'emergencia', etiqueta: `Emergencia ${datos.emergencia.folio ?? ''}`.trim() },
   ] : []
+  if (avance) {
+    marcadores.push({
+      id: 'amb', lat: avance.punto[0], lng: avance.punto[1], tipo: 'ambulancia', icono: SVG_AMBULANCIA,
+      etiqueta: emergencia.ambulancia || 'Ambulancia',
+    })
+  }
   // Los últimos metros: de la esquina más cercana al punto exacto de la emergencia y del hospital.
   if (actual?.encontrado) {
     const ini = actual.coords[0], fin = actual.coords[actual.coords.length - 1]
@@ -111,6 +151,7 @@ export default function RutaAmbulancia({ emergencia }) {
               {['libre', 'moderado', 'denso'].map((n) => (
                 <li key={n}><span style={{ background: NIVEL_COLOR[n] }} />{NIVEL_LABEL[n]}</li>
               ))}
+              {avance && <li><span style={{ background: '#9aa0a6' }} />Ya recorrido</li>}
               <li><span className="punteada" />{tramo === 'ida' ? 'Regreso' : 'Ida'}</li>
             </ul>
           </div>
@@ -138,6 +179,20 @@ export default function RutaAmbulancia({ emergencia }) {
                     <span>{fmtKm(actual.km)} · {datos.periodo_nombre.toLowerCase()} · {fmtHora(datos.hora)}</span>
                   </div>
                 </div>
+                {avance && (
+                  <Simulacion
+                    ruta={actual}
+                    avance={avance}
+                    restante={total - minuto}
+                    llegada={new Date(salida.getTime() + total * 60000)}
+                    destino={tramo === 'ida' ? 'la emergencia' : h.corto}
+                    corriendo={corriendo}
+                    onPausa={() => setCorriendo((c) => !c)}
+                    onRepetir={() => { setMinuto(0); setCorriendo(true); setSalida(new Date()) }}
+                    velocidad={velocidad}
+                    onVelocidad={setVelocidad}
+                  />
+                )}
                 <ol className="ruta-pasos">
                   {actual.indicaciones.map((p, i) => (
                     <li key={i}>
@@ -165,6 +220,46 @@ export default function RutaAmbulancia({ emergencia }) {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+function Simulacion({ ruta, avance, restante, llegada, destino, corriendo, onPausa, onRepetir, velocidad, onVelocidad }) {
+  const sinTrafico = ruta.minutos_sin_trafico
+  const retraso = sinTrafico != null ? ruta.minutos - sinTrafico : null
+  return (
+    <div className="ruta-sim">
+      <div className="ruta-sim-estado">
+        <span className={`ruta-sim-chip${avance.llego ? ' llego' : ''}`}>
+          {avance.llego ? `Llegó a ${destino}` : `En camino · llega en ${fmtMin(restante)}`}
+        </span>
+        <span className="ruta-sim-ahora">
+          {avance.llego ? `${fmtKm(ruta.km)} recorridos` : `Ahora: ${NIVEL_LABEL[avance.nivel].toLowerCase()}`}
+        </span>
+      </div>
+      <div className="ruta-sim-cifras">
+        {sinTrafico != null && <div><b>{fmtMin(sinTrafico)}</b><span>Sin tráfico</span></div>}
+        {retraso != null && (
+          <div className={retraso >= 1 ? 'retraso' : ''}><b>{retraso >= 1 ? `+${fmtMin(retraso)}` : 'Ninguno'}</b><span>Retraso por tráfico</span></div>
+        )}
+        <div><b>{fmtReloj(llegada)}</b><span>Hora de llegada</span></div>
+        <div><b>{fmtKm(Math.max(0, ruta.km - avance.km))}</b><span>Falta por recorrer</span></div>
+      </div>
+      <div className="ruta-sim-barra" aria-hidden="true">
+        {ruta.tramos.map((t, i) => <span key={i} style={{ flexGrow: t.km, background: NIVEL_COLOR[t.nivel] }} />)}
+        <i style={{ left: `${Math.min(100, (avance.km / ruta.km) * 100)}%` }} />
+      </div>
+      <div className="ruta-sim-controles">
+        <button type="button" className="btn-ghost" onClick={avance.llego ? onRepetir : onPausa}>
+          {avance.llego ? <><RotateCcw size={14} /> Repetir</> : corriendo ? <><Pause size={14} /> Pausar</> : <><Play size={14} /> Continuar</>}
+        </button>
+        <div className="segmentado" role="group" aria-label="Velocidad de la simulación">
+          {VELOCIDADES.map((v) => (
+            <button key={v} type="button" className={velocidad === v ? 'on' : ''} aria-pressed={velocidad === v} onClick={() => onVelocidad(v)}>×{v}</button>
+          ))}
+        </div>
+        <span className="badge">Simulación</span>
+      </div>
     </div>
   )
 }

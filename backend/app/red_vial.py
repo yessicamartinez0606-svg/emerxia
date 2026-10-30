@@ -428,13 +428,25 @@ def describir_ruta(grafo: Grafo, aristas: list[int], hora: int) -> dict:
         coords.extend(t.geom if not coords else t.geom[1:])
 
     # Tramos seguidos con el mismo tráfico, para pintar la ruta por colores.
+    # Cada uno lleva sus km y minutos (con y sin tráfico) para simular el avance de la ambulancia.
     por_trafico: list[dict] = []
     for t in tramos:
         nivel = nivel_trafico(t.highway, t.way_id, hora)
+        km = t.metros / 1000
+        libre = km / VELOCIDAD[t.highway] * 60
+        minutos = libre * (busqueda.NIVELES[nivel] or 1)
         if por_trafico and por_trafico[-1]["nivel"] == nivel:
-            por_trafico[-1]["coords"].extend(_redondear(t.geom[1:]))
+            ult = por_trafico[-1]
+            ult["coords"].extend(_redondear(t.geom[1:]))
+            ult["km"] += km
+            ult["minutos"] += minutos
+            ult["minutos_libre"] += libre
         else:
-            por_trafico.append({"nivel": nivel, "coords": _redondear(t.geom)})
+            por_trafico.append({"nivel": nivel, "coords": _redondear(t.geom), "km": km,
+                                "minutos": minutos, "minutos_libre": libre})
+    for pt in por_trafico:
+        for k in ("km", "minutos", "minutos_libre"):
+            pt[k] = round(pt[k], 3)
 
     # Indicaciones: se juntan los tramos seguidos de la misma calle.
     grupos: list[dict] = []
@@ -494,6 +506,7 @@ def describir_ruta(grafo: Grafo, aristas: list[int], hora: int) -> dict:
         "coords": _redondear(coords),
         "tramos": por_trafico,
         "km": round(sum(t.metros for t in tramos) / 1000, 2),
+        "minutos_sin_trafico": round(sum(pt["minutos_libre"] for pt in por_trafico), 1),
         "indicaciones": indicaciones,
     }
 
