@@ -1,4 +1,4 @@
-"""Búsqueda ciega (no informada) sobre un espacio de estados.
+"""Búsqueda ciega (no informada) e informada (heurística) sobre un espacio de estados.
 
 Funciones puras, igual que app/logica.py: no tocan la red ni la base de datos, así que se
 pueden probar solas (ver probar_busqueda.py). El problema concreto de la ambulancia en
@@ -13,12 +13,19 @@ ESPACIO DE ESTADOS (ruta de la ambulancia)
                     si la calle no está cerrada y se respeta su sentido.
     Costo           minutos del tramo = distancia / velocidad de la vía × factor de tráfico.
 
-ALGORITMOS (búsqueda ciega: ninguno usa una estimación de qué tan lejos está la meta)
+ALGORITMOS
+  Búsqueda ciega (no usan ninguna estimación de qué tan lejos está la meta)
     anchura          frontera FIFO (cola).  Encuentra la ruta con MENOS tramos.
     profundidad      frontera LIFO (pila).  Encuentra una ruta, no necesariamente buena.
     costo_uniforme   frontera ordenada por costo acumulado g(n).  Encuentra la ruta MÁS RÁPIDA.
+  Búsqueda heurística (usan h(n) = minutos estimados que faltan para llegar a la meta)
+    greedy           frontera ordenada por h(n).  Va hacia lo que "parece" más cerca; es
+                     rápida para decidir pero no garantiza la ruta más rápida.
+    a_estrella       frontera ordenada por f(n) = g(n) + h(n).  Si h(n) nunca sobreestima
+                     (heurística admisible), encuentra la ruta MÁS RÁPIDA revisando menos
+                     estados que costo uniforme.
 
-Las tres son búsqueda en grafo: un estado ya expandido no se vuelve a expandir.
+Todas son búsqueda en grafo: un estado ya expandido no se vuelve a expandir.
 """
 from __future__ import annotations
 
@@ -35,12 +42,15 @@ NIVELES: dict[str, float | None] = {
     "bloqueado": None,
 }
 
-ALGORITMOS = ("anchura", "profundidad", "costo_uniforme")
+ALGORITMOS = ("anchura", "profundidad", "costo_uniforme", "greedy", "a_estrella")
+HEURISTICOS = ("greedy", "a_estrella")
 
 NOMBRES_ALGORITMO = {
     "anchura": "Primero en anchura",
     "profundidad": "Primero en profundidad",
     "costo_uniforme": "Costo uniforme",
+    "greedy": "Voraz (greedy)",
+    "a_estrella": "A*",
 }
 
 Estado = Hashable
@@ -55,6 +65,8 @@ class Problema:
     meta: Estado
     sucesores: Sucesores
     nombre: Callable[[Estado], str] = field(default=str)   # para mostrar la traza
+    # h(estado) -> minutos estimados hasta la meta. Sin heurística, h(n) = 0 (A* = costo uniforme).
+    heuristica: Callable[[Estado], float] = field(default=lambda _e: 0.0)
 
     def es_meta(self, estado: Estado) -> bool:
         return estado == self.meta
@@ -78,7 +90,7 @@ def _camino(n: _Nodo) -> list[_Nodo]:
 
 def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
            max_traza: int = 120) -> dict:
-    """Ejecuta un algoritmo de búsqueda ciega.
+    """Ejecuta un algoritmo de búsqueda (ciega o heurística).
 
     Devuelve la ruta (estados y aristas), su costo, estadísticas y los primeros `max_traza`
     pasos de la búsqueda (en una ciudad real son miles; con unos cuantos basta para ver
@@ -87,6 +99,15 @@ def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
     if algoritmo not in ALGORITMOS:
         raise ValueError(f"Algoritmo desconocido: '{algoritmo}'.")
 
+    h = problema.heuristica
+
+    def prioridad(n: _Nodo) -> float:
+        if algoritmo == "greedy":
+            return h(n.estado)
+        if algoritmo == "a_estrella":
+            return n.g + h(n.estado)
+        return n.g
+
     inicio = _Nodo(problema.inicial, None, None, 0.0)
     contador = 0                                     # desempate estable en el heap
     if algoritmo == "anchura":
@@ -94,8 +115,8 @@ def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
     elif algoritmo == "profundidad":
         frontera = [inicio]
     else:
-        frontera = [(0.0, 0, inicio)]
-    en_frontera: set = {problema.inicial}            # solo anchura y profundidad
+        frontera = [(prioridad(inicio), 0, inicio)]
+    en_frontera: set = {problema.inicial}            # anchura, profundidad y greedy
 
     expandidos: set = set()
     traza: list[dict] = []
@@ -113,15 +134,16 @@ def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
     while frontera and len(expandidos) < max_expansiones:
         nodo = sacar()
         en_frontera.discard(nodo.estado)
-        if nodo.estado in expandidos:                # copia vieja (costo uniforme)
+        if nodo.estado in expandidos:                # copia vieja (costo uniforme / A*)
             continue
+        hn = h(nodo.estado)
 
         if problema.es_meta(nodo.estado):
             encontrado = nodo
             if len(traza) < max_traza:
                 traza.append({"paso": len(expandidos) + 1, "estado": problema.nombre(nodo.estado),
-                              "g": round(nodo.g, 2), "meta": True, "agregados": [],
-                              "frontera": len(frontera)})
+                              "g": round(nodo.g, 2), "h": round(hn, 2), "f": round(nodo.g + hn, 2),
+                              "meta": True, "agregados": [], "frontera": len(frontera)})
             break
 
         expandidos.add(nodo.estado)
@@ -129,9 +151,9 @@ def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
         for sig, arista, costo in problema.sucesores(nodo.estado):
             if sig in expandidos:
                 continue
-            # Anchura y profundidad no repiten un estado que ya espera en la frontera.
-            # Costo uniforme sí: el camino nuevo puede ser más barato.
-            if algoritmo != "costo_uniforme" and sig in en_frontera:
+            # Anchura, profundidad y greedy no repiten un estado que ya espera en la frontera.
+            # Costo uniforme y A* sí: el camino nuevo puede ser más barato.
+            if algoritmo not in ("costo_uniforme", "a_estrella") and sig in en_frontera:
                 continue
             hijos.append(_Nodo(sig, nodo, arista, nodo.g + costo))
 
@@ -140,24 +162,25 @@ def buscar(problema: Problema, algoritmo: str, max_expansiones: int = 300_000,
         elif algoritmo == "profundidad":
             frontera.extend(reversed(hijos))         # el primer sucesor queda en el tope
         else:
-            for h in hijos:
+            for hijo in hijos:
                 contador += 1
-                heapq.heappush(frontera, (h.g, contador, h))
-        if algoritmo != "costo_uniforme":
-            en_frontera.update(h.estado for h in hijos)
+                heapq.heappush(frontera, (prioridad(hijo), contador, hijo))
+        if algoritmo not in ("costo_uniforme", "a_estrella"):
+            en_frontera.update(hijo.estado for hijo in hijos)
         generados += len(hijos)
         frontera_max = max(frontera_max, len(frontera))
 
         if len(traza) < max_traza:
             traza.append({"paso": len(expandidos), "estado": problema.nombre(nodo.estado),
-                          "g": round(nodo.g, 2), "meta": False,
-                          "agregados": [problema.nombre(h.estado) for h in hijos],
+                          "g": round(nodo.g, 2), "h": round(hn, 2), "f": round(nodo.g + hn, 2),
+                          "meta": False, "agregados": [problema.nombre(x.estado) for x in hijos],
                           "frontera": len(frontera)})
 
     total = len(expandidos) + (1 if encontrado else 0)
     resultado = {
         "algoritmo": algoritmo,
         "nombre": NOMBRES_ALGORITMO[algoritmo],
+        "heuristico": algoritmo in HEURISTICOS,
         "encontrado": encontrado is not None,
         "estados": [],
         "aristas": [],

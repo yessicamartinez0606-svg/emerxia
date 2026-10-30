@@ -8,7 +8,7 @@ import {
 
 // Ruta de la ambulancia para una emergencia: sale del Hospital IMSS 220, llega a la
 // dirección de la emergencia y regresa al hospital. La dirección se ubica sola en el mapa
-// y la ruta la calcula el backend con búsqueda ciega (costo uniforme) sobre calles reales.
+// y la ruta la calcula el backend con búsqueda sobre calles reales (la más rápida: costo uniforme / A*).
 // Sobre esa ruta se simula el avance de la ambulancia en tiempo acelerado: cada tramo se
 // recorre al ritmo de su tráfico, así se ve cuánto falta y a qué hora llega.
 
@@ -289,7 +289,7 @@ function Comparacion({ ida }) {
         ¿Cómo se eligió esta ruta? <ChevronDown size={15} aria-hidden="true" />
       </summary>
       <p>
-        Cada esquina es un estado y cada calle abierta es un operador. Con búsqueda ciega se probaron tres
+        Cada esquina es un estado y cada calle abierta es un operador. Se probaron cinco
         algoritmos sobre {ida.esquinas.toLocaleString('es-MX')} esquinas de la zona; se usa el de menor tiempo.
       </p>
       <table>

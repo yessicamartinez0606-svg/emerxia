@@ -2,7 +2,7 @@
 
     GET  /api/rutas/zona                 avenidas de la zona con su tráfico estimado
     GET  /api/rutas/geocodificar?q=      coordenadas de una dirección de la zona
-    POST /api/rutas/calcular             ruta entre dos puntos con los tres algoritmos
+    POST /api/rutas/calcular             ruta entre dos puntos con los cinco algoritmos (ciegos y heurísticos)
     GET  /api/rutas/emergencias/{id}     ruta del IMSS 220 a la emergencia y de regreso
 """
 from fastapi import APIRouter, Depends, HTTPException, Query

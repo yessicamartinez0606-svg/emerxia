@@ -93,12 +93,16 @@ def main() -> int:
         sol = red_vial.calcular_ruta(origen, destino, hora)
         res = {r["algoritmo"]: r for r in sol["resultados"]}
         a, p, u = res["anchura"], res["profundidad"], res["costo_uniforme"]
+        g, ae = res["greedy"], res["a_estrella"]
         print(f"\nDe la esquina 0,0 a la 2,5 en {etiqueta} ({sol['periodo_nombre']})")
         for r in sol["resultados"]:
             print(f"    {r['nombre']:<24} {r['minutos']:>5} min  {r['km']:>5} km  {r['num_tramos']:>2} tramos  {r['expandidos']:>3} esquinas revisadas")
-        revisar(all(r["encontrado"] for r in res.values()), "Los tres algoritmos encuentran ruta")
+        revisar(all(r["encontrado"] for r in res.values()), "Los cinco algoritmos encuentran ruta")
         revisar(a["num_tramos"] <= min(p["num_tramos"], u["num_tramos"]), "Anchura usa la menor cantidad de tramos")
         revisar(u["minutos"] <= min(a["minutos"], p["minutos"]) + 1e-9, "Costo uniforme encuentra la ruta más rápida")
+        revisar(abs(ae["minutos"] - u["minutos"]) < 1e-9, "A* encuentra la misma ruta más rápida que costo uniforme")
+        revisar(ae["expandidos"] <= u["expandidos"], "A* revisa igual o menos esquinas que costo uniforme")
+        revisar(g["minutos"] >= u["minutos"] - 1e-9, "Greedy no mejora a costo uniforme (no garantiza la más rápida)")
         revisar(u["coords"][0] == [round(o[0], 6), round(o[1], 6)], "La ruta empieza en el punto de salida")
         rutas[hora] = u
     revisar(rutas[23]["minutos"] < rutas[8]["minutos"], "De noche la ruta tarda menos que en hora pico")
@@ -112,6 +116,18 @@ def main() -> int:
     llegan = {t.way_id for t in grafo.tramos if t.b == meta}
     prob = red_vial.problema(grafo, esquina[(0, 0)], meta, 12, cerradas=llegan)
     revisar(not busqueda.buscar(prob, "costo_uniforme")["encontrado"], "Con las calles de llegada cerradas, no hay ruta")
+
+    # Heurística admisible: h(n) nunca supera el tiempo real que falta (costo uniforme
+    # desde cada esquina hasta la meta), a ninguna hora.
+    print("\nHeurística")
+    for hora in (8, 12, 23):
+        h, vmax = red_vial.heuristica_trafico(grafo, meta, hora)
+        admisible = True
+        for e in grafo.coords:
+            r = busqueda.buscar(red_vial.problema(grafo, e, meta, hora), "costo_uniforme")
+            if r["encontrado"] and h(e) > r["minutos"] + 0.005:   # r["minutos"] viene redondeado a 2 decimales
+                admisible = False
+        revisar(admisible, f"A las {hora}:00 h(n) nunca sobreestima (velocidad máxima con tráfico: {vmax:.0f} km/h)")
 
     print("\nTodo bien.\n" if not fallas else f"\n{fallas} regla(s) fallaron.\n")
     return 1 if fallas else 0

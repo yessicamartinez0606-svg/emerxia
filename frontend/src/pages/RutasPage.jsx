@@ -8,7 +8,8 @@ import {
 
 // Mapa de Toluca, Metepec, San Mateo Atenco y Lerma con el tráfico estimado de las avenidas y las rutas de la ambulancia desde
 // el Hospital IMSS 220. Al tocar el mapa (o buscar una dirección) se calcula la ruta con los
-// tres algoritmos de búsqueda ciega y se comparan; abajo se ve la búsqueda paso a paso.
+// cinco algoritmos (tres de búsqueda ciega y dos heurísticos: greedy y A*) y se comparan; abajo se
+// ve la búsqueda paso a paso.
 
 export default function RutasPage() {
   const [hora, setHora] = useState(null)
@@ -195,7 +196,7 @@ export default function RutasPage() {
               </div>
               <p className="rutas-destino">{ruta?.destino?.esquina ?? punto.texto}</p>
 
-              {cargandoRuta && <p className="muted">Calculando con los tres algoritmos…</p>}
+              {cargandoRuta && <p className="muted">Calculando con los cinco algoritmos…</p>}
               {errorRuta && <p className="form-error">{errorRuta}</p>}
 
               {ruta && (
@@ -212,7 +213,11 @@ export default function RutasPage() {
                           onClick={() => setAlgoritmo(a.key)}
                           style={{ '--c': ALGORITMO_COLOR[a.key] }}
                         >
-                          <span className="nombre">{a.label}{ruta.mas_rapido === a.key && <em>más rápida</em>}</span>
+                          <span className="nombre">
+                            {a.label}
+                            {a.heuristico && <i className="tipo">heurística</i>}
+                            {r?.encontrado && r.minutos === porAlgoritmo[ruta.mas_rapido]?.minutos && <em>más rápida</em>}
+                          </span>
                           <b>{r?.encontrado ? fmtMin(r.minutos) : 'sin ruta'}</b>
                           <small>{r?.encontrado ? `${fmtKm(r.km)} · ${r.expandidos.toLocaleString('es-MX')} esquinas revisadas` : ''}</small>
                         </button>
@@ -220,7 +225,7 @@ export default function RutasPage() {
                     })}
                   </div>
                   <label className="rutas-check">
-                    <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} /> Mostrar las tres rutas en el mapa
+                    <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} /> Mostrar todas las rutas en el mapa
                   </label>
 
                   {elegido?.encontrado && (
@@ -259,7 +264,7 @@ function Explicacion({ ruta, algoritmo, setAlgoritmo }) {
       <summary>
         <div>
           <strong>¿Cómo se calculó la ruta?</strong>
-          <span>Búsqueda ciega sobre el espacio de estados de las calles reales</span>
+          <span>Búsqueda ciega y heurística sobre el espacio de estados de las calles reales</span>
         </div>
         <ChevronDown size={18} className="chev" aria-hidden="true" />
       </summary>
@@ -269,7 +274,13 @@ function Explicacion({ ruta, algoritmo, setAlgoritmo }) {
           <dt>Estado inicial</dt><dd>{ruta.origen.esquina} (junto al Hospital IMSS 220)</dd>
           <dt>Estado meta</dt><dd>{ruta.destino.esquina}</dd>
           <dt>Operadores</dt><dd>Avanzar a la siguiente esquina por una calle abierta, respetando su sentido</dd>
-          <dt>Costo</dt><dd>Minutos de cada tramo = distancia ÷ velocidad de la vía × tráfico (sin tráfico ×1, lento ×1.8, pesado ×3)</dd>
+          <dt>Costo g(n)</dt><dd>Minutos de cada tramo = distancia ÷ velocidad de la vía × tráfico (sin tráfico ×1, lento ×1.8, pesado ×3)</dd>
+          <dt>Heurística h(n)</dt>
+          <dd>
+            Minutos estimados que faltan = distancia en línea recta hasta el destino ÷ {ruta.heuristica.velocidad_kmh} km/h × 60.
+            Esos {ruta.heuristica.velocidad_kmh} km/h son lo más rápido que se puede ir a esta hora con el tráfico, así que h(n) nunca
+            sobreestima (es admisible) y A* encuentra la misma ruta que costo uniforme. Desde la salida, h = {ruta.heuristica.h_inicial} min.
+          </dd>
         </dl>
 
         <div className="rutas-paso-head">
@@ -287,13 +298,22 @@ function Explicacion({ ruta, algoritmo, setAlgoritmo }) {
         {r && (
           <div className="table-wrap rutas-tabla">
             <table>
-              <thead><tr><th>Paso</th><th>Esquina revisada</th><th>Minutos</th><th>Esquinas nuevas en la frontera</th><th>Frontera</th></tr></thead>
+              <thead>
+                <tr>
+                  <th>Paso</th><th>Esquina revisada</th><th>g(n) min</th>
+                  {info.heuristico && <th>h(n) min</th>}
+                  {algoritmo === 'a_estrella' && <th>f(n) = g + h</th>}
+                  <th>Esquinas nuevas en la frontera</th><th>Frontera</th>
+                </tr>
+              </thead>
               <tbody>
                 {r.traza.map((t) => (
                   <tr key={t.paso} className={t.meta ? 'sel' : ''}>
                     <td>{t.paso}</td>
                     <td className="wrap"><strong>{t.estado}</strong>{t.meta && <span className="badge b-activo">destino</span>}</td>
                     <td>{t.g.toFixed(1)}</td>
+                    {info.heuristico && <td>{t.h?.toFixed(1)}</td>}
+                    {algoritmo === 'a_estrella' && <td>{t.f?.toFixed(1)}</td>}
                     <td className="wrap">{t.agregados.join(' · ') || '—'}</td>
                     <td>{t.frontera}</td>
                   </tr>

@@ -181,10 +181,10 @@ export const MODULES = [
     ],
   },
   {
-    // Pantalla propia (pages/RutasPage.jsx): búsqueda ciega sobre el espacio de estados.
+    // Pantalla propia (pages/RutasPage.jsx): búsqueda ciega y heurística (greedy, A*) sobre el espacio de estados.
     key: 'rutas',
     label: 'Rutas y tráfico',
-    description: 'Encuentra la ruta de la ambulancia evitando el tráfico con búsqueda ciega',
+    description: 'Encuentra la ruta de la ambulancia evitando el tráfico con búsqueda ciega y heurística (A*)',
     icon: TrafficCone,
     navIcon: Route,
     custom: true,

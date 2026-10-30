@@ -524,6 +524,37 @@ def _minutos(t: Tramo, hora: int, cerradas: set[int]) -> float | None:
     return t.metros / 1000 / VELOCIDAD[t.highway] * 60 * factor
 
 
+def velocidad_maxima(grafo: Grafo, hora: int, cerradas: set[int] = frozenset()) -> float:
+    """La velocidad más alta (km/h) a la que se puede avanzar en alguna calle abierta del mapa
+    a esa hora, ya contando su tráfico: velocidad de la vía ÷ factor de tráfico."""
+    mejor = 0.0
+    for t in grafo.tramos:
+        nivel = "bloqueado" if t.way_id in cerradas else nivel_trafico(t.highway, t.way_id, hora)
+        factor = busqueda.NIVELES[nivel]
+        if factor is not None:
+            mejor = max(mejor, VELOCIDAD[t.highway] / factor)
+    return mejor or max(VELOCIDAD.values())
+
+
+def heuristica_trafico(grafo: Grafo, meta: int, hora: int, cerradas: set[int] = frozenset()):
+    """h(n) = minutos estimados de la esquina n a la meta, según el tráfico de esa hora.
+
+        h(n) = distancia en línea recta (km) ÷ velocidad máxima posible con el tráfico × 60
+
+    Es ADMISIBLE (nunca sobreestima): ninguna ruta por calles es más corta que la línea recta,
+    y ningún tramo se recorre más rápido que la velocidad máxima posible a esa hora. Por eso
+    A* encuentra la misma ruta más rápida que costo uniforme. En hora pico la velocidad
+    máxima baja (las vías rápidas se saturan) y h(n) crece: la estimación toma en cuenta el
+    tráfico y A* se guía mejor."""
+    vmax = velocidad_maxima(grafo, hora, cerradas)
+    mlat, mlng = grafo.coords[meta]
+
+    def h(estado: int) -> float:
+        lat, lng = grafo.coords[estado]
+        return distancia_m(lat, lng, mlat, mlng) / 1000 / vmax * 60
+    return h, vmax
+
+
 def problema(grafo: Grafo, inicial: int, meta: int, hora: int, cerradas: set[int] = frozenset()) -> busqueda.Problema:
     def sucesores(estado: int):
         out = []
@@ -532,7 +563,8 @@ def problema(grafo: Grafo, inicial: int, meta: int, hora: int, cerradas: set[int
             if m is not None:                       # calle cerrada: el operador no aplica
                 out.append((t.b, t.id, m))
         return out
-    return busqueda.Problema(inicial, meta, sucesores, grafo.nombre_esquina)
+    h, _ = heuristica_trafico(grafo, meta, hora, cerradas)
+    return busqueda.Problema(inicial, meta, sucesores, grafo.nombre_esquina, heuristica=h)
 
 
 def _redondear(geom) -> list[list[float]]:
@@ -632,7 +664,8 @@ def describir_ruta(grafo: Grafo, aristas: list[int], hora: int) -> dict:
 
 def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
                   algoritmos: tuple[str, ...] = busqueda.ALGORITMOS) -> dict:
-    """Ruta real de `origen` a `destino` ({lat, lng}) con cada algoritmo de búsqueda ciega."""
+    """Ruta real de `origen` a `destino` ({lat, lng}) con cada algoritmo de búsqueda
+    (ciega y heurística)."""
     hora = hora_actual() if hora is None else hora
     puntos = [(origen["lat"], origen["lng"]), (destino["lat"], destino["lng"])]
     datos = calles_para_ruta(puntos)
@@ -645,7 +678,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
     resultados = []
     for alg in algoritmos:
         r = busqueda.buscar(problema(grafo, a, b, hora), alg)
-        salida = {k: r[k] for k in ("algoritmo", "nombre", "encontrado", "minutos", "num_tramos",
+        salida = {k: r[k] for k in ("algoritmo", "nombre", "heuristico", "encontrado", "minutos", "num_tramos",
                                     "expandidos", "generados", "frontera_max", "traza", "traza_completa")}
         if r["encontrado"]:
             salida.update(describir_ruta(grafo, r["aristas"], hora))
@@ -653,6 +686,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
         resultados.append(salida)
 
     encontrados = [r for r in resultados if r["encontrado"]]
+    h, vmax = heuristica_trafico(grafo, b, hora)
     return {
         "hora": hora,
         "periodo": periodo(hora),
@@ -660,6 +694,8 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
         "origen": {**origen, "esquina": grafo.nombre_esquina(a)},
         "destino": {**destino, "esquina": grafo.nombre_esquina(b)},
         "esquinas": len(grafo.coords),
+        # Para explicar h(n) en pantalla: con qué velocidad se estimó y cuánto vale en la salida.
+        "heuristica": {"velocidad_kmh": round(vmax, 1), "h_inicial": round(h(a), 1)},
         "resultados": resultados,
         # En empate gana costo uniforme, que es el que garantiza la ruta más rápida.
         "mas_rapido": min(encontrados, key=lambda r: (r["minutos"], r["algoritmo"] != "costo_uniforme"))["algoritmo"]

@@ -570,3 +570,4 @@ tbody tr:hover { background: #fcfcfd; }
 .despacho-grafica .mejor { stroke: var(--red-600); }
 .despacho-grafica .promedio { stroke: #9aa0a6; stroke-width: 1.5; }
 @media (max-width: 720px) { .despacho .rutas-barra .segmentado { width: 100%; } .despacho .rutas-barra .segmentado button { flex: 1; } }
+.rutas-algo .nombre i.tipo { font-style: normal; font-size: 10px; font-weight: 600; color: var(--c); border: 1px solid var(--c); padding: 0 6px; border-radius: 999px; }
