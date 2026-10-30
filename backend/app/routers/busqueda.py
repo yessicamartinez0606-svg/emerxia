@@ -18,8 +18,8 @@ Algoritmo = Literal["anchura", "profundidad", "costo_uniforme"]
 
 class ResolverIn(BaseModel):
     inicial: str = "BASE"
-    meta: str = "HS"
-    # Cambios al tráfico por defecto: {"c07": "libre", "c11": "bloqueado", ...}
+    meta: str = "IMSS"
+    # Cambios al tráfico por defecto: {"c16": "libre", "c05": "bloqueado", ...}
     trafico: dict[str, Literal["libre", "moderado", "denso", "bloqueado"]] = Field(default_factory=dict)
     algoritmos: list[Algoritmo] = Field(default_factory=lambda: list(busqueda.ALGORITMOS))
 

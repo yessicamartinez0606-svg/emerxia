@@ -33,7 +33,7 @@ from dataclasses import dataclass
 # ─────────────────────────── Tráfico ───────────────────────────
 
 VELOCIDAD_KMH = 40.0          # velocidad de la ambulancia con la calle libre
-PX_POR_KM = 137.5             # escala del mapa: 220 px ≈ 1.6 km
+PX_POR_KM = 300.0             # escala del esquema: 330 px ≈ 1.1 km
 
 # Cuánto más tarda una calle según su nivel de tráfico. None = no se puede pasar.
 NIVELES: dict[str, float | None] = {
@@ -53,15 +53,21 @@ NOMBRES_ALGORITMO = {
 
 
 # ─────────────────────────── Mapa ───────────────────────────
-# Mapa simplificado de una zona de la ciudad. x, y son coordenadas para dibujarlo.
+# Esquema simplificado de la zona del Hospital General Regional No. 220 del IMSS, en
+# Paseo Tollocan esquina Nezahualcóyotl, Col. Vértice, Toluca. Las calles son reales pero
+# el dibujo no está a escala: x, y son coordenadas para dibujar (oriente = derecha,
+# norte = arriba). Solo el hospital lleva coordenadas geográficas reales (lat, lng).
 
 @dataclass(frozen=True)
 class Nodo:
     id: str
     nombre: str
+    corto: str                # nombre breve para el mapa y las tablas
     x: int
     y: int
     tipo: str = "cruce"       # cruce | base | hospital
+    lat: float | None = None
+    lng: float | None = None
 
 
 @dataclass(frozen=True)
@@ -76,52 +82,45 @@ class Calle:
 
 
 NODOS: tuple[Nodo, ...] = (
-    Nodo("BASE", "Base de ambulancias Polanco", 80, 80, "base"),
-    Nodo("P1", "Ejército Nacional y Gandhi", 300, 80),
-    Nodo("P2", "Ejército Nacional y Mariano Escobedo", 520, 80),
-    Nodo("P3", "Ejército Nacional e Insurgentes", 740, 80),
-    Nodo("HN", "Hospital General Norte", 940, 80, "hospital"),
-    Nodo("R1", "Reforma y Periférico", 80, 300),
-    Nodo("R2", "Reforma y Gandhi", 300, 300),
-    Nodo("R3", "Reforma y Mariano Escobedo", 520, 300),
-    Nodo("R4", "Reforma e Insurgentes", 740, 300),
-    Nodo("R5", "Reforma y Bucareli", 940, 300),
-    Nodo("S1", "Constituyentes y Periférico", 80, 520),
-    Nodo("S2", "Av. Chapultepec y Gandhi", 300, 520),
-    Nodo("S3", "Av. Chapultepec y Mariano Escobedo", 520, 520),
-    Nodo("S4", "Av. Chapultepec e Insurgentes", 740, 520),
-    Nodo("HS", "Hospital General Centro", 940, 520, "hospital"),
+    # Av. Sebastián Lerdo de Tejada (norte)
+    Nodo("BASE", "Base de ambulancias (Lerdo e Isidro Fabela)", "Base de ambulancias", 140, 80, "base"),
+    Nodo("L2", "Lerdo y Pino Suárez", "Lerdo / Pino Suárez", 470, 80),
+    Nodo("L3", "Lerdo y Nezahualcóyotl", "Lerdo / Nezahualcóyotl", 800, 80),
+    # Av. Morelos
+    Nodo("M1", "Morelos e Isidro Fabela", "Morelos / Fabela", 140, 210),
+    Nodo("M2", "Morelos y Pino Suárez", "Morelos / Pino Suárez", 470, 210),
+    Nodo("M3", "Morelos y Nezahualcóyotl", "Morelos / Nezahualcóyotl", 800, 210),
+    # Paseo Tollocan
+    Nodo("T1", "Paseo Tollocan e Isidro Fabela", "Tollocan / Fabela", 140, 360),
+    Nodo("T2", "Paseo Tollocan y Pino Suárez", "Tollocan / Pino Suárez", 470, 360),
+    Nodo("IMSS", "Hospital General Regional No. 220 IMSS (Paseo Tollocan esq. Nezahualcóyotl)",
+         "Hospital IMSS 220", 800, 360, "hospital", 19.2828591, -99.6393513),
+    # Av. Solidaridad Las Torres (sur)
+    Nodo("S1", "Las Torres e Isidro Fabela", "Las Torres / Fabela", 140, 500),
+    Nodo("S2", "Las Torres y Pino Suárez", "Las Torres / Pino Suárez", 470, 500),
+    Nodo("S3", "Las Torres y Nezahualcóyotl", "Las Torres / Nezahualcóyotl", 800, 500),
 )
 
 CALLES: tuple[Calle, ...] = (
-    # Ejército Nacional (arriba)
-    Calle("c01", "BASE", "P1", "Ejército Nacional", "moderado"),
-    Calle("c02", "P1", "P2", "Ejército Nacional", "denso"),
-    Calle("c03", "P2", "P3", "Ejército Nacional", "moderado", "ida", "Un solo sentido hacia el oriente"),
-    Calle("c04", "P3", "HN", "Ejército Nacional", "libre"),
-    # Paseo de la Reforma (en medio)
-    Calle("c05", "R1", "R2", "Paseo de la Reforma", "libre"),
-    Calle("c06", "R2", "R3", "Paseo de la Reforma", "moderado"),
-    Calle("c07", "R3", "R4", "Paseo de la Reforma", "bloqueado", nota="Marcha sobre Reforma"),
-    Calle("c08", "R4", "R5", "Paseo de la Reforma", "denso"),
-    # Av. Chapultepec (abajo)
-    Calle("c09", "S1", "S2", "Constituyentes", "libre"),
-    Calle("c10", "S2", "S3", "Av. Chapultepec", "moderado"),
-    Calle("c11", "S3", "S4", "Av. Chapultepec", "libre"),
-    Calle("c12", "S4", "HS", "Av. Chapultepec", "moderado"),
-    # Calles verticales
-    Calle("c13", "BASE", "R1", "Periférico", "denso"),
-    Calle("c14", "R1", "S1", "Periférico", "denso"),
-    Calle("c15", "P1", "R2", "Gandhi", "libre"),
-    Calle("c16", "R2", "S2", "Gandhi", "libre"),
-    Calle("c17", "P2", "R3", "Mariano Escobedo", "moderado"),
-    Calle("c18", "R3", "S3", "Mariano Escobedo", "libre"),
-    Calle("c19", "P3", "R4", "Insurgentes", "denso"),
-    Calle("c20", "R4", "S4", "Insurgentes", "moderado"),
-    Calle("c21", "HN", "R5", "Bucareli", "libre"),
-    Calle("c22", "R5", "HS", "Bucareli", "moderado", "ida", "Un solo sentido hacia el sur"),
-    # Diagonal
-    Calle("c23", "R2", "S3", "Calzada Chivatito", "denso", nota="Obra: un solo carril abierto"),
+    # Calles de oriente a poniente
+    Calle("c01", "BASE", "L2", "Av. Lerdo", "moderado"),
+    Calle("c02", "L2", "L3", "Av. Lerdo", "moderado"),
+    Calle("c03", "M1", "M2", "Av. Morelos", "denso"),
+    Calle("c04", "M2", "M3", "Av. Morelos", "moderado"),
+    Calle("c05", "T1", "T2", "Paseo Tollocan", "denso"),
+    Calle("c06", "T2", "IMSS", "Paseo Tollocan", "denso"),
+    Calle("c07", "S1", "S2", "Av. Las Torres", "libre"),
+    Calle("c08", "S2", "S3", "Av. Las Torres", "libre"),
+    # Calles de norte a sur
+    Calle("c09", "BASE", "M1", "Av. Isidro Fabela", "moderado"),
+    Calle("c10", "M1", "T1", "Av. Isidro Fabela", "moderado"),
+    Calle("c11", "T1", "S1", "Av. Isidro Fabela", "libre"),
+    Calle("c12", "L2", "M2", "Av. Pino Suárez", "denso"),
+    Calle("c13", "M2", "T2", "Av. Pino Suárez", "denso"),
+    Calle("c14", "T2", "S2", "Av. Pino Suárez", "moderado"),
+    Calle("c15", "L3", "M3", "Nezahualcóyotl", "libre"),
+    Calle("c16", "M3", "IMSS", "Nezahualcóyotl", "bloqueado", nota="Cerrada por obra"),
+    Calle("c17", "IMSS", "S3", "Nezahualcóyotl", "libre"),
 )
 
 _NODO = {n.id: n for n in NODOS}
@@ -148,6 +147,7 @@ def mapa() -> dict:
         "calles": [{**vars(c), "distancia_km": distancia_km(c)} for c in CALLES],
         "niveles": {k: v for k, v in NIVELES.items()},
         "velocidad_kmh": VELOCIDAD_KMH,
+        "zona": "Toluca, Estado de México · alrededores del Hospital General Regional No. 220 del IMSS",
     }
 
 

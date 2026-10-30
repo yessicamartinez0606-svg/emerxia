@@ -2,7 +2,7 @@
 
 Uso (en la carpeta backend, con el entorno virtual activado):
     python probar_busqueda.py
-    python probar_busqueda.py BASE HN          # otro origen y destino
+    python probar_busqueda.py S1 IMSS          # otro origen y destino
 
 Imprime, para cada algoritmo, la ruta encontrada, los minutos estimados y cuántos estados
 expandió. Al final revisa unas reglas que siempre deben cumplirse.
@@ -25,7 +25,7 @@ def mostrar(r: dict) -> None:
 
 
 def main() -> int:
-    inicial, meta = (sys.argv[1], sys.argv[2]) if len(sys.argv) == 3 else ("BASE", "HS")
+    inicial, meta = (sys.argv[1], sys.argv[2]) if len(sys.argv) == 3 else ("BASE", "IMSS")
     nombres = {n.id: n.nombre for n in busqueda.NODOS}
     print(f"\nDe {nombres[inicial]} ({inicial}) a {nombres[meta]} ({meta}), tráfico por defecto")
     sol = busqueda.resolver(inicial, meta)
@@ -45,19 +45,19 @@ def main() -> int:
     revisar(all(r["encontrado"] for r in res.values()), "Los tres algoritmos encuentran ruta")
     revisar(a["num_calles"] <= min(p["num_calles"], u["num_calles"]), "Anchura usa la menor cantidad de calles")
     revisar(u["minutos"] <= min(a["minutos"], p["minutos"]), "Costo uniforme encuentra la ruta más rápida")
-    revisar(all("c07" not in r["calles"] for r in res.values()), "Ninguna ruta pasa por la calle bloqueada (Reforma)")
+    revisar(all("c16" not in r["calles"] for r in res.values()), "Ninguna ruta pasa por la calle cerrada (Nezahualcóyotl)")
 
-    # Sentido de las calles: R5 → HS es de un solo sentido, así que de HS no se puede subir a R5.
-    inverso = busqueda.EspacioEstados("HS", "BASE")
-    revisar("R5" not in [s for s, _, _ in inverso.sucesores("HS")], "Se respeta el sentido de Bucareli (solo hacia el sur)")
+    # Una calle cerrada no genera sucesor: de Morelos no se puede bajar al hospital por Nezahualcóyotl.
+    normal = busqueda.EspacioEstados("M3", "IMSS")
+    revisar("IMSS" not in [s for s, _, _ in normal.sucesores("M3")], "La calle cerrada no es un operador válido")
 
-    # Si se bloquean todas las calles que llegan al hospital, no debe haber ruta.
-    aislado = busqueda.resolver("BASE", "HS", {"c12": "bloqueado", "c22": "bloqueado"})
+    # Si se cierran todas las calles que llegan al hospital, no debe haber ruta.
+    aislado = busqueda.resolver("BASE", "IMSS", {"c06": "bloqueado", "c17": "bloqueado"})
     revisar(not any(r["encontrado"] for r in aislado["resultados"]), "Sin calles abiertas al destino, no hay ruta")
 
-    # Si se libera la marcha, Reforma vuelve a ser un operador válido.
-    libre = busqueda.EspacioEstados("R3", "R4", {"c07": "libre"})
-    revisar("R4" in [s for s, _, _ in libre.sucesores("R3")], "Al liberar Reforma, se puede avanzar de R3 a R4")
+    # Si se reabre Nezahualcóyotl, vuelve a ser un operador válido.
+    libre = busqueda.EspacioEstados("M3", "IMSS", {"c16": "libre"})
+    revisar("IMSS" in [s for s, _, _ in libre.sucesores("M3")], "Al reabrir Nezahualcóyotl, se puede avanzar de Morelos al hospital")
 
     print("\nTodo bien.\n" if not fallas else f"\n{fallas} regla(s) fallaron.\n")
     return 1 if fallas else 0
