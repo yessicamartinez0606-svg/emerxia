@@ -1,36 +1,71 @@
-"""Prueba la búsqueda ciega de rutas con tráfico (sin abrir el sitio web ni MongoDB).
+"""Prueba la búsqueda ciega de la ruta de la ambulancia.
 
 Uso (en la carpeta backend, con el entorno virtual activado):
-    python probar_busqueda.py
-    python probar_busqueda.py S1 IMSS          # otro origen y destino
+    python probar_busqueda.py              # sin internet: calles de ejemplo
+    python probar_busqueda.py --en-vivo    # calles reales de Toluca (necesita internet)
+    python probar_busqueda.py --en-vivo "Av. Independencia 100, Centro"
 
-Imprime, para cada algoritmo, la ruta encontrada, los minutos estimados y cuántos estados
-expandió. Al final revisa unas reglas que siempre deben cumplirse.
+Sin --en-vivo se usa una cuadrícula de calles de ejemplo con el mismo formato que devuelve
+OpenStreetMap, y se revisan unas reglas que siempre deben cumplirse. Con --en-vivo se
+descargan las calles reales y se calcula la ruta del Hospital IMSS 220 a una dirección.
 """
 import sys
 
-from app import busqueda
+from app import busqueda, red_vial
 
 OK, BAD = "  [OK]  ", "  [X]   "
 
 
-def mostrar(r: dict) -> None:
-    print(f"\n{r['nombre']}")
-    if not r["encontrado"]:
-        print("    No hay ruta: el destino quedó aislado por el tráfico.")
-        return
-    print("    Ruta:      " + " → ".join(r["ruta"]))
-    print(f"    Calles:    {r['num_calles']}   Distancia: {r['distancia_km']} km   Tiempo: {r['minutos']} min")
-    print(f"    Expandidos: {r['expandidos']}   Generados: {r['generados']}   Frontera máx.: {r['frontera_max']}")
+def calles_de_ejemplo():
+    """Cuadrícula de 6 x 5 esquinas alrededor del IMSS 220, en formato de Overpass.
+
+    - La fila 2 es Paseo Tollocan (vía rápida, con mucho tráfico en hora pico).
+    - La columna 3 es de un solo sentido hacia el norte.
+    - Entre esquinas hay nodos intermedios que solo dan forma a la calle.
+    """
+    lat0, lng0, paso = 19.2770, -99.6480, 0.0030
+    elementos, nid = [], 1
+    pos = {}
+
+    def nodo(lat, lng):
+        nonlocal nid
+        elementos.append({"type": "node", "id": nid, "lat": lat, "lon": lng})
+        pos[nid] = (lat, lng)
+        nid += 1
+        return nid - 1
+
+    esquina = {(f, c): nodo(lat0 + f * paso, lng0 + c * paso) for f in range(5) for c in range(6)}
+    wid = 1000
+
+    def via(ids, **tags):
+        nonlocal wid
+        elementos.append({"type": "way", "id": wid, "nodes": ids, "tags": tags})
+        wid += 1
+
+    def con_intermedios(seq):
+        out = [seq[0]]
+        for a, b in zip(seq, seq[1:]):
+            (la, lo), (lb, lob) = pos[a], pos[b]
+            out += [nodo((la + lb) / 2, (lo + lob) / 2), b]
+        return out
+
+    for f in range(5):
+        tags = {"highway": "trunk", "name": "Paseo Tollocan"} if f == 2 else {"highway": "residential", "name": f"Calle Oriente {f}"}
+        via(con_intermedios([esquina[(f, c)] for c in range(6)]), **tags)
+    for c in range(6):
+        tags = {"highway": "secondary", "name": f"Av. Norte {c}"}
+        if c == 3:
+            tags["oneway"] = "yes"                     # de sur (fila 0) a norte (fila 4)
+        via(con_intermedios([esquina[(f, c)] for f in range(5)]), **tags)
+    # Pasillo de estacionamiento: no se debe usar.
+    p = nodo(lat0 + 2.5 * paso, lng0 + 2.5 * paso)
+    via([esquina[(2, 2)], p, esquina[(3, 3)]], highway="service", service="parking_aisle")
+    return {"elements": elementos}, esquina, pos
 
 
 def main() -> int:
-    inicial, meta = (sys.argv[1], sys.argv[2]) if len(sys.argv) == 3 else ("BASE", "IMSS")
-    nombres = {n.id: n.nombre for n in busqueda.NODOS}
-    print(f"\nDe {nombres[inicial]} ({inicial}) a {nombres[meta]} ({meta}), tráfico por defecto")
-    sol = busqueda.resolver(inicial, meta)
-    for r in sol["resultados"]:
-        mostrar(r)
+    if "--en-vivo" in sys.argv:
+        return en_vivo()
 
     fallas = 0
 
@@ -39,28 +74,69 @@ def main() -> int:
         print((OK if cond else BAD) + texto)
         fallas += 0 if cond else 1
 
-    print("\nReglas:")
-    res = {r["algoritmo"]: r for r in sol["resultados"]}
-    a, p, u = res["anchura"], res["profundidad"], res["costo_uniforme"]
-    revisar(all(r["encontrado"] for r in res.values()), "Los tres algoritmos encuentran ruta")
-    revisar(a["num_calles"] <= min(p["num_calles"], u["num_calles"]), "Anchura usa la menor cantidad de calles")
-    revisar(u["minutos"] <= min(a["minutos"], p["minutos"]), "Costo uniforme encuentra la ruta más rápida")
-    revisar(all("c16" not in r["calles"] for r in res.values()), "Ninguna ruta pasa por la calle cerrada (Nezahualcóyotl)")
+    datos, esquina, pos = calles_de_ejemplo()
+    red_vial.overpass = lambda consulta: datos           # sin internet
+    grafo = red_vial.construir_grafo(datos)
 
-    # Una calle cerrada no genera sucesor: de Morelos no se puede bajar al hospital por Nezahualcóyotl.
-    normal = busqueda.EspacioEstados("M3", "IMSS")
-    revisar("IMSS" not in [s for s, _, _ in normal.sucesores("M3")], "La calle cerrada no es un operador válido")
+    print("\nGrafo de esquinas")
+    revisar(len(grafo.coords) == 30, f"30 esquinas (hay {len(grafo.coords)}); los nodos intermedios no son estados")
+    revisar(grafo.nombre_esquina(esquina[(2, 3)]) == "Av. Norte 3 y Paseo Tollocan", "Cada esquina se nombra con sus calles")
+    sube = {t.b for t in grafo.salidas[esquina[(1, 3)]]}
+    revisar(esquina[(2, 3)] in sube and esquina[(0, 3)] not in sube, "Av. Norte 3 solo se recorre hacia el norte")
+    revisar(all(t.highway != "service" for t in grafo.tramos), "El estacionamiento no forma parte de la red")
 
-    # Si se cierran todas las calles que llegan al hospital, no debe haber ruta.
-    aislado = busqueda.resolver("BASE", "IMSS", {"c06": "bloqueado", "c17": "bloqueado"})
-    revisar(not any(r["encontrado"] for r in aislado["resultados"]), "Sin calles abiertas al destino, no hay ruta")
+    o, d = pos[esquina[(0, 0)]], pos[esquina[(2, 5)]]
+    origen, destino = {"lat": o[0], "lng": o[1]}, {"lat": d[0], "lng": d[1]}
 
-    # Si se reabre Nezahualcóyotl, vuelve a ser un operador válido.
-    libre = busqueda.EspacioEstados("M3", "IMSS", {"c16": "libre"})
-    revisar("IMSS" in [s for s, _, _ in libre.sucesores("M3")], "Al reabrir Nezahualcóyotl, se puede avanzar de Morelos al hospital")
+    rutas = {}
+    for hora, etiqueta in ((8, "hora pico"), (23, "noche")):
+        sol = red_vial.calcular_ruta(origen, destino, hora)
+        res = {r["algoritmo"]: r for r in sol["resultados"]}
+        a, p, u = res["anchura"], res["profundidad"], res["costo_uniforme"]
+        print(f"\nDe la esquina 0,0 a la 2,5 en {etiqueta} ({sol['periodo_nombre']})")
+        for r in sol["resultados"]:
+            print(f"    {r['nombre']:<24} {r['minutos']:>5} min  {r['km']:>5} km  {r['num_tramos']:>2} tramos  {r['expandidos']:>3} esquinas revisadas")
+        revisar(all(r["encontrado"] for r in res.values()), "Los tres algoritmos encuentran ruta")
+        revisar(a["num_tramos"] <= min(p["num_tramos"], u["num_tramos"]), "Anchura usa la menor cantidad de tramos")
+        revisar(u["minutos"] <= min(a["minutos"], p["minutos"]) + 1e-9, "Costo uniforme encuentra la ruta más rápida")
+        revisar(u["coords"][0] == [round(o[0], 6), round(o[1], 6)], "La ruta empieza en el punto de salida")
+        rutas[hora] = u
+    revisar(rutas[23]["minutos"] < rutas[8]["minutos"], "De noche la ruta tarda menos que en hora pico")
+    print("\n    Indicaciones (costo uniforme, hora pico):")
+    for i, ind in enumerate(rutas[8]["indicaciones"], 1):
+        print(f"      {i}. {ind['texto']} · {ind['km']} km · {ind['minutos']} min")
+    revisar(rutas[8]["indicaciones"][0]["texto"].startswith("Sal por"), "Las indicaciones empiezan con «Sal por…»")
+
+    # Calles cerradas: si se cierran todas las que llegan al destino, no hay ruta.
+    meta = esquina[(2, 5)]
+    llegan = {t.way_id for t in grafo.tramos if t.b == meta}
+    prob = red_vial.problema(grafo, esquina[(0, 0)], meta, 12, cerradas=llegan)
+    revisar(not busqueda.buscar(prob, "costo_uniforme")["encontrado"], "Con las calles de llegada cerradas, no hay ruta")
 
     print("\nTodo bien.\n" if not fallas else f"\n{fallas} regla(s) fallaron.\n")
     return 1 if fallas else 0
+
+
+def en_vivo() -> int:
+    args = [a for a in sys.argv[1:] if a != "--en-vivo"]
+    direccion = args[0] if args else "Av. Independencia, Centro, Toluca"
+    print(f"\nBuscando «{direccion}»…")
+    lugar = red_vial.geocodificar(direccion)
+    print(f"  {lugar['texto']}  ({lugar['lat']:.5f}, {lugar['lng']:.5f})")
+    print("Descargando calles de OpenStreetMap (la primera vez tarda unos segundos)…")
+    h = red_vial.HOSPITAL
+    sol = red_vial.calcular_ruta({"lat": h["lat"], "lng": h["lng"]}, lugar)
+    print(f"\nDel {h['corto']} a la emergencia · {sol['periodo_nombre']} ({sol['hora']} h) · {sol['esquinas']} esquinas en el mapa")
+    for r in sol["resultados"]:
+        if r["encontrado"]:
+            print(f"  {r['nombre']:<24} {r['minutos']:>5} min  {r['km']:>5} km  {r['expandidos']:>5} esquinas revisadas")
+        else:
+            print(f"  {r['nombre']:<24} sin ruta")
+    mejor = next(r for r in sol["resultados"] if r["algoritmo"] == sol["mas_rapido"])
+    print("\nIndicaciones:")
+    for i, ind in enumerate(mejor["indicaciones"], 1):
+        print(f"  {i}. {ind['texto']} · {ind['km']} km · {ind['minutos']} min")
+    return 0
 
 
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ScanFace, ShieldCheck } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { slug } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
+import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
 
 // Ventana del operador: a la que se llega solos justo después de registrar una
 // emergencia (ver `afterSave` del módulo Emergencias en lib/modules.js). Aquí el
@@ -185,6 +186,8 @@ export default function OperatorValidationPage() {
           )}
         </div>
       </div>
+
+      <RutaAmbulancia emergencia={emergency} />
 
       <FaceCapture
         open={faceOpen}

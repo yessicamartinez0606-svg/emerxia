@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight, CalendarClock, ScanFace } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
+import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
 
 // Campo que se usa como título principal del perfil, por módulo.
 const TITLE_KEY = { doctores: 'nombre', ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
@@ -156,6 +157,8 @@ function DetailView({ mod, id }) {
           </dl>
         </div>
       </div>
+
+      {mod.key === 'emergencias' && <RutaAmbulancia emergencia={item} />}
 
       <div className={`profile-sections ${groups.length === 1 ? 'single' : ''}`}>
         {groups.map((g) => (

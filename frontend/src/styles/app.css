@@ -379,113 +379,129 @@ tbody tr:hover { background: #fcfcfd; }
 .validation-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; }
 .validation-actions .btn-ghost { text-decoration: none; }
 
-/* ───────── Rutas y tráfico: búsqueda ciega ───────── */
-.rutas {
-  --t-libre: #2e9d5a;
-  --t-moderado: #e3a114;
-  --t-denso: #d9502a;
-  --t-bloqueado: #45454f;
-  --ruta: #1d5fd6;
-  --frontera: #1d5fd6;
-  --mapa-bg: #e9ecf0;
-  --manzana: #f6f7f9;
+/* ───────── Mapa real (components/MapaToluca.jsx) ───────── */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.mapa {
+  position: relative; overflow: hidden; border-radius: 10px; background: #e9eef1;
+  touch-action: none; user-select: none; cursor: grab; isolation: isolate;
+  box-shadow: inset 0 0 0 1px rgba(23, 23, 28, .06);
 }
-.rutas-head-icon { color: var(--red-600); flex: none; }
+.mapa:active { cursor: grabbing; }
+.mapa.clicable { cursor: crosshair; }
+.mapa.clicable:active { cursor: grabbing; }
+.mapa-teselas img { position: absolute; width: 256px; height: 256px; max-width: none; pointer-events: none; }
+.mapa-lineas { position: absolute; inset: 0; pointer-events: none; }
+.mapa-lineas path { fill: none; stroke-linecap: round; stroke-linejoin: round; }
+.mapa-lineas path.borde { stroke: #fff; stroke-opacity: .95; }
+.mapa-pin { position: absolute; transform: translate(-50%, -50%); z-index: 2; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+.pin-icono { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(23, 23, 28, .35); }
+.pin-hospital .pin-icono { background: #fff; border: 3px solid var(--red-600); }
+.pin-hospital .pin-icono::before { content: ""; width: 14px; height: 14px; background: var(--red-600); clip-path: polygon(35% 0, 65% 0, 65% 35%, 100% 35%, 100% 65%, 65% 65%, 65% 100%, 35% 100%, 35% 65%, 0 65%, 0 35%, 35% 35%); }
+.pin-emergencia .pin-icono { width: 22px; height: 22px; background: var(--red-600); border: 3px solid #fff; position: relative; }
+.pin-emergencia .pin-icono::after { content: ""; position: absolute; inset: -9px; border-radius: 50%; border: 2px solid var(--red-600); animation: pin-pulso 1.8s ease-out infinite; }
+@keyframes pin-pulso { from { transform: scale(.6); opacity: .9; } to { transform: scale(1.6); opacity: 0; } }
+.pin-punto .pin-icono { width: 16px; height: 16px; background: #1d5fd6; border: 3px solid #fff; }
+.pin-etiqueta {
+  position: absolute; top: calc(100% + 4px); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+  background: #fff; color: var(--ink); font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 999px;
+  box-shadow: 0 1px 4px rgba(23, 23, 28, .25);
+}
+.mapa-controles { position: absolute; right: 10px; top: 10px; z-index: 3; display: flex; flex-direction: column; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(23, 23, 28, .25); overflow: hidden; }
+.mapa-controles button { width: 34px; height: 34px; border: 0; background: #fff; color: var(--ink); display: grid; place-items: center; }
+.mapa-controles button + button { border-top: 1px solid var(--line); }
+.mapa-controles button:hover { background: var(--field); }
+.mapa-credito { position: absolute; right: 0; bottom: 0; z-index: 3; font-size: 10px; color: #555; background: rgba(255, 255, 255, .8); padding: 2px 6px; border-top-left-radius: 6px; }
+.mapa-credito a { color: inherit; }
 
-/* Planear: salida, destino y tráfico */
-.rutas-plan { display: flex; flex-direction: column; gap: 16px; }
-.rutas-puntos { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: end; }
-.rutas-swap { height: 42px; width: 42px; }
-.rutas-swap svg { transform: rotate(90deg); }
-@media (max-width: 720px) {
-  .rutas-puntos { grid-template-columns: 1fr; }
-  .rutas-swap { justify-self: start; }
-  .rutas-swap svg { transform: none; }
-}
-.rutas-trafico { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; }
-.rutas-trafico-label { font-size: 12px; font-weight: 600; }
-.rutas-tip { font-size: 12px; flex-basis: 100%; }
-@media (min-width: 900px) { .rutas-tip { flex-basis: auto; margin-left: auto; } }
+.ruta-leyenda { list-style: none; margin: 10px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12px; color: var(--muted); }
+.ruta-leyenda li { display: inline-flex; align-items: center; gap: 6px; }
+.ruta-leyenda span { width: 20px; height: 5px; border-radius: 3px; display: inline-block; }
+.ruta-leyenda span.punteada { background: repeating-linear-gradient(90deg, #1d5fd6 0 3px, transparent 3px 7px); }
+
 .segmentado { display: inline-flex; flex-wrap: wrap; background: var(--field); border-radius: 9px; padding: 3px; gap: 2px; }
-.segmentado button { border: 0; background: none; border-radius: 7px; padding: 7px 14px; font-weight: 600; color: var(--muted); }
+.segmentado button { border: 0; background: none; border-radius: 7px; padding: 7px 12px; font-weight: 600; font-size: 13px; color: var(--muted); }
 .segmentado button:hover { color: var(--ink); }
 .segmentado button.on { background: var(--card); color: var(--red-700); box-shadow: 0 1px 3px rgba(23, 23, 28, .12); }
 
-/* Mapa + resultado */
-.rutas-grid { display: grid; grid-template-columns: minmax(0, 1.75fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.ruta-pasos { list-style: none; margin: 14px 0 0; padding: 0; display: grid; }
+.ruta-pasos li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding-bottom: 12px; position: relative; }
+.ruta-pasos li:not(:last-child)::before { content: ""; position: absolute; left: 12px; top: 26px; bottom: 2px; width: 2px; background: #dbe3f2; }
+.ruta-pasos .num { width: 26px; height: 26px; border-radius: 50%; background: #1d5fd6; color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
+.ruta-pasos .llegada .num { background: var(--red-600); }
+.ruta-pasos .llegada { padding-bottom: 0; align-items: center; }
+.ruta-pasos strong { display: block; font-size: 13.5px; line-height: 1.35; }
+.ruta-pasos span { font-size: 12px; color: var(--muted); }
+.ruta-pasos em { font-style: normal; font-weight: 600; }
+
+/* ───────── Ruta de la ambulancia en la emergencia ───────── */
+.ruta-amb { display: flex; flex-direction: column; gap: 14px; }
+.ruta-amb-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.ruta-amb-head .form-section-title { margin-bottom: 2px; }
+.ruta-amb-head .muted { font-size: 12.5px; }
+.ruta-hora { display: inline-flex; align-items: center; gap: 6px; padding: 0 10px; height: 34px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); }
+.ruta-hora select { border: 0; background: none; font: inherit; font-weight: 600; color: var(--ink); cursor: pointer; }
+.ruta-amb-grid { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(280px, 1fr); gap: 20px; align-items: start; transition: opacity .2s; }
+.ruta-amb-grid.recalculando { opacity: .6; }
+.ruta-amb-grid > * { min-width: 0; }
+@media (max-width: 1000px) { .ruta-amb-grid { grid-template-columns: 1fr; } }
+.ruta-lugar { display: flex; gap: 10px; color: var(--red-600); padding: 10px 12px; border-radius: 10px; background: var(--red-50); }
+.ruta-lugar svg { flex: none; margin-top: 2px; }
+.ruta-lugar div { min-width: 0; }
+.ruta-lugar strong { display: block; color: var(--ink); font-size: 13.5px; }
+.ruta-lugar span { display: block; color: var(--muted); font-size: 11.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ruta-tabs { margin-top: 14px; display: flex; }
+.ruta-tabs button { flex: 1; }
+.ruta-eta { display: flex; align-items: center; gap: 12px; margin-top: 16px; color: #1d5fd6; }
+.ruta-eta b { display: block; font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
+.ruta-eta span { color: var(--muted); font-size: 12.5px; }
+.ruta-cargando { display: flex; align-items: center; gap: 14px; padding: 18px; border-radius: 10px; background: var(--field); }
+.ruta-cargando strong { display: block; }
+.ruta-cargando span { font-size: 12.5px; color: var(--muted); }
+.ruta-pulso { width: 14px; height: 14px; border-radius: 50%; background: var(--red-600); flex: none; animation: pin-pulso-solido 1.2s ease-in-out infinite alternate; }
+@keyframes pin-pulso-solido { from { opacity: .35; transform: scale(.8); } to { opacity: 1; transform: scale(1.1); } }
+.ruta-error { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; color: var(--red-700); background: var(--red-50); border: 1px solid var(--red-100); border-radius: 8px; padding: 10px 12px; font-size: 13px; }
+.ruta-comparacion { margin-top: 16px; border-top: 1px solid var(--line); padding-top: 12px; font-size: 12.5px; }
+.ruta-comparacion summary { cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 6px; list-style: none; color: var(--ink); }
+.ruta-comparacion summary::-webkit-details-marker { display: none; }
+.ruta-comparacion[open] summary svg { transform: rotate(180deg); }
+.ruta-comparacion p { color: var(--muted); margin: 8px 0; line-height: 1.5; }
+.ruta-comparacion table { font-size: 12.5px; }
+.ruta-comparacion th, .ruta-comparacion td { padding: 7px 10px; }
+.ruta-comparacion tr.sel { background: #e8f0fd; font-weight: 600; }
+.ruta-link { display: inline-block; margin-top: 10px; color: #1d5fd6; font-weight: 600; text-decoration: none; }
+.ruta-link:hover { text-decoration: underline; }
+
+/* ───────── Pantalla Rutas y tráfico ───────── */
+.rutas-head-icon { color: var(--red-600); flex: none; }
+.rutas-barra { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; }
+.rutas-buscar { flex: 1 1 380px; display: flex; align-items: center; gap: 8px; height: 42px; padding: 0 4px 0 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--field); color: var(--muted); }
+.rutas-buscar:focus-within { border-color: var(--red-500); background: #fff; box-shadow: 0 0 0 3px rgba(200, 32, 47, .12); }
+.rutas-buscar input { flex: 1; min-width: 0; border: 0; background: none; font: inherit; color: var(--ink); height: 100%; outline: none; }
+.rutas-buscar .btn-primary.compact { height: 34px; box-shadow: none; }
+.rutas-grid { display: grid; grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
 .rutas-grid > * { min-width: 0; }
 @media (max-width: 1100px) { .rutas-grid { grid-template-columns: 1fr; } }
-.rutas-mapa-wrap { overflow-x: auto; }
-.rutas-mapa { display: block; width: 100%; min-width: 560px; height: auto; user-select: none; }
 .rutas-nota { font-size: 11px; color: var(--muted); margin-top: 6px; }
+.rutas-ayuda { line-height: 1.5; margin-bottom: 14px; }
+.rutas-h3 { font-size: 13px; font-weight: 700; margin: 6px 0 8px; }
+.rutas-despejadas { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.rutas-despejadas li { display: flex; align-items: center; gap: 8px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13px; font-weight: 500; }
+.rutas-despejadas li:last-child { border-bottom: 0; }
+.rutas-despejadas small { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dot-libre { width: 9px; height: 9px; border-radius: 50%; background: #2e9d5a; flex: none; }
+.rutas-resultado-head { display: flex; align-items: center; justify-content: space-between; }
+.rutas-eyebrow { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #1d5fd6; }
+.rutas-destino { font-size: 16px; font-weight: 700; margin: 4px 0 14px; }
+.rutas-algos { display: grid; gap: 8px; }
+.rutas-algo { --c: #1d5fd6; display: grid; grid-template-columns: 1fr auto; align-items: baseline; gap: 2px 10px; text-align: left; border: 1px solid var(--line); border-left: 4px solid var(--c); border-radius: 10px; background: #fff; padding: 10px 12px; }
+.rutas-algo:hover { border-color: var(--c); }
+.rutas-algo.on { background: color-mix(in srgb, var(--c) 8%, #fff); border-color: var(--c); }
+.rutas-algo .nombre { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.rutas-algo .nombre em { font-style: normal; font-size: 10.5px; font-weight: 700; color: #1a7a41; background: #e5f6ec; padding: 1px 7px; border-radius: 999px; }
+.rutas-algo b { font-size: 17px; font-variant-numeric: tabular-nums; }
+.rutas-algo small { grid-column: 1 / -1; color: var(--muted); font-size: 11.5px; }
+.rutas-check { display: flex; align-items: center; gap: 8px; margin-top: 10px; font-size: 12.5px; color: var(--muted); cursor: pointer; }
 
-.rutas-mapa .fondo { fill: var(--mapa-bg); }
-.rutas-mapa .manzana { fill: var(--manzana); }
-.calle { cursor: pointer; outline: none; }
-.calle .hit { stroke: transparent; stroke-width: 34; }
-.calle .casing { stroke: #fff; stroke-width: 20; stroke-linecap: round; }
-.calle .via { stroke-width: 9; stroke-linecap: round; transition: stroke .2s, stroke-width .15s; }
-.calle.t-libre .via { stroke: var(--t-libre); }
-.calle.t-moderado .via { stroke: var(--t-moderado); }
-.calle.t-denso .via { stroke: var(--t-denso); }
-.calle.t-bloqueado .via { stroke: var(--t-bloqueado); stroke-dasharray: 2 12; }
-.calle:hover .via, .calle:focus-visible .via { stroke-width: 13; }
-.calle:focus-visible .casing { stroke: #ffd9dd; }
-.calle .sentido { stroke: transparent; stroke-width: 2; }
-.flecha { fill: #fff; }
-.rutas-mapa .ruta { stroke: var(--ruta); stroke-width: 7; stroke-linecap: round; pointer-events: none; opacity: .95; }
-.bloqueo circle { fill: var(--red-700); stroke: #fff; stroke-width: 3; }
-.bloqueo path { stroke: #fff; stroke-width: 3; stroke-linecap: round; }
-.bloqueo text { font-size: 12px; font-weight: 700; fill: var(--red-700); paint-order: stroke; stroke: #fff; stroke-width: 4px; }
-.nombre-calle { font-size: 13px; font-weight: 600; fill: #5a606b; paint-order: stroke; stroke: var(--mapa-bg); stroke-width: 5px; pointer-events: none; }
-.nombre-calle.principal { font-size: 14px; font-weight: 700; fill: #3b404a; }
-
-.nodo .halo { fill: transparent; stroke: transparent; stroke-width: 4; }
-.nodo .punto { fill: #fff; stroke: #8a909b; stroke-width: 2.5; }
-.nodo.n-base .punto { fill: var(--red-600); stroke: #fff; stroke-width: 3; }
-.nodo .amb path, .nodo .amb circle { fill: #fff; }
-.nodo.n-hospital .punto { fill: #fff; stroke: var(--red-600); stroke-width: 3; }
-.nodo .cruz { fill: var(--red-600); }
-.nodo.marcado .halo { fill: rgba(29, 95, 214, .14); stroke: var(--ruta); stroke-width: 2.5; }
-.nodo.marcado.n-cruce .punto { fill: var(--ruta); stroke: #fff; }
-.nodo.expandido .punto { fill: #c9ced8; }
-.nodo.frontera .halo { stroke: var(--frontera); stroke-width: 3; stroke-dasharray: 4 3; fill: transparent; }
-.nodo.actual .halo { stroke: var(--red-600); stroke-width: 5; stroke-dasharray: none; fill: rgba(200, 32, 47, .12); }
-.etiqueta .nombre { font-size: 14px; font-weight: 700; fill: var(--ink); paint-order: stroke; stroke: #fff; stroke-width: 5px; }
-.etiqueta .rol { font-size: 11px; font-weight: 800; letter-spacing: .08em; fill: var(--ruta); paint-order: stroke; stroke: #fff; stroke-width: 4px; }
-
-.rutas-leyenda { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12.5px; color: var(--ink); }
-.rutas-leyenda li { display: inline-flex; align-items: center; gap: 7px; }
-.swatch { width: 22px; height: 7px; border-radius: 4px; display: inline-block; }
-.swatch.t-libre { background: var(--t-libre); }
-.swatch.t-moderado { background: var(--t-moderado); }
-.swatch.t-denso { background: var(--t-denso); }
-.swatch.t-bloqueado { background: repeating-linear-gradient(90deg, var(--t-bloqueado) 0 3px, transparent 3px 7px); }
-.swatch.ruta { background: var(--ruta); }
-
-.rutas-resultado { position: sticky; top: 16px; }
-.rutas-eyebrow { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--ruta); margin-bottom: 8px; }
-.rutas-eta { display: flex; align-items: center; gap: 12px; color: var(--ruta); }
-.rutas-eta b { display: block; font-size: 30px; line-height: 1.1; font-weight: 800; letter-spacing: -.02em; color: var(--ink); font-variant-numeric: tabular-nums; }
-.rutas-eta span { color: var(--muted); font-size: 13px; }
-.rutas-ahorro { margin: 14px 0 0; padding: 9px 12px; border-radius: 8px; background: #e5f6ec; color: #1a6a3b; font-size: 12.5px; line-height: 1.45; }
-.rutas-ahorro.warn { background: #fff2dc; color: #8a5408; }
-.link { border: 0; background: none; padding: 0; color: inherit; font-weight: 700; text-decoration: underline; }
-.rutas-indicaciones { list-style: none; margin: 18px 0 0; padding: 0; display: grid; gap: 0; }
-.rutas-indicaciones li { display: grid; grid-template-columns: 26px 1fr; gap: 10px; padding-bottom: 14px; position: relative; }
-.rutas-indicaciones li:not(:last-child)::before { content: ""; position: absolute; left: 12px; top: 26px; bottom: 2px; width: 2px; background: #d4def3; }
-.rutas-indicaciones .num { width: 26px; height: 26px; border-radius: 50%; background: var(--ruta); color: #fff; font-size: 12px; font-weight: 700; display: grid; place-items: center; }
-.rutas-indicaciones .llegada .num { background: var(--red-600); }
-.rutas-indicaciones strong { display: block; font-size: 13.5px; line-height: 1.35; }
-.rutas-indicaciones span { font-size: 12px; color: var(--muted); }
-.rutas-indicaciones .llegada { padding-bottom: 0; align-items: center; }
-.t-denso-txt { color: var(--t-denso); font-style: normal; font-weight: 600; }
-.rutas-maps { display: inline-flex; align-items: center; gap: 6px; margin-top: 16px; font-size: 12.5px; font-weight: 600; color: var(--ruta); text-decoration: none; }
-.rutas-maps:hover { text-decoration: underline; }
-.rutas-sinruta strong { display: block; font-size: 16px; color: var(--red-700); margin-bottom: 6px; }
-.rutas-sinruta p { color: var(--muted); line-height: 1.5; }
-
-/* ¿Cómo se calculó? */
 .rutas-detalle { padding: 0; }
 .rutas-detalle summary { list-style: none; cursor: pointer; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 20px; }
 .rutas-detalle summary::-webkit-details-marker { display: none; }
@@ -493,18 +509,12 @@ tbody tr:hover { background: #fcfcfd; }
 .rutas-detalle summary span { font-size: 12.5px; color: var(--muted); }
 .rutas-detalle .chev { color: var(--muted); transition: transform .2s; flex: none; }
 .rutas-detalle[open] .chev { transform: rotate(180deg); }
-.rutas-detalle-body { padding: 0 20px 20px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); padding-top: 16px; }
-.rutas-h3 { font-size: 13.5px; font-weight: 700; margin: 10px 0 0; }
+.rutas-detalle-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; border-top: 1px solid var(--line); }
 .rutas-kv { grid-template-columns: 120px 1fr; font-size: 13px; }
 .rutas-paso-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .rutas-paso-head .rutas-h3 { margin: 0; }
-.rutas-slider { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-variant-numeric: tabular-nums; }
-.rutas-slider label { font-weight: 600; white-space: nowrap; }
-.rutas-slider input { flex: 1; min-width: 160px; accent-color: var(--red-600); }
-.rutas-narra { margin: 0; padding: 10px 12px; border-radius: 8px; background: var(--field); line-height: 1.5; font-size: 13px; }
 .rutas-tabla { margin: 0 -20px; border-top: 1px solid var(--line); }
 .rutas-tabla td, .rutas-tabla th { padding: 9px 14px; font-variant-numeric: tabular-nums; }
-.rutas-tabla td.wrap { white-space: normal; min-width: 180px; }
+.rutas-tabla td.wrap { white-space: normal; min-width: 160px; }
 .rutas-tabla td .badge { margin-left: 8px; }
-.rutas-tabla tbody tr { cursor: pointer; }
 .rutas-tabla tbody tr.sel { background: var(--red-50); }
