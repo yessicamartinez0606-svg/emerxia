@@ -13,6 +13,11 @@ import {
 // recorre al ritmo de su tráfico, así se ve cuánto falta y a qué hora llega.
 
 const VELOCIDADES = [1, 10, 30, 60]
+// OpenStreetMap casi nunca tiene números de casa en México: se avisa cuando el punto es aproximado.
+const PRECISION = {
+  calle: 'Ubicación aproximada: se encontró la calle, pero no el número exacto.',
+  colonia: 'Ubicación aproximada: se encontró la colonia o barrio, pero no la calle.',
+}
 const fmtReloj = (d) => new Intl.DateTimeFormat('es-MX', { hour: 'numeric', minute: '2-digit', hour12: true }).format(d)
 const SVG_AMBULANCIA = (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
@@ -162,6 +167,7 @@ export default function RutaAmbulancia({ emergencia }) {
               <div>
                 <strong>{datos.emergencia.direccion}</strong>
                 <span title={lugar.texto}>{lugar.texto}</span>
+                {PRECISION[lugar.precision] && <em className="ruta-lugar-aviso">{PRECISION[lugar.precision]}</em>}
               </div>
             </div>
 
@@ -269,7 +275,7 @@ function Encabezado({ children }) {
     <div className="ruta-amb-head">
       <div>
         <h2 className="form-section-title">Ruta de la ambulancia</h2>
-        <p className="muted">Sale del Hospital IMSS 220 · tráfico estimado según la hora</p>
+        <p className="muted">Sale del Hospital IMSS 220 · Toluca, Metepec, San Mateo Atenco y Lerma · tráfico estimado según la hora</p>
       </div>
       {children}
     </div>

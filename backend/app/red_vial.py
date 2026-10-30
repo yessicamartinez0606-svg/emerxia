@@ -1,4 +1,5 @@
-"""Red vial real de Toluca para la ruta de la ambulancia.
+"""Red vial real del Valle de Toluca (Toluca, Metepec, San Mateo Atenco y Lerma) para la
+ruta de la ambulancia.
 
 De dónde salen los datos
     Calles      OpenStreetMap, por medio de la API de Overpass (overpass-api.de).
@@ -40,8 +41,21 @@ HOSPITAL = {
     "lng": -99.6393513,
 }
 
-# Zona de Toluca que se muestra en el mapa general (sur, oeste, norte, este).
-ZONA_TOLUCA = (19.245, -99.715, 19.320, -99.585)
+# Zona que se muestra en el mapa general (sur, oeste, norte, este): Toluca, Metepec,
+# San Mateo Atenco y Lerma.
+ZONA = (19.205, -99.715, 19.335, -99.455)
+
+# Municipios donde se buscan las direcciones. Las claves van en minúsculas y sin acentos,
+# como queda el texto después de _normalizar().
+MUNICIPIOS = {
+    "toluca": "Toluca",
+    "metepec": "Metepec",
+    "san mateo atenco": "San Mateo Atenco",
+    "lerma": "Lerma",
+    "zinacantepec": "Zinacantepec",
+}
+# Recuadro donde se aceptan resultados de direcciones (oeste, norte, este, sur).
+RECUADRO_DIRECCIONES = (-99.78, 19.40, -99.38, 19.15)
 
 # ─────────────────────────── Vías y tráfico ───────────────────────────
 
@@ -132,7 +146,11 @@ def rumbo_texto(grados: float) -> str:
 # ─────────────────────────── Servicios externos con caché ───────────────────────────
 
 USER_AGENT = "Emergexia/1.0 (sistema escolar de gestion de emergencias)"
-OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter")
+OVERPASS = (
+    "https://overpass-api.de/api/interpreter",
+    "https://overpass.kumi.systems/api/interpreter",
+    "https://overpass.private.coffee/api/interpreter",
+)
 NOMINATIM = "https://nominatim.openstreetmap.org/search"
 
 
@@ -173,14 +191,19 @@ def overpass(consulta: str) -> dict:
     clave = "overpass-" + hashlib.sha1(consulta.encode()).hexdigest()[:16] + ".json"
     if (datos := _leer_cache(clave)) is not None:
         return datos
+    # Los servidores públicos de Overpass a veces están saturados (502/504): se prueba cada
+    # uno y, si todos fallan, se da una segunda vuelta tras una pausa corta.
     ultimo_error = None
-    for url in OVERPASS:
-        try:
-            datos = json.loads(_http(url, urllib.parse.urlencode({"data": consulta}).encode()))
-            _guardar_cache(clave, datos)
-            return datos
-        except Exception as exc:  # noqa: BLE001
-            ultimo_error = exc
+    for vuelta in range(2):
+        if vuelta:
+            time.sleep(3)
+        for url in OVERPASS:
+            try:
+                datos = json.loads(_http(url, urllib.parse.urlencode({"data": consulta}).encode()))
+                _guardar_cache(clave, datos)
+                return datos
+            except Exception as exc:  # noqa: BLE001
+                ultimo_error = exc
     raise ServicioMapasError(
         "No se pudieron descargar las calles de OpenStreetMap. Revisa la conexión a internet "
         f"del servidor ({ultimo_error})."
@@ -189,44 +212,136 @@ def overpass(consulta: str) -> dict:
 
 _ultimo_geocode = 0.0
 
+_TIPOS_CALLE = r"calle|c\.|avenida|av\.?|boulevard|blvd\.?|privada|priv\.?|cerrada|andador|paseo|camino|carretera|prolongacion|prol\.?"
+_TIPOS_ZONA = r"barrio|colonia|col\.?|fraccionamiento|fracc\.?|unidad habitacional|unidad|pueblo|ejido|residencial"
+_CORTE = rf"(?=\s*(?:,|\b(?:numero|num|no\.?)\b|#|\d|\b(?:{_TIPOS_ZONA})\b|\b(?:{_TIPOS_CALLE})\s|$))"
+
+
+def _normalizar(texto: str) -> str:
+    import unicodedata
+    t = unicodedata.normalize("NFD", texto.lower())
+    t = "".join(c for c in t if unicodedata.category(c) != "Mn")
+    return " ".join(t.replace("º", " ").replace("°", " ").split())
+
+
+def _partes_direccion(texto: str) -> dict:
+    """Separa una dirección escrita a mano en municipio, calle, número y colonia/barrio.
+    Ej.: «san mateo atenco, barrio santiago calle villada numero 304»."""
+    import re
+    t = _normalizar(texto)
+    municipio = next((MUNICIPIOS[m] for m in sorted(MUNICIPIOS, key=len, reverse=True) if m in t), None)
+    sin_mun = t
+    for m in MUNICIPIOS:
+        sin_mun = sin_mun.replace(m, " ")
+    sin_mun = re.sub(r"\b(estado de mexico|edo\.? de mexico|edomex|mexico|c\.?p\.?\s*\d{5}|\d{5})\b", " ", sin_mun)
+
+    calle = None
+    if m := re.search(rf"\b({_TIPOS_CALLE})\s+(.+?){_CORTE}", sin_mun):
+        tipo, nombre = m.group(1), m.group(2).strip(" .,")
+        # «calle» no ayuda a buscar; avenida, paseo, etc. sí son parte del nombre.
+        calle = nombre if tipo in ("calle", "c.") else f"{tipo} {nombre}"
+    numero = None
+    if m := re.search(r"(?:\b(?:numero|num|no\.?)\s*|#\s*)(\d+[a-z]?)\b", sin_mun):
+        numero = m.group(1)
+    elif calle and (m := re.search(rf"{re.escape(calle.split()[-1])}\s+(\d+[a-z]?)\b", sin_mun)):
+        numero = m.group(1)
+    zona = None
+    if m := re.search(rf"\b({_TIPOS_ZONA})\s+(?:de\s+)?(.+?){_CORTE}", sin_mun):
+        zona = m.group(2).strip(" .,")
+    if not calle:
+        # Sin palabra «calle»: el primer trozo entre comas que no sea la colonia.
+        trozos = [x.strip(" .") for x in sin_mun.split(",") if x.strip(" .")]
+        for x in trozos:
+            if not re.match(rf"({_TIPOS_ZONA})\b", x):
+                calle = re.sub(r"\b(?:numero|num|no\.?)\b|#|\s\d+[a-z]?\b", " ", x).strip(" .") or None
+                if not numero and (m := re.search(r"\s(\d+[a-z]?)\b", x)):
+                    numero = m.group(1)
+                break
+    return {"municipio": municipio, "calle": calle, "numero": numero, "zona": zona}
+
 
 def geocodificar(direccion: str) -> dict:
-    """Convierte una dirección escrita en {lat, lng, encontrado}. Busca dentro de Toluca."""
-    global _ultimo_geocode
+    """Convierte una dirección escrita en {lat, lng, texto, precision}. Busca en Toluca,
+    Metepec, San Mateo Atenco y Lerma.
+
+    Las direcciones se escriben de muchas formas, así que se prueba de lo más exacto a lo
+    más general: calle y número → calle → colonia o barrio → el texto tal cual. Si solo se
+    encuentra la calle o la colonia, `precision` lo dice para avisarlo en pantalla."""
     texto = " ".join((direccion or "").split())
     if not texto:
         raise ValueError("La emergencia no tiene dirección.")
-    consulta = texto
-    if not any(z in texto.lower() for z in ("toluca", "metepec", "zinacantepec", "lerma", "estado de m")):
-        consulta += ", Toluca, Estado de México"
 
     cache = _leer_cache("geocode.json") or {}
-    if consulta in cache:
-        return cache[consulta]
+    clave = "v2|" + _normalizar(texto)
+    if clave in cache:
+        return cache[clave]
 
-    def pedir(acotar: bool) -> list:
-        global _ultimo_geocode
-        espera = 1.1 - (time.time() - _ultimo_geocode)       # Nominatim: máximo 1 por segundo
-        if espera > 0:
-            time.sleep(espera)
-        params = {"format": "jsonv2", "limit": 1, "countrycodes": "mx", "q": consulta,
-                  "addressdetails": 0, "accept-language": "es"}
-        if acotar:
-            params.update(viewbox="-99.80,19.38,-99.50,19.18", bounded=1)
-        try:
-            return json.loads(_http(NOMINATIM + "?" + urllib.parse.urlencode(params), timeout=20))
-        except Exception as exc:  # noqa: BLE001
-            raise ServicioMapasError(f"No se pudo buscar la dirección en el mapa ({exc}).") from exc
-        finally:
-            _ultimo_geocode = time.time()
+    p = _partes_direccion(texto)
+    mun = p["municipio"]
+    lugar = f"{mun}, Estado de México" if mun else "Estado de México"
 
-    res = pedir(True) or pedir(False)
-    if not res:
-        raise ValueError(f"No se encontró en el mapa la dirección «{texto}». Escríbela con calle, número y colonia.")
-    punto = {"lat": float(res[0]["lat"]), "lng": float(res[0]["lon"]), "texto": res[0].get("display_name", texto)}
-    cache[consulta] = punto
-    _guardar_cache("geocode.json", cache)
-    return punto
+    def guardar(r: dict, precision: str) -> dict:
+        punto = {"lat": float(r["lat"]), "lng": float(r["lon"]),
+                 "texto": r.get("display_name", texto), "precision": precision}
+        cache[clave] = punto
+        _guardar_cache("geocode.json", cache)
+        return punto
+
+    # 1. La colonia o barrio: sirve para elegir entre calles con el mismo nombre.
+    # Una calle con el mismo nombre no cuenta como colonia.
+    zona = None
+    if p["zona"]:
+        for q in (f'{p["zona"]}, {lugar}', f'barrio de {p["zona"]}, {lugar}'):
+            zona = next((r for r in _nominatim({"q": q, "limit": 3}) if r.get("category") != "highway"), None)
+            if zona:
+                break
+
+    # 2. La calle (con número si OSM lo tiene; en México casi nunca).
+    if p["calle"]:
+        candidatos = []
+        if p["numero"] and mun:
+            candidatos += _nominatim({"street": f'{p["numero"]} {p["calle"]}', "city": mun,
+                                      "state": "Estado de México", "limit": 5})
+        candidatos += _nominatim({"q": f'{p["calle"]}, {lugar}', "limit": 5})
+        con_numero = lambda r: bool(p["numero"]) and f', {p["numero"]}, ' in r.get("display_name", "")  # noqa: E731
+        es_calle = lambda r: r.get("category") == "highway" and r.get("type") not in ("track", "path", "footway")  # noqa: E731
+        candidatos = [r for r in candidatos if con_numero(r) or es_calle(r)]
+        if zona:
+            zlat, zlng = float(zona["lat"]), float(zona["lon"])
+            candidatos.sort(key=lambda r: distancia_m(zlat, zlng, float(r["lat"]), float(r["lon"])))
+        else:
+            candidatos.sort(key=lambda r: not con_numero(r))      # estable: respeta el orden de Nominatim
+        if candidatos:
+            r = candidatos[0]
+            return guardar(r, "exacta" if con_numero(r) else "calle")
+
+    # 3. Solo la colonia o barrio.
+    if zona:
+        return guardar(zona, "colonia")
+
+    # 4. El texto tal cual.
+    if r := _nominatim({"q": texto if mun else f"{texto}, Toluca, Estado de México"}):
+        return guardar(r[0], "calle" if r[0].get("category") == "highway" else "colonia")
+    raise ValueError(
+        f"No se encontró en el mapa la dirección «{texto}». Escríbela con calle, número, colonia "
+        "y municipio (Toluca, Metepec, San Mateo Atenco o Lerma)."
+    )
+
+
+def _nominatim(params: dict) -> list:
+    global _ultimo_geocode
+    espera = 1.1 - (time.time() - _ultimo_geocode)       # Nominatim: máximo 1 por segundo
+    if espera > 0:
+        time.sleep(espera)
+    o, n, e, s = RECUADRO_DIRECCIONES
+    todo = {"format": "jsonv2", "limit": 1, "countrycodes": "mx", "addressdetails": 0,
+            "accept-language": "es", "viewbox": f"{o},{n},{e},{s}", "bounded": 1, **params}
+    try:
+        return json.loads(_http(NOMINATIM + "?" + urllib.parse.urlencode(todo), timeout=20))
+    except Exception as exc:  # noqa: BLE001
+        raise ServicioMapasError(f"No se pudo buscar la dirección en el mapa ({exc}).") from exc
+    finally:
+        _ultimo_geocode = time.time()
 
 
 # ─────────────────────────── Grafo de esquinas ───────────────────────────
@@ -363,7 +478,11 @@ def calles_para_ruta(puntos: list[tuple[float, float]], radio_local_m: int = 900
     """Avenidas de toda el área entre los puntos y, alrededor de cada punto, también las
     calles de colonia (para poder salir y llegar a la puerta)."""
     s, w, n, e = _bbox(puntos, margen_km=1.5)
-    principales = "|".join(PRINCIPALES)
+    # En trayectos largos (p. ej. Toluca → Lerma) las calles colectoras de toda el área hacen
+    # la descarga muy pesada para Overpass; basta con las avenidas, y cerca de cada punto
+    # siguen bajando las calles de colonia y las colectoras.
+    largo = distancia_m(*puntos[0], *puntos[-1]) > 6000
+    principales = "|".join(v for v in PRINCIPALES if not (largo and v == "tertiary"))
     locales = "|".join(LOCALES)
     alrededor = "".join(
         f'way["highway"~"^({locales}|tertiary)$"](around:{radio_local_m},{lat:.5f},{lng:.5f});'
@@ -378,7 +497,7 @@ def calles_para_ruta(puntos: list[tuple[float, float]], radio_local_m: int = 900
 
 
 def calles_principales_zona() -> dict:
-    s, w, n, e = ZONA_TOLUCA
+    s, w, n, e = ZONA
     consulta = (
         "[out:json][timeout:90];("
         f'way["highway"~"^(motorway|trunk|primary|secondary)(_link)?$"]({s},{w},{n},{e});'
@@ -549,7 +668,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
 
 
 def zona(hora: int | None = None) -> dict:
-    """Avenidas principales de Toluca con su tráfico estimado, para el mapa general."""
+    """Avenidas principales de la zona con su tráfico estimado, para el mapa general."""
     hora = hora_actual() if hora is None else hora
     datos = calles_principales_zona()
     nodos = {e["id"]: (e["lat"], e["lon"]) for e in datos.get("elements", []) if e["type"] == "node"}
@@ -572,7 +691,7 @@ def zona(hora: int | None = None) -> dict:
         "hora": hora,
         "periodo": periodo(hora),
         "periodo_nombre": NOMBRE_PERIODO[periodo(hora)],
-        "zona": ZONA_TOLUCA,
+        "zona": ZONA,
         "hospital": HOSPITAL,
         "vias": vias,
     }

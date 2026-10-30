@@ -6,7 +6,7 @@ import {
   geocodificar, obtenerZona,
 } from '../lib/busqueda.js'
 
-// Mapa de Toluca con el tráfico estimado de las avenidas y las rutas de la ambulancia desde
+// Mapa de Toluca, Metepec, San Mateo Atenco y Lerma con el tráfico estimado de las avenidas y las rutas de la ambulancia desde
 // el Hospital IMSS 220. Al tocar el mapa (o buscar una dirección) se calcula la ruta con los
 // tres algoritmos de búsqueda ciega y se comparan; abajo se ve la búsqueda paso a paso.
 
@@ -116,7 +116,7 @@ export default function RutasPage() {
       <header className="view-head">
         <div>
           <h1>Rutas y tráfico</h1>
-          <p>Toluca · tráfico estimado de las avenidas y rutas de la ambulancia desde el Hospital IMSS 220</p>
+          <p>Toluca, Metepec, San Mateo Atenco y Lerma · tráfico estimado de las avenidas y rutas de la ambulancia desde el Hospital IMSS 220</p>
         </div>
         <Siren size={28} className="rutas-head-icon" aria-hidden="true" />
       </header>
@@ -128,7 +128,7 @@ export default function RutasPage() {
           <input
             id="rutas-q"
             type="search"
-            placeholder="Escribe una dirección de Toluca o toca el mapa"
+            placeholder="Escribe una dirección (Toluca, Metepec, San Mateo Atenco o Lerma) o toca el mapa"
             value={busqueda}
             onChange={(e) => setBusqueda(e.target.value)}
           />
@@ -183,7 +183,7 @@ export default function RutasPage() {
                 </>
               )}
               {zona && despejadas.length === 0 && <p className="muted">A esta hora todas las avenidas principales tienen tráfico.</p>}
-              {!zona && !errorZona && <p className="muted">Cargando el mapa de Toluca…</p>}
+              {!zona && !errorZona && <p className="muted">Cargando el mapa…</p>}
             </div>
           )}
 
@@ -259,7 +259,7 @@ function Explicacion({ ruta, algoritmo, setAlgoritmo }) {
       <summary>
         <div>
           <strong>¿Cómo se calculó la ruta?</strong>
-          <span>Búsqueda ciega sobre el espacio de estados de las calles de Toluca</span>
+          <span>Búsqueda ciega sobre el espacio de estados de las calles reales</span>
         </div>
         <ChevronDown size={18} className="chev" aria-hidden="true" />
       </summary>

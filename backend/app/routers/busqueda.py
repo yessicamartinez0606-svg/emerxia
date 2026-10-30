@@ -1,7 +1,7 @@
-"""Rutas de la ambulancia sobre calles reales de Toluca (ver app/red_vial.py y app/busqueda.py).
+"""Rutas de la ambulancia sobre calles reales de Toluca, Metepec, San Mateo Atenco y Lerma (ver app/red_vial.py y app/busqueda.py).
 
-    GET  /api/rutas/zona                 avenidas de Toluca con su tráfico estimado
-    GET  /api/rutas/geocodificar?q=      coordenadas de una dirección de Toluca
+    GET  /api/rutas/zona                 avenidas de la zona con su tráfico estimado
+    GET  /api/rutas/geocodificar?q=      coordenadas de una dirección de la zona
     POST /api/rutas/calcular             ruta entre dos puntos con los tres algoritmos
     GET  /api/rutas/emergencias/{id}     ruta del IMSS 220 a la emergencia y de regreso
 """
@@ -43,7 +43,7 @@ def zona(hora: int | None = Hora):
 
 
 @router.get("/geocodificar")
-def geocodificar(q: str = Query(..., min_length=3, description="Dirección a buscar en Toluca")):
+def geocodificar(q: str = Query(..., min_length=3, description="Dirección a buscar (Toluca, Metepec, San Mateo Atenco o Lerma)")):
     return _errores(lambda: red_vial.geocodificar(q))
 
 

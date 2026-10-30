@@ -1,4 +1,4 @@
-// Rutas de la ambulancia sobre calles reales de Toluca. La búsqueda ciega corre en el
+// Rutas de la ambulancia sobre calles reales de Toluca, Metepec, San Mateo Atenco y Lerma. La búsqueda ciega corre en el
 // backend (app/busqueda.py y app/red_vial.py); aquí están las llamadas a la API y los
 // textos que comparten la pantalla de Rutas y la ficha de cada emergencia.
 import { api } from './api.js'
