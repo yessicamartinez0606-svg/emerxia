@@ -344,6 +344,33 @@ def _nominatim(params: dict) -> list:
         _ultimo_geocode = time.time()
 
 
+def direccion_de_punto(lat: float, lng: float) -> str:
+    """Dirección aproximada de un punto del mapa (para los reportes del perfil Usuario).
+    Sin internet regresa las coordenadas."""
+    respaldo = f"Punto marcado en el mapa ({lat:.5f}, {lng:.5f})"
+    clave = f"{lat:.5f},{lng:.5f}"
+    cache = _leer_cache("reverso.json") or {}
+    if clave in cache:
+        return cache[clave]
+    global _ultimo_geocode
+    espera = 1.1 - (time.time() - _ultimo_geocode)
+    if espera > 0:
+        time.sleep(espera)
+    try:
+        params = {"format": "jsonv2", "lat": lat, "lon": lng, "zoom": 18, "accept-language": "es"}
+        datos = json.loads(_http(NOMINATIM.replace("/search", "/reverse") + "?" + urllib.parse.urlencode(params), timeout=15))
+        texto = datos.get("display_name") or respaldo
+    except Exception:  # noqa: BLE001
+        return respaldo
+    finally:
+        _ultimo_geocode = time.time()
+    # Solo lo útil: calle y número, colonia, municipio.
+    texto = ", ".join(texto.split(", ")[:4])
+    cache[clave] = texto
+    _guardar_cache("reverso.json", cache)
+    return texto
+
+
 # ─────────────────────────── Grafo de esquinas ───────────────────────────
 
 @dataclass

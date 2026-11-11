@@ -108,6 +108,8 @@ export const MODULES = [
       { key: 'folio', label: 'Folio' },
       { key: 'paciente_nombre', label: 'Paciente' },
       { key: 'descripcion', label: 'Descripción' },
+      // mensaje / llamada si la reportó una persona desde su perfil de Usuario.
+      { key: 'canal', label: 'Reportada por' },
       { key: 'prioridad', label: 'Prioridad', badge: true },
       { key: 'doctor', label: 'Doctor' },
       { key: 'operador', label: 'Operador' },

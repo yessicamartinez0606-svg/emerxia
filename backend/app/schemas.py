@@ -33,7 +33,39 @@ class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2)
     username: str = Field(min_length=3)
     password: str = Field(min_length=6)
-    role: Literal["Administrador", "Despachador", "Supervisor"] = "Despachador"
+    role: Literal["Administrador", "Despachador", "Supervisor", "Operador", "Usuario"] = "Usuario"
+    telefono: str = ""
+
+
+class FaceLoginIn(BaseModel):
+    """Segundo paso del inicio de sesión de un operador (la comparación de rostros se hace
+    en el navegador con face-api.js; aquí llega el resultado)."""
+    face_token: str
+    coincide: bool
+    distancia: float | None = None
+
+
+class ReporteUsuarioIn(BaseModel):
+    """Emergencia reportada por una persona desde su perfil de Usuario."""
+    canal: Literal["mensaje", "llamada"] = "mensaje"
+    tipo: str = Field(min_length=2)
+    descripcion: str = ""
+    lat: float | None = Field(None, ge=-90, le=90)
+    lng: float | None = Field(None, ge=-180, le=180)
+    direccion: str = ""
+    referencias: str = ""
+    paciente_nombre: str = ""
+    paciente_edad: str = ""
+    telefono: str = ""
+    personas: int = Field(1, ge=1, le=50)
+
+
+class CargaOperadorIn(BaseModel):
+    litros: float = Field(gt=0, le=500)
+    costo: float | None = Field(None, ge=0)
+    kilometraje: float | None = Field(None, ge=0)
+    estacion: str = ""
+    notas: str = ""
 
 
 class ForgotPasswordIn(BaseModel):

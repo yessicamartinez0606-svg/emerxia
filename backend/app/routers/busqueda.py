@@ -60,7 +60,12 @@ def ruta_emergencia(emergencia_id: int, hora: int | None = Hora):
         raise HTTPException(404, "No existe esa emergencia.")
 
     def armar():
-        lugar = red_vial.geocodificar(emergencia.get("direccion", ""))
+        if emergencia.get("lat") is not None and emergencia.get("lng") is not None:
+            # Punto marcado en el mapa por quien reportó la emergencia (perfil Usuario).
+            lugar = {"lat": emergencia["lat"], "lng": emergencia["lng"], "texto": emergencia.get("direccion", ""),
+                     "precision": "punto marcado en el mapa"}
+        else:
+            lugar = red_vial.geocodificar(emergencia.get("direccion", ""))
         hospital = {"lat": red_vial.HOSPITAL["lat"], "lng": red_vial.HOSPITAL["lng"]}
         punto = {"lat": lugar["lat"], "lng": lugar["lng"]}
         ida = red_vial.calcular_ruta(hospital, punto, hora)

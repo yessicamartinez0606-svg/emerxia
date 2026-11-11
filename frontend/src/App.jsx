@@ -14,6 +14,13 @@ import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 import RutasPage from './pages/RutasPage.jsx'
 import DespachoPage from './pages/DespachoPage.jsx'
 import HistorialPage from './pages/HistorialPage.jsx'
+import { ClipboardList, Fuel, History, Route as RouteIcon, Siren, Truck } from 'lucide-react'
+import PortalLayout from './components/PortalLayout.jsx'
+import MiTurno from './pages/operador/MiTurno.jsx'
+import Gasolina from './pages/operador/Gasolina.jsx'
+import MiHistorial from './pages/operador/MiHistorial.jsx'
+import Reportar from './pages/usuario/Reportar.jsx'
+import MisReportes from './pages/usuario/MisReportes.jsx'
 
 function Protected({ children }) {
   const { user, loading } = useAuth()
@@ -34,7 +41,52 @@ export default function App() {
       <Route path="/registro" element={<PublicOnly><Register /></PublicOnly>} />
       <Route path="/recuperar" element={<PublicOnly><ForgotPassword /></PublicOnly>} />
       <Route path="/restablecer" element={<PublicOnly><ResetPassword /></PublicOnly>} />
-      <Route element={<Protected><Layout /></Protected>}>
+      <Route path="/*" element={<Protected><PorPerfil /></Protected>} />
+    </Routes>
+  )
+}
+
+// Cada perfil ve su propia aplicación (los permisos también se revisan en el backend).
+const NAV_OPERADOR = [
+  { to: '/', label: 'Mi turno', icon: Truck },
+  { to: '/gasolina', label: 'Gasolina', icon: Fuel },
+  { to: '/rutas', label: 'Rutas y tráfico', icon: RouteIcon },
+  { to: '/historial', label: 'Historial', icon: History },
+]
+const NAV_USUARIO = [
+  { to: '/', label: 'Reportar', icon: Siren },
+  { to: '/mis-reportes', label: 'Mis reportes', icon: ClipboardList },
+]
+
+function PorPerfil() {
+  const { user } = useAuth()
+  if (user.role === 'Operador') {
+    return (
+      <Routes>
+        <Route element={<PortalLayout nav={NAV_OPERADOR} etiqueta="Operador" />}>
+          <Route index element={<MiTurno />} />
+          <Route path="gasolina" element={<Gasolina />} />
+          <Route path="rutas" element={<RutasPage />} />
+          <Route path="historial" element={<MiHistorial />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
+  if (user.role === 'Usuario') {
+    return (
+      <Routes>
+        <Route element={<PortalLayout nav={NAV_USUARIO} etiqueta="Reportes" />}>
+          <Route index element={<Reportar />} />
+          <Route path="mis-reportes" element={<MisReportes />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
+  return (
+    <Routes>
+      <Route element={<Layout />}>
         <Route index element={<Home />} />
         <Route path="configuracion" element={<SettingsPage />} />
         <Route path="rutas" element={<RutasPage />} />
@@ -45,7 +97,6 @@ export default function App() {
         <Route path=":module/:id" element={<RecordDetailPage />} />
         <Route path=":module" element={<ModulePage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )
 }

@@ -118,6 +118,7 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, c
         return
       }
       if (result.match) {
+        setResult(result)
         setStatus('ok')
         setMessage('Identidad verificada: coincide con la foto registrada.')
       } else {

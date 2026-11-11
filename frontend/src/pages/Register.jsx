@@ -2,16 +2,27 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Lock, User, UserPlus, ArrowRight } from 'lucide-react'
 import AuthAside from '../components/AuthAside.jsx'
+import PasoFaceId from '../components/PasoFaceId.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
-const ROLES = ['Despachador', 'Supervisor', 'Administrador']
+// Usuario: reporta emergencias. Operador: conductor de ambulancia (necesita su foto en
+// Operadores para entrar con Face ID). Los demás son el personal de la central.
+const ROLES = [
+  { valor: 'Usuario', texto: 'Usuario · reportar emergencias' },
+  { valor: 'Operador', texto: 'Operador · conductor de ambulancia' },
+  { valor: 'Despachador', texto: 'Despachador · central' },
+  { valor: 'Supervisor', texto: 'Supervisor · central' },
+  { valor: 'Administrador', texto: 'Administrador · central' },
+]
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
-  const [role, setRole] = useState(ROLES[0])
+  const [role, setRole] = useState(ROLES[0].valor)
+  const [telefono, setTelefono] = useState('')
+  const [paso, setPaso] = useState(null)
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
@@ -31,8 +42,9 @@ export default function Register() {
     }
     setBusy(true)
     try {
-      await register({ fullName: fullName.trim(), username: username.trim(), password, role })
-      navigate('/', { replace: true })
+      const faltaRostro = await register({ fullName: fullName.trim(), username: username.trim(), password, role, telefono: telefono.trim() })
+      if (faltaRostro) setPaso(faltaRostro)
+      else navigate('/', { replace: true })
     } catch (err) {
       setError(err.message)
     } finally {
@@ -46,6 +58,7 @@ export default function Register() {
         <AuthAside tagline={'Únete al equipo,\nmarca la diferencia'} />
 
         <div className="login-form-wrap">
+          {paso ? <PasoFaceId paso={paso} onVolver={() => navigate('/login')} textoVolver="Ir a iniciar sesión" /> : (
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Crear una cuenta</h1>
             <p className="lead">Regístrate para acceder al sistema de Emergexia</p>
@@ -75,8 +88,17 @@ export default function Register() {
 
             <label htmlFor="role"><UserPlus size={14} /> Rol</label>
             <select id="role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-              {ROLES.map((r) => <option key={r}>{r}</option>)}
+              {ROLES.map((r) => <option key={r.valor} value={r.valor}>{r.texto}</option>)}
             </select>
+            {role === 'Operador' && (
+              <p className="field-hint">Escribe tu nombre igual que en Operadores. Para entrar se verifica tu rostro con la foto que tomó la central; sin foto no podrás acceder.</p>
+            )}
+            {role === 'Usuario' && (
+              <>
+                <label htmlFor="telefono"><User size={14} /> Teléfono (para que te llamen)</label>
+                <input id="telefono" className="input" inputMode="tel" placeholder="10 dígitos" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+              </>
+            )}
 
             <label htmlFor="password"><Lock size={14} /> Contraseña</label>
             <div className="input-with-action">
@@ -120,6 +142,7 @@ export default function Register() {
             </button>
             <Link className="forgot" to="/login">¿Ya tienes cuenta? Inicia sesión</Link>
           </form>
+          )}
         </div>
       </section>
     </div>

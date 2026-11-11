@@ -7,7 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import readiness
 from .config import settings
 from .mongo import close_client
-from .routers import auth, busqueda, despacho, flota, modules, system, verificaciones
+from .routers import auth, busqueda, despacho, flota, modules, portal, system, verificaciones
+from .security import OPERADOR, PERSONAL, require_roles, solo_personal
 from .spark import stop_spark
 
 logging.basicConfig(level=logging.INFO)
@@ -38,13 +39,17 @@ app.add_middleware(
 
 app.include_router(auth.router, dependencies=[Depends(readiness.require_mongo)])   # usuarios en MongoDB
 app.include_router(system.router)
-for r in modules.routers:
-    app.include_router(r, dependencies=[Depends(readiness.require_mongo)])
-app.include_router(verificaciones.router, dependencies=[Depends(readiness.require_mongo)])
-app.include_router(flota.router, dependencies=[Depends(readiness.require_mongo)])   # flota, gasolina, historial y reportes
-app.include_router(busqueda.router)   # búsqueda ciega: no usa la base de datos
-app.include_router(despacho.router)   # algoritmo genético: no usa la base de datos
 
+# Perfiles (app/security.py): el personal de la central ve todo; el Operador y el Usuario
+# solo usan su portal (app/routers/portal.py). El Operador también puede ver las rutas.
+PERSONAL_DB = [Depends(readiness.require_mongo), Depends(solo_personal)]
+for r in modules.routers:
+    app.include_router(r, dependencies=PERSONAL_DB)
+app.include_router(verificaciones.router, dependencies=PERSONAL_DB)
+app.include_router(flota.router, dependencies=PERSONAL_DB)   # flota, gasolina, historial y reportes
+app.include_router(portal.router, dependencies=[Depends(readiness.require_mongo)])   # portales Operador y Usuario
+app.include_router(busqueda.router, dependencies=[Depends(require_roles(*PERSONAL, OPERADOR))])   # rutas (búsqueda ciega y heurística)
+app.include_router(despacho.router, dependencies=[Depends(solo_personal)])   # algoritmo genético
 
 @app.get("/api/health")
 def health():

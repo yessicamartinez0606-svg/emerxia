@@ -2,10 +2,12 @@ import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react'
 import AuthAside from '../components/AuthAside.jsx'
+import PasoFaceId from '../components/PasoFaceId.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 export default function Login() {
   const { login } = useAuth()
+  const [paso, setPaso] = useState(null)   // operador: { faceToken, operador }
   const location = useLocation()
   const notice = location.state?.notice
   const [username, setUsername] = useState('')
@@ -19,7 +21,7 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      await login(username.trim(), password)
+      setPaso(await login(username.trim(), password))
     } catch (err) {
       setError(err.message)
     } finally {
@@ -33,6 +35,7 @@ export default function Login() {
         <AuthAside />
 
         <div className="login-form-wrap">
+          {paso ? <PasoFaceId paso={paso} onVolver={() => { setPaso(null); setPassword('') }} /> : (
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Iniciar sesión</h1>
             <p className="lead">Ingresa tus credenciales para acceder al sistema</p>
@@ -82,6 +85,7 @@ export default function Login() {
               <Link className="forgot" to="/registro">Crear una cuenta</Link>
             </div>
           </form>
+          )}
         </div>
 
       </section>

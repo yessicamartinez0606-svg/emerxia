@@ -79,7 +79,9 @@ def _placas(em: dict) -> list[str]:
 
 
 def _ubicacion(em: dict) -> dict | None:
-    """Coordenadas de la emergencia, si la dirección se puede ubicar (usa la caché de mapas)."""
+    """Coordenadas de la emergencia: las que marcó quien la reportó o, si no, las de su dirección."""
+    if em.get("lat") is not None and em.get("lng") is not None:
+        return {"lat": em["lat"], "lng": em["lng"]}
     try:
         from .. import red_vial
         lugar = red_vial.geocodificar(em.get("direccion", ""))
