@@ -33,16 +33,14 @@ class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2)
     username: str = Field(min_length=3)
     password: str = Field(min_length=6)
-    role: Literal["Administrador", "Despachador", "Supervisor", "Operador", "Usuario"] = "Usuario"
+    # Los operadores no crean cuenta: entran solo con su rostro (ver app/routers/auth.py).
+    role: Literal["Administrador", "Despachador", "Supervisor", "Usuario"] = "Usuario"
     telefono: str = ""
 
 
-class FaceLoginIn(BaseModel):
-    """Segundo paso del inicio de sesión de un operador (la comparación de rostros se hace
-    en el navegador con face-api.js; aquí llega el resultado)."""
-    face_token: str
-    coincide: bool
-    distancia: float | None = None
+class RostroIn(BaseModel):
+    """Descriptor facial de 128 números que calcula face-api.js en el navegador."""
+    descriptor: list[float] = Field(min_length=128, max_length=128)
 
 
 class ReporteUsuarioIn(BaseModel):

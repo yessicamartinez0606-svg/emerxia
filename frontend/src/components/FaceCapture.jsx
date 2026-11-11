@@ -19,7 +19,7 @@ const REASON_MESSAGE = {
  *   una emergencia). Al confirmar, `onSuccess(foto, resultado)` recibe el candidato reconocido
  *   en `resultado.candidate`.
  */
-export default function FaceCapture({ open, title, mode = 'verify', reference, candidates, onSuccess, onCancel }) {
+export default function FaceCapture({ open, title, mode = 'verify', reference, candidates, onSuccess, onCancel, textoConfirmar }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [captured, setCaptured] = useState(null)
@@ -171,7 +171,7 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, c
           )}
           {captured && status === 'ok' && (
             <button type="button" className="btn-primary compact" onClick={confirm}>
-              {mode === 'register' ? 'Usar esta foto' : 'Confirmar'}
+              {textoConfirmar ?? (mode === 'register' ? 'Usar esta foto' : 'Confirmar')}
             </button>
           )}
           <button type="button" className="btn-ghost compact" onClick={onCancel}>Cancelar</button>

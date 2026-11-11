@@ -21,13 +21,10 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [logout])
 
-  // Si la respuesta trae sesión, se inicia; si es un operador, regresa el paso de Face ID
-  // ({ faceToken, operador: { nombre, foto } }) y la sesión llega hasta completeFace().
   const aceptar = useCallback((data) => {
-    if (data.face_required) return { faceToken: data.face_token, operador: data.operador }
     setToken(data.token)
     setUser(data.user)
-    return null
+    return data.user
   }, [])
 
   const login = useCallback(async (username, password) => {
@@ -35,11 +32,10 @@ export function AuthProvider({ children }) {
     return aceptar(data)
   }, [aceptar])
 
-  const completeFace = useCallback(async (faceToken, resultado) => {
-    const data = await api('/auth/face', {
-      method: 'POST',
-      body: { face_token: faceToken, coincide: Boolean(resultado?.match), distancia: resultado?.distance ?? null },
-    })
+  // Operadores: entran solo con su rostro. `descriptor` son los 128 números que calcula
+  // face-api.js de la foto recién tomada; el servidor busca a qué operador corresponde.
+  const loginConRostro = useCallback(async (descriptor) => {
+    const data = await api('/auth/operador', { method: 'POST', body: { descriptor } })
     return aceptar(data)
   }, [aceptar])
 
@@ -51,7 +47,7 @@ export function AuthProvider({ children }) {
     return aceptar(data)
   }, [aceptar])
 
-  const value = useMemo(() => ({ user, loading, login, completeFace, register, logout }), [user, loading, login, completeFace, register, logout])
+  const value = useMemo(() => ({ user, loading, login, loginConRostro, register, logout }), [user, loading, login, loginConRostro, register, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

@@ -56,6 +56,15 @@ async function descriptorFromDataUrl(dataUrl) {
 }
 
 /**
+ * Descriptor facial de una foto (128 números) para guardarlo en el servidor o mandarlo al
+ * entrar como operador. Regresa null si no se ve un rostro.
+ */
+export async function descriptorDeFoto(dataUrl) {
+  const d = await descriptorFromDataUrl(dataUrl)
+  return d ? Array.from(d, (x) => Math.round(x * 1e6) / 1e6) : null
+}
+
+/**
  * Verifica que en la foto sí se vea un rostro (para no aceptar una foto de
  * referencia en blanco, de un objeto, o mal encuadrada). Devuelve:
  *  - { ok: false, reason: 'models' } si no se pudieron cargar los modelos

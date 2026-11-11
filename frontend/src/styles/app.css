@@ -782,13 +782,17 @@ tbody tr:hover { background: #fcfcfd; }
 .portal-main .panel { margin-bottom: 0; }
 @media (max-width: 560px) { .portal-nombre, .portal-salir span { display: none; } }
 
-/* Login: paso de Face ID */
-.paso-face { display: flex; flex-direction: column; gap: 14px; }
-.paso-face-ref { display: flex; align-items: center; gap: 14px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
-.paso-face-ref img { width: 72px; height: 72px; border-radius: 12px; object-fit: cover; }
-.paso-face-ref strong { display: block; font-size: 13.5px; }
-.paso-face-ref span { font-size: 12.5px; color: var(--muted); }
-.paso-volver { justify-content: center; }
+/* Login: entrar como operador con el rostro */
+.login-separador { display: flex; align-items: center; gap: 10px; margin-top: 6px; font-size: 12px; color: var(--muted); }
+.login-separador::before, .login-separador::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.login-operador { justify-content: center; width: 100%; }
+.entrar-rostro { display: flex; flex-direction: column; gap: 14px; }
+.entrar-rostro-icono { width: 56px; height: 56px; border-radius: 16px; background: var(--red-50); color: var(--red-600); display: grid; place-items: center; }
+.entrar-rostro-tips { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.entrar-rostro-volver { justify-content: center; }
+.rostros-aviso { display: flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 10px; background: #e6eefc; color: #163f8f; font-size: 13px; margin-bottom: 14px; }
+.rostros-aviso.warn { background: #fff2dc; color: #7a4a05; }
+.rostros-aviso svg { flex: none; }
 
 /* Operador: Mi turno */
 .op-turno { display: flex; flex-direction: column; gap: 16px; }

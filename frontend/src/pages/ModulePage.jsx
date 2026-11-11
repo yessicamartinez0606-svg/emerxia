@@ -5,6 +5,7 @@ import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
 import FlotaHospitales from '../components/FlotaHospitales.jsx'
+import PrepararRostros from '../components/PrepararRostros.jsx'
 
 export default function ModulePage() {
   const { module: key } = useParams()
@@ -65,6 +66,7 @@ function ModuleView({ mod }) {
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
       {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} />}
+      {mod.key === 'operadores' && <PrepararRostros key={recarga} visible />}
 
       <div className="panel table-wrap">
         {error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}

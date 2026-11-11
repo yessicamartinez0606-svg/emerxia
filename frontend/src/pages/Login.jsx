@@ -1,13 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Lock, User, ArrowRight, ScanFace } from 'lucide-react'
 import AuthAside from '../components/AuthAside.jsx'
-import PasoFaceId from '../components/PasoFaceId.jsx'
+import EntrarConRostro from '../components/EntrarConRostro.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 export default function Login() {
   const { login } = useAuth()
-  const [paso, setPaso] = useState(null)   // operador: { faceToken, operador }
+  const [operador, setOperador] = useState(false)   // pantalla «Soy operador»
   const location = useLocation()
   const notice = location.state?.notice
   const [username, setUsername] = useState('')
@@ -21,7 +21,7 @@ export default function Login() {
     setError('')
     setBusy(true)
     try {
-      setPaso(await login(username.trim(), password))
+      await login(username.trim(), password)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -35,7 +35,7 @@ export default function Login() {
         <AuthAside />
 
         <div className="login-form-wrap">
-          {paso ? <PasoFaceId paso={paso} onVolver={() => { setPaso(null); setPassword('') }} /> : (
+          {operador ? <EntrarConRostro onVolver={() => setOperador(false)} /> : (
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Iniciar sesión</h1>
             <p className="lead">Ingresa tus credenciales para acceder al sistema</p>
@@ -79,6 +79,10 @@ export default function Login() {
 
             <button className="btn-primary" type="submit" disabled={busy || !username || !password}>
               {busy ? 'Ingresando…' : <>Iniciar sesión <ArrowRight size={16} /></>}
+            </button>
+            <div className="login-separador"><span>¿Eres operador de ambulancia?</span></div>
+            <button className="btn-ghost tall login-operador" type="button" onClick={() => setOperador(true)}>
+              <ScanFace size={17} /> Soy operador · Entrar con mi rostro
             </button>
             <div className="login-links">
               <Link className="forgot" to="/recuperar">¿Olvidaste tu contraseña?</Link>

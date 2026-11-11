@@ -13,11 +13,16 @@ from fastapi import HTTPException
 
 from app import repository, security
 from app.routers import auth, flota as flota_api, portal
-from app.schemas import (AmbulanciaPatch, CargaOperadorIn, EventoEmergenciaIn, FaceLoginIn, LoginIn, RegisterIn,
-                         ReporteUsuarioIn)
+from app.schemas import (AmbulanciaPatch, CargaOperadorIn, EventoEmergenciaIn, LoginIn, RegisterIn, ReporteUsuarioIn,
+                         RostroIn)
 
 OK, BAD = "  [OK]  ", "  [X]   "
 FOTO = "data:image/jpeg;base64,AAAA"
+
+
+def cara(base: float, ruido: float = 0.0) -> list[float]:
+    """Descriptor facial de ejemplo: 128 números parecidos entre sí si `base` es igual."""
+    return [round(base + (i % 7) * 0.01 + ruido, 4) for i in range(128)]
 
 
 class Coleccion:
@@ -102,42 +107,54 @@ def main() -> int:
                 setattr(m, f, getattr(repository, f))
     flota_api._ubicacion = lambda em: None
 
-    for i, (nombre, foto) in enumerate([("Mariana Torres", FOTO), ("Pablo Núñez", None)], 1):
+    for i, (nombre, foto) in enumerate([("Mariana Torres", FOTO), ("Pablo Núñez", None), ("Elena Cruz", FOTO + "B")], 1):
         db["operators"].insert_one({"id": i, "nombre": nombre, "turno": "Matutino", "estado": "En línea", **({"foto": foto} if foto else {})})
     db["ambulances"].insert_one({"id": 1, "placa": "AMB-101", "tipo": "Avanzada", "hospital": "Hospital IMSS 220",
                                  "conductor": "Mariana Torres", "estado": "Libre", "tanque_litros": 80,
                                  "rendimiento_km_l": 6, "combustible_pct": 50, "kilometraje": 1000})
     db["counters"].insert_one({"_id": "ambulances", "seq": 1})
-    db["counters"].insert_one({"_id": "operators", "seq": 2})
+    db["counters"].insert_one({"_id": "operators", "seq": 3})
 
-    print("\nRegistro de operadores")
-    cod, msg = error(auth.register, RegisterIn(full_name="Juan Nadie", username="juan", password="secreta1", role="Operador"))
-    revisar(cod == 422 and "No hay un operador" in msg, "No se puede crear un operador que no está en Operadores")
-    cod, msg = error(auth.register, RegisterIn(full_name="Pablo Núñez", username="pablo", password="secreta1", role="Operador"))
-    revisar(cod == 422 and "foto no está registrada" in msg, "Sin foto registrada no se puede crear la cuenta de operador")
-    r = auth.register(RegisterIn(full_name="Mariana Torres", username="mariana", password="secreta1", role="Operador"))
-    revisar(r.get("face_required") and "token" not in r, "Al registrarse, el operador todavía tiene que pasar Face ID")
+    print("\nFotos de los operadores")
+    pendientes = auth.rostros_pendientes()
+    revisar([p["id"] for p in pendientes] == [1, 3], "Se piden los descriptores de quienes tienen foto (Pablo no tiene)")
+    cod, msg = error(auth.login_operador, RostroIn(descriptor=cara(0.2)))
+    revisar(cod == 401, "Mientras no se calcula el descriptor de su foto, nadie entra")
+    auth.guardar_rostro(1, RostroIn(descriptor=cara(0.2)))
+    auth.guardar_rostro(3, RostroIn(descriptor=cara(0.6)))
+    revisar(auth.rostros_pendientes() == [], "Con los descriptores guardados ya no hay pendientes")
+    cod, _ = error(auth.guardar_rostro, 2, RostroIn(descriptor=cara(0.4)))
+    revisar(cod == 404, "No se guarda descriptor para un operador sin foto")
 
-    print("\nInicio de sesión con Face ID")
-    r = auth.login(LoginIn(username="mariana", password="secreta1"))
-    revisar(r["face_required"] and r["operador"]["foto"] == FOTO and "token" not in r,
-            "Con la contraseña correcta solo recibe un pase para verificar su rostro")
-    cod, _ = error(security.decode_token, r["face_token"])
-    revisar(cod == 401, "Ese pase no sirve como sesión para usar el sistema")
-    cod, msg = error(auth.login_face, FaceLoginIn(face_token=r["face_token"], coincide=False, distancia=0.8))
-    revisar(cod == 401 and "no coincide" in msg, "Si el rostro no coincide, no entra")
-    cod, _ = error(auth.login_face, FaceLoginIn(face_token=r["face_token"], coincide=True, distancia=0.9))
-    revisar(cod == 401, "Tampoco entra si la distancia supera el umbral aunque diga que coincide")
-    s = auth.login_face(FaceLoginIn(face_token=r["face_token"], coincide=True, distancia=0.31))
-    revisar(s["user"]["role"] == "Operador" and security.decode_token(s["token"]) == "mariana", "Con su rostro recibe su sesión")
-    revisar(len(db["verificaciones"].docs) == 3, "Cada intento de Face ID queda en la bitácora de verificaciones")
-    db["operators"].update_one({"id": 1}, {"$set": {"foto": None}})
-    cod, msg = error(auth.login, LoginIn(username="mariana", password="secreta1"))
-    revisar(cod == 403 and "foto" in msg, "Si le borran la foto, ya no puede entrar")
-    db["operators"].update_one({"id": 1}, {"$set": {"foto": FOTO}})
-
+    print("\nEntrada del operador solo con su rostro")
+    r = auth.login_operador(RostroIn(descriptor=cara(0.2, ruido=0.02)))
+    revisar(r["user"]["role"] == "Operador" and r["user"]["full_name"] == "Mariana Torres",
+            "Mariana entra solo con su rostro, sin crear cuenta")
+    revisar(repository.find_user("operador-1")["operador_id"] == 1, "Su cuenta interna se crea sola y queda ligada a su registro")
+    r2 = auth.login_operador(RostroIn(descriptor=cara(0.2, ruido=-0.01)))
+    revisar(r2["user"]["username"] == "operador-1" and len([u for u in db["users"].docs if u.get("operador_id") == 1]) == 1,
+            "La segunda vez usa la misma cuenta")
+    r3 = auth.login_operador(RostroIn(descriptor=cara(0.6)))
+    revisar(r3["user"]["full_name"] == "Elena Cruz", "Otro rostro abre la sesión de otro operador")
+    cod, msg = error(auth.login_operador, RostroIn(descriptor=cara(1.5)))
+    revisar(cod == 401 and "No te reconocimos" in msg, "Un rostro que no está registrado no entra")
+    cod, msg = error(auth.login, LoginIn(username="operador-1", password="cualquiera"))
+    revisar(cod == 401, "La cuenta del operador no tiene contraseña con la que se pueda entrar")
+    revisar(len(db["verificaciones"].docs) == 5 and not db["verificaciones"].docs[-1]["coincide"],
+            "Cada intento (correcto o no) queda en la bitácora de verificaciones")
+    db["operators"].update_one({"id": 1}, {"$set": {"foto": FOTO + "nueva"}})
+    cod, _ = error(auth.login_operador, RostroIn(descriptor=cara(0.2)))
+    revisar(cod == 401 and [p["id"] for p in auth.rostros_pendientes()] == [1],
+            "Si le cambian la foto, no entra hasta recalcular su descriptor")
+    auth.guardar_rostro(1, RostroIn(descriptor=cara(0.2)))
+    try:
+        RegisterIn(full_name="Juan", username="juan", password="secreta1", role="Operador")
+        sin_registro = False
+    except ValueError:
+        sin_registro = True
+    revisar(sin_registro, "Ya no se puede crear una cuenta con el rol Operador")
     print("\nPermisos por perfil")
-    mariana = repository.find_user("mariana")
+    mariana = repository.find_user("operador-1")
     cod, _ = error(security.solo_personal, mariana)
     revisar(cod == 403, "Un operador no entra a las secciones del personal de la central")
     cod, _ = error(portal.solo_usuario, mariana)

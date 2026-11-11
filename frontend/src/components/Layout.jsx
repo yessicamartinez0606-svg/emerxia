@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { ChevronDown, LogOut, Search, UserRound } from 'lucide-react'
 import { Logo } from './Logo.jsx'
 import ClockWidget from './ClockWidget.jsx'
+import PrepararRostros from './PrepararRostros.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { HOME, MODULES } from '../lib/modules.js'
 
@@ -85,6 +86,8 @@ export default function Layout() {
       </div>
 
       <ClockWidget />
+      {/* Descriptores faciales de los operadores, para que entren solo con su rostro. */}
+      <PrepararRostros />
     </div>
   )
 }
