@@ -50,7 +50,7 @@ def evaluar(P: Proposiciones) -> dict:
     if not P.rostro_doctor:
         motivos.append("Falta validar el rostro del doctor (Face ID).")
     if not P.ambulancia_disponible:
-        motivos.append("La ambulancia no está Disponible.")
+        motivos.append("La ambulancia no está Libre.")
     if P.prioridad_alta and not P.ambulancia_avanzada:
         motivos.append("La emergencia es de prioridad Alta y requiere ambulancia Avanzada.")
 

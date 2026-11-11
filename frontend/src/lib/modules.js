@@ -1,4 +1,5 @@
-import { Ambulance, CircleDot, Dna, Headset, Hospital, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
+import { Ambulance, CircleDot, Dna, Headset, History, Hospital, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
+import { HOSPITALES } from './flota.js'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
@@ -64,14 +65,32 @@ export const MODULES = [
     columns: [
       { key: 'placa', label: 'Placa' },
       { key: 'tipo', label: 'Tipo' },
+      { key: 'hospital', label: 'Hospital' },
       { key: 'conductor', label: 'Conductor' },
-      { key: 'estado', label: 'Estado', badge: true },
+      { key: 'combustible_pct', label: 'Gasolina (%)' },
+      { key: 'estado', label: 'Estatus', badge: true },
     ],
     fields: [
-      { key: 'placa', label: 'Placa', required: true },
-      { key: 'tipo', label: 'Tipo', options: ['Básica', 'Avanzada'] },
-      { key: 'conductor', label: 'Conductor' },
-      { key: 'estado', label: 'Estado', options: ['Disponible', 'En servicio', 'Mantenimiento'] },
+      { key: 'placa', label: 'Placa', required: true, group: 'Ambulancia' },
+      { key: 'tipo', label: 'Tipo', options: ['Básica', 'Avanzada'], group: 'Ambulancia' },
+      { key: 'hospital', label: 'Hospital donde está', options: HOSPITALES, group: 'Ambulancia' },
+      // "Ocupada" no se elige aquí: la pone el sistema al asignarla a una emergencia.
+      { key: 'estado', label: 'Estatus', options: ['Libre', 'En reparación', 'Fuera de servicio'], group: 'Ambulancia' },
+      {
+        // El conductor es un operador: es quien registra la gasolina de esta ambulancia.
+        key: 'conductor',
+        label: 'Conductor (operador)',
+        group: 'Ambulancia',
+        source: 'operadores',
+        optionValue: (r) => r.nombre,
+        optionLabel: (r) => `${r.nombre} · turno ${r.turno}`,
+        allowEmpty: true,
+        emptyLabel: 'Sin conductor',
+      },
+      { key: 'tanque_litros', label: 'Capacidad del tanque (L)', type: 'number', default: '80', group: 'Gasolina' },
+      { key: 'rendimiento_km_l', label: 'Rendimiento (km por litro)', type: 'number', default: '6', group: 'Gasolina' },
+      { key: 'combustible_pct', label: 'Gasolina actual (%)', type: 'number', default: '100', group: 'Gasolina' },
+      { key: 'kilometraje', label: 'Kilometraje (odómetro)', type: 'number', default: '0', group: 'Gasolina' },
     ],
   },
   {
@@ -106,6 +125,11 @@ export const MODULES = [
       // Datos de la emergencia
       { key: 'descripcion', label: 'Descripción de la emergencia', required: true, group: 'Emergencia' },
       { key: 'prioridad', label: 'Prioridad', options: ['Alta', 'Media', 'Baja'], group: 'Emergencia' },
+      {
+        // Si se necesitan más de las que tiene libres el IMSS 220, las demás salen de otros hospitales.
+        key: 'ambulancias_requeridas', label: 'Ambulancias necesarias', type: 'number', default: '1', group: 'Emergencia',
+        hint: 'Si son más de las que hay libres en el Hospital IMSS 220, se piden a los hospitales más cercanos.',
+      },
       { key: 'estado', label: 'Estado', options: ['Pendiente', 'Asignada', 'En curso', 'Cerrada'], group: 'Emergencia' },
 
       // Asignación: se elige de las bases de datos reales, no se escribe a mano
@@ -139,13 +163,15 @@ export const MODULES = [
       },
       {
         key: 'ambulancia',
-        label: 'Ambulancia asignada',
+        label: 'Ambulancia(s) asignada(s)',
         group: 'Asignación',
         source: 'ambulancias',
         optionValue: (r) => r.placa,
         optionLabel: (r) => `${r.placa} · ${r.tipo} (${r.estado})`,
         allowEmpty: true,
         emptyLabel: 'Sin ambulancia asignada',
+        // Se asignan desde el reporte de la emergencia (pueden ser varias, de varios hospitales).
+        hideInForm: true,
       },
     ],
   },
@@ -196,6 +222,15 @@ export const MODULES = [
     description: 'Elige con un algoritmo genético de qué hospital sale la ambulancia',
     icon: Dna,
     navIcon: Hospital,
+    custom: true,
+  },
+  {
+    // Pantalla propia (pages/HistorialPage.jsx): movimientos de la flota.
+    key: 'historial',
+    label: 'Historial',
+    description: 'Movimientos de las ambulancias: estatus, emergencias, conductores y gasolina',
+    icon: History,
+    navIcon: History,
     custom: true,
   },
   {

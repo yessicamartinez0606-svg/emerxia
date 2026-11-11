@@ -72,11 +72,40 @@ class DoctorIn(BaseModel):
         return _valida_correo(v)
 
 
+def _numero(default: float):
+    """Los formularios mandan los números como texto; vacío = valor por defecto."""
+    def convertir(v):
+        if v is None or (isinstance(v, str) and not v.strip()):
+            return default
+        return v
+    return convertir
+
+
 class AmbulanceIn(BaseModel):
     placa: str = Field(min_length=2)
     tipo: Literal["Básica", "Avanzada"] = "Básica"
+    # Hospital donde está la ambulancia (ver app/flota.py y app/genetico.py).
+    hospital: str = "Hospital IMSS 220"
+    # Operador que la maneja: es quien registra sus cargas de gasolina.
     conductor: str = ""
-    estado: Literal["Disponible", "En servicio", "Mantenimiento"] = "Disponible"
+    estado: Literal["Libre", "En reparación", "Fuera de servicio"] = "Libre"
+    tanque_litros: float = Field(80, gt=0, le=500)
+    rendimiento_km_l: float = Field(6, gt=0, le=50)
+    combustible_pct: float = Field(100, ge=0, le=100)
+    kilometraje: float = Field(0, ge=0)
+
+    _tanque = field_validator("tanque_litros", mode="before")(_numero(80))
+    _rend = field_validator("rendimiento_km_l", mode="before")(_numero(6))
+    _comb = field_validator("combustible_pct", mode="before")(_numero(100))
+    _km = field_validator("kilometraje", mode="before")(_numero(0))
+
+    @field_validator("hospital")
+    @classmethod
+    def _hospital_valido(cls, v: str) -> str:
+        from .flota import NOMBRES_HOSPITALES
+        if v not in NOMBRES_HOSPITALES:
+            raise ValueError("Elige uno de los hospitales de la lista.")
+        return v
 
 
 class EmergencyIn(BaseModel):
@@ -101,6 +130,11 @@ class EmergencyIn(BaseModel):
     operador: str | None = None
     ambulancia: str | None = None
     doctor: str | None = None
+    # Cuántas ambulancias necesita (p. ej. un choque múltiple). Si son más de las que tiene
+    # libres el hospital base, las demás se piden a otros hospitales (app/flota.py).
+    ambulancias_requeridas: int = Field(1, ge=1, le=20)
+
+    _req = field_validator("ambulancias_requeridas", mode="before")(_numero(1))
 
 
 class EmergencyPatch(BaseModel):
@@ -144,3 +178,35 @@ class VerificacionIn(BaseModel):
     coincide: bool = True
     distancia: float | None = None
     emergencia_folio: str | None = None
+
+
+class AmbulanciaPatch(BaseModel):
+    """Cambios de la ficha de la ambulancia (cada uno queda en el historial)."""
+    estado: Literal["Libre", "En reparación", "Fuera de servicio"] | None = None
+    hospital: str | None = None
+    conductor: str | None = None
+    tanque_litros: float | None = Field(None, gt=0, le=500)
+    rendimiento_km_l: float | None = Field(None, gt=0, le=50)
+    motivo: str = ""
+
+
+class CargaCombustibleIn(BaseModel):
+    operador: str = Field(min_length=2)
+    litros: float = Field(gt=0, le=500)
+    costo: float | None = Field(None, ge=0)
+    kilometraje: float | None = Field(None, ge=0)
+    estacion: str = ""
+    notas: str = ""
+    verificado_facial: bool = False
+
+
+class AsignarIn(BaseModel):
+    cantidad: int | None = Field(None, ge=1, le=20)
+    confirmar: bool = False
+
+
+class EventoEmergenciaIn(BaseModel):
+    tipo: Literal["salida", "llegada", "traslado", "cierre"]
+    km_recorridos: float | None = Field(None, ge=0, le=2000)
+    hospital_destino: str | None = None
+    observaciones: str = ""

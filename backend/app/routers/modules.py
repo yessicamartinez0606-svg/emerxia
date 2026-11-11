@@ -3,25 +3,31 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError, WriteError
 
+from .. import flota
 from ..repository import insert_row, list_rows, source_name, update_row
 from ..schemas import AmbulanceIn, DoctorIn, EmergencyIn, EmergencyPatch, OperatorIn
 from ..security import current_username
 
 
 def build_router(
-    path: str, collection: str, model: type[BaseModel], derive=None, patch_model: type[BaseModel] | None = None
+    path: str, collection: str, model: type[BaseModel], derive=None, patch_model: type[BaseModel] | None = None,
+    normalize=None, check=None,
 ) -> APIRouter:
     router = APIRouter(prefix=f"/api/{path}", tags=[path], dependencies=[Depends(current_username)])
 
     @router.get("")
     def list_items():
         rows = list_rows(collection)
+        if normalize:
+            rows = [normalize(r) for r in rows]
         return {"total": len(rows), "items": rows, "source": source_name(collection)}
 
     @router.post("", status_code=201)
     def create_item(body: model):  # type: ignore[valid-type]
         try:
             data = body.model_dump()
+            if check:
+                check(data)   # reglas extra; lanza ValueError con el mensaje para el usuario
             if derive:
                 # p. ej. doctores: junta nombres + apellidos en un campo "nombre"
                 # para poder mostrarlo/enlazarlo igual que en los demás módulos.
@@ -33,6 +39,8 @@ def build_router(
             raise HTTPException(409, f"Ya existe un registro con ese valor de '{field}'.")
         except WriteError as exc:
             raise HTTPException(422, f"MongoDB rechazó el documento: {exc}")
+        except ValueError as exc:
+            raise HTTPException(422, str(exc))
 
     if patch_model is not None:
         @router.patch("/{item_id}")
@@ -46,12 +54,24 @@ def build_router(
     return router
 
 
+def _check_ambulancia(data: dict) -> None:
+    """Un operador conduce una sola ambulancia."""
+    conductor = (data.get("conductor") or "").strip().lower()
+    if not conductor:
+        return
+    if not any((o.get("nombre") or "").lower() == conductor for o in list_rows("operators")):
+        raise ValueError(f"No hay un operador llamado {data['conductor']}. Regístralo primero en Operadores.")
+    otra = next((a for a in list_rows("ambulances") if (a.get("conductor") or "").lower() == conductor), None)
+    if otra:
+        raise ValueError(f"{data['conductor']} ya conduce {otra['placa']}. Elige otro operador.")
+
+
 routers = [
     build_router(
         "doctores", "doctors", DoctorIn,
         derive=lambda d: {"nombre": f"{d['nombres']} {d['apellidos']}".strip()},
     ),
-    build_router("ambulancias", "ambulances", AmbulanceIn),
+    build_router("ambulancias", "ambulances", AmbulanceIn, normalize=flota.normalizar, check=_check_ambulancia),
     build_router("emergencias", "emergencies", EmergencyIn, patch_model=EmergencyPatch),
     build_router(
         "operadores", "operators", OperatorIn,

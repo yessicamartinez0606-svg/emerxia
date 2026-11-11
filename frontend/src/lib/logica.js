@@ -10,7 +10,7 @@ export function evaluarFormulario({ prioridad, doctor, doctorVerificado, ambulan
   const p = prioridad === 'Alta'
   const s = !!doctor && doctor.estado !== 'Descanso'
   const t = !!doctor && !!doctorVerificado
-  const u = ambulancia?.estado === 'Disponible'
+  const u = ['Libre', 'Disponible'].includes(ambulancia?.estado)   // Disponible = nombre anterior
   const v = ambulancia?.tipo === 'Avanzada'
 
   const doctorHabilitado = s && t
@@ -21,7 +21,7 @@ export function evaluarFormulario({ prioridad, doctor, doctorVerificado, ambulan
   else if (!s) motivos.push('El doctor está en Descanso.')
   else if (!t) motivos.push('Falta validar el rostro del doctor (Face ID).')
   if (!ambulancia) motivos.push('Falta elegir una ambulancia.')
-  else if (!u) motivos.push('La ambulancia no está Disponible.')
+  else if (!u) motivos.push('La ambulancia no está Libre.')
   else if (p && !v) motivos.push('Prioridad Alta: se requiere una ambulancia Avanzada.')
 
   return { p, s, t, u, v, doctorHabilitado, ambulanciaAdecuada, motivos }

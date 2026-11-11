@@ -233,7 +233,7 @@ function FormView({ mod }) {
                     {f.requireFaceVerification && form[f.key] && verifiedFields[f.key] === form[f.key] && (
                       <p className="field-hint ok"><CheckCircle2 size={13} /> Identidad verificada por reconocimiento facial.</p>
                     )}
-                    {f.type === 'photo' && f.hint && (
+                    {f.hint && (
                       <p className="field-hint">{f.hint}</p>
                     )}
                   </div>

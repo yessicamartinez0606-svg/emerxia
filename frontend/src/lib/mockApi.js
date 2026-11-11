@@ -16,10 +16,10 @@ const SEEDS = {
     { id: 4, nombre: 'Dr. Andrés Villalobos', especialidad: 'Pediatría', telefono: '55 1234 5604', estado: 'Descanso' },
   ],
   ambulances: [
-    { id: 1, placa: 'AMB-101', tipo: 'Avanzada', conductor: 'Jorge Salinas', estado: 'Disponible' },
-    { id: 2, placa: 'AMB-102', tipo: 'Básica', conductor: 'Marcos Herrera', estado: 'En servicio' },
-    { id: 3, placa: 'AMB-103', tipo: 'Avanzada', conductor: 'Elena Cruz', estado: 'Disponible' },
-    { id: 4, placa: 'AMB-104', tipo: 'Básica', conductor: 'Pablo Núñez', estado: 'Mantenimiento' },
+    { id: 1, placa: 'AMB-101', tipo: 'Avanzada', conductor: 'Jorge Salinas', estado: 'Libre' },
+    { id: 2, placa: 'AMB-102', tipo: 'Básica', conductor: 'Marcos Herrera', estado: 'Ocupada' },
+    { id: 3, placa: 'AMB-103', tipo: 'Avanzada', conductor: 'Elena Cruz', estado: 'Libre' },
+    { id: 4, placa: 'AMB-104', tipo: 'Básica', conductor: 'Pablo Núñez', estado: 'En reparación' },
   ],
   emergencies: [
     { id: 1, folio: 'EMG-0001', descripcion: 'Accidente vehicular en Av. Reforma', prioridad: 'Alta', estado: 'En curso', ambulancia: 'AMB-102', creado: new Date().toISOString() },

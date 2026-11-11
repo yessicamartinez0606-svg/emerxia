@@ -45,7 +45,7 @@ def evaluar_emergencia(body: EvaluacionIn):
         rostro_operador=body.rostro_operador and bool(operador),                  # r
         doctor_disponible=bool(doctor) and doctor.get("estado") != "Descanso",    # s
         rostro_doctor=body.rostro_doctor and bool(doctor),                        # t
-        ambulancia_disponible=ambulancia.get("estado") == "Disponible",           # u
+        ambulancia_disponible=ambulancia.get("estado") in ("Libre", "Disponible"),   # u (Disponible = nombre anterior)
         ambulancia_avanzada=ambulancia.get("tipo") == "Avanzada",                 # v
         rostro_salida=body.rostro_salida and bool(operador),                      # x
         estado_asignada=body.estado == "Asignada",                                # g

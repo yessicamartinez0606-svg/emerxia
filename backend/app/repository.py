@@ -122,21 +122,32 @@ def seed_demo() -> None:
             {"nombres": "Sofía", "apellidos": "Ramírez", "nombre": "Sofía Ramírez", "especialidad": "Traumatología", "cedula_profesional": "8451205", "celular": "55 1234 5603", "turno": "Nocturno", "estado": "En guardia"},
             {"nombres": "Andrés", "apellidos": "Villalobos", "nombre": "Andrés Villalobos", "especialidad": "Pediatría", "cedula_profesional": "8451206", "celular": "55 1234 5604", "turno": "Matutino", "estado": "Descanso"},
         ],
+        # Ambulancias repartidas en los hospitales de app/genetico.py. El conductor es un
+        # operador (más abajo), que es quien registra la gasolina de su ambulancia.
         "ambulances": [
-            {"placa": "AMB-101", "tipo": "Avanzada", "conductor": "Jorge Salinas", "estado": "Disponible"},
-            {"placa": "AMB-102", "tipo": "Básica", "conductor": "Marcos Herrera", "estado": "En servicio"},
-            {"placa": "AMB-103", "tipo": "Avanzada", "conductor": "Elena Cruz", "estado": "Disponible"},
-            {"placa": "AMB-104", "tipo": "Básica", "conductor": "Pablo Núñez", "estado": "Mantenimiento"},
+            {"placa": "AMB-101", "tipo": "Avanzada", "hospital": "Hospital IMSS 220", "conductor": "Mariana Torres", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 85, "kilometraje": 48210},
+            {"placa": "AMB-102", "tipo": "Básica", "hospital": "Hospital IMSS 220", "conductor": "Ricardo Paredes", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 60, "kilometraje": 61540},
+            {"placa": "AMB-103", "tipo": "Avanzada", "hospital": "Hospital IMSS 220", "conductor": "Daniela Ibarra", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 92, "kilometraje": 23980},
+            {"placa": "AMB-104", "tipo": "Básica", "hospital": "Hospital IMSS 220", "conductor": "Jorge Salinas", "estado": "En reparación", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 40, "kilometraje": 90311},
+            {"placa": "CRT-201", "tipo": "Avanzada", "hospital": "Cruz Roja Toluca", "conductor": "Elena Cruz", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 70, "kilometraje": 35002},
+            {"placa": "CRT-202", "tipo": "Básica", "hospital": "Cruz Roja Toluca", "conductor": "Pablo Núñez", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 18, "kilometraje": 77120},
+            {"placa": "NSJ-301", "tipo": "Avanzada", "hospital": "Hospital General Nicolás San Juan", "conductor": "Marcos Herrera", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 66, "kilometraje": 52300},
+            {"placa": "MET-401", "tipo": "Básica", "hospital": "Hospital IMSS 251", "conductor": "Lucía Gómez", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 95, "kilometraje": 14880},
         ],
         "emergencies": [
-            {"descripcion": "Accidente vehicular en Av. Reforma", "prioridad": "Alta", "estado": "En curso", "ambulancia": "AMB-102"},
-            {"descripcion": "Dolor torácico, adulto mayor", "prioridad": "Alta", "estado": "Asignada", "ambulancia": "AMB-101"},
-            {"descripcion": "Caída con posible fractura", "prioridad": "Media", "estado": "Pendiente", "ambulancia": None},
+            {"paciente_nombre": "Juan Pérez", "direccion": "Av. Independencia 300, Centro, Toluca", "descripcion": "Choque de dos autos, varios lesionados", "prioridad": "Alta", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 5},
+            {"paciente_nombre": "Rosa Díaz", "direccion": "Av. Morelos 1200, Toluca", "descripcion": "Dolor torácico, adulto mayor", "prioridad": "Alta", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 1},
+            {"paciente_nombre": "Luis Romero", "direccion": "Av. Tecnológico 100, Metepec", "descripcion": "Caída con posible fractura", "prioridad": "Media", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 1},
         ],
         "operators": [
             {"nombre": "Mariana Torres", "turno": "Matutino", "extension": "201", "estado": "En línea"},
             {"nombre": "Ricardo Paredes", "turno": "Vespertino", "extension": "202", "estado": "En línea"},
-            {"nombre": "Daniela Ibarra", "turno": "Nocturno", "extension": "203", "estado": "Desconectado"},
+            {"nombre": "Daniela Ibarra", "turno": "Nocturno", "extension": "203", "estado": "En línea"},
+            {"nombre": "Jorge Salinas", "turno": "Matutino", "extension": "204", "estado": "Desconectado"},
+            {"nombre": "Elena Cruz", "turno": "Vespertino", "extension": "205", "estado": "En línea"},
+            {"nombre": "Pablo Núñez", "turno": "Nocturno", "extension": "206", "estado": "En línea"},
+            {"nombre": "Marcos Herrera", "turno": "Matutino", "extension": "207", "estado": "En línea"},
+            {"nombre": "Lucía Gómez", "turno": "Vespertino", "extension": "208", "estado": "En línea"},
         ],
     }
     for name, rows in samples.items():

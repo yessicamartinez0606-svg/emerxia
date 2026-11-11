@@ -22,7 +22,7 @@ export function getPhoto(mod, item) {
 }
 
 export function emptyForm(fields) {
-  return Object.fromEntries(fields.map((f) => [f.key, f.options ? f.options[0] : '']))
+  return Object.fromEntries(fields.map((f) => [f.key, f.default ?? (f.options ? f.options[0] : '')]))
 }
 
 // Campos con `source` no traen una lista fija: se llenan leyendo otra colección

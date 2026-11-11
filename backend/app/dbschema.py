@@ -43,15 +43,18 @@ DEFINITIONS: dict[str, dict] = {
     "ambulances": {
         "validator": _schema(
             {"id": NUM, "placa": STR, "tipo": STR, "estado": STR},
-            {"conductor": STR, "created_at": "date"},
+            {"conductor": STR, "hospital": STR, "tanque_litros": NUM, "rendimiento_km_l": NUM,
+             "combustible_pct": NUM, "kilometraje": NUM, "emergencia_actual": [STR, "null"], "created_at": "date"},
         ),
-        "indexes": [("id", True), ("placa", True), ("estado", False)],
+        "indexes": [("id", True), ("placa", True), ("estado", False), ("hospital", False)],
     },
     # Emergencias atendidas
     "emergencies": {
         "validator": _schema(
             {"id": NUM, "folio": STR, "descripcion": STR, "prioridad": STR, "estado": STR},
-            {"ambulancia": [STR, "null"], "created_at": "date"},
+            {"ambulancia": [STR, "null"], "ambulancias": "array", "ambulancias_requeridas": NUM,
+             "hospital_salida": [STR, "null"], "hospital_destino": [STR, "null"], "km_recorridos": [NUM, "null"],
+             "created_at": "date"},
         ),
         "indexes": [("id", True), ("folio", True), ("estado", False), ("created_at", False)],
     },
@@ -76,6 +79,25 @@ DEFINITIONS: dict[str, dict] = {
             {"distancia": NUM, "emergencia_folio": [STR, "null"], "verificado_por": STR, "momento": "date"},
         ),
         "indexes": [("operador", False), ("momento", False)],
+    },
+    # Cargas de gasolina: las registra el operador que conduce la ambulancia.
+    "cargas_combustible": {
+        "validator": _schema(
+            {"id": NUM, "ambulancia": STR, "operador": STR, "litros": NUM},
+            {"costo": [NUM, "null"], "kilometraje": [NUM, "null"], "combustible_antes": NUM,
+             "combustible_despues": NUM, "estacion": STR, "notas": STR, "verificado_facial": "bool",
+             "registrado_por": STR, "created_at": "date"},
+        ),
+        "indexes": [("id", True), ("ambulancia", False), ("created_at", False)],
+    },
+    # Historial: cada cambio de estatus, asignación, carga de gasolina y paso de una emergencia.
+    "historial": {
+        "validator": _schema(
+            {"id": NUM, "tipo": STR, "detalle": STR},
+            {"ambulancia": [STR, "null"], "operador": [STR, "null"], "emergencia": [STR, "null"],
+             "hospital": [STR, "null"], "usuario": [STR, "null"], "created_at": "date"},
+        ),
+        "indexes": [("id", True), ("ambulancia", False), ("emergencia", False), ("created_at", False)],
     },
     # Contadores internos para los id autoincrementales (sin validación)
     "counters": {"validator": None, "indexes": []},

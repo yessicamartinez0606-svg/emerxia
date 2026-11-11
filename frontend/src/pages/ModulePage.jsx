@@ -4,6 +4,7 @@ import { Plus, RefreshCw } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
+import FlotaHospitales from '../components/FlotaHospitales.jsx'
 
 export default function ModulePage() {
   const { module: key } = useParams()
@@ -19,6 +20,7 @@ function ModuleView({ mod }) {
   const [source, setSource] = useState(null)
   const [notice, setNotice] = useState(location.state?.notice ?? null)
   const [error, setError] = useState('')
+  const [recarga, setRecarga] = useState(0)
 
   // El aviso de "guardado con éxito" llega desde la pantalla del formulario a
   // través del estado de navegación; se limpia del historial para que no
@@ -32,6 +34,7 @@ function ModuleView({ mod }) {
 
   const load = useCallback(() => {
     setError('')
+    setRecarga((n) => n + 1)
     api(`/${mod.key}`)
       .then((d) => { setItems(d.items); setSource(d.source ?? null) })
       .catch((e) => setError(e.message))
@@ -60,6 +63,8 @@ function ModuleView({ mod }) {
       </header>
 
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
+
+      {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} />}
 
       <div className="panel table-wrap">
         {error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}

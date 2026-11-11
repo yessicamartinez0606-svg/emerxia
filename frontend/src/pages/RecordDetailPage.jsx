@@ -5,6 +5,8 @@ import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
 import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
+import ControlAmbulancia from '../components/ControlAmbulancia.jsx'
+import ReporteEmergencia from '../components/ReporteEmergencia.jsx'
 
 // Campo que se usa como título principal del perfil, por módulo.
 const TITLE_KEY = { doctores: 'nombre', ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
@@ -48,14 +50,14 @@ function DetailView({ mod, id }) {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [related, setRelated] = useState({})
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     setError('')
-    setItems(null)
     api(`/${mod.key}`)
       .then((d) => setItems(d.items ?? []))
       .catch((e) => setError(e.message))
-  }, [mod.key])
+  }, [mod.key, recarga])
 
   // Campos como "operador" o "ambulancia" (en Emergencias) apuntan a otra
   // colección: se carga esa lista para poder enlazar al perfil real.
@@ -158,6 +160,8 @@ function DetailView({ mod, id }) {
         </div>
       </div>
 
+      {mod.key === 'ambulancias' && <ControlAmbulancia id={item.id} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.key === 'emergencias' && <ReporteEmergencia emergencia={item} onCambio={() => setRecarga((n) => n + 1)} />}
       {mod.key === 'emergencias' && <RutaAmbulancia emergencia={item} />}
 
       <div className={`profile-sections ${groups.length === 1 ? 'single' : ''}`}>
