@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ambulance, Check, FileText, Hospital, Printer, Truck, UserRound } from 'lucide-react'
 import {
-  ESTADO_INFO, HOSPITALES, confirmarAsignacion, eventoEmergencia, fmtFecha, fmtHoraCorta, fmtLitros, planAsignacion,
+  ESTADO_INFO, HOSPITALES, confirmarAsignacion, obtenerHospitales, eventoEmergencia, fmtFecha, fmtHoraCorta, fmtLitros, planAsignacion,
   reporteEmergencia,
 } from '../lib/flota.js'
 
@@ -55,23 +55,36 @@ function Asignacion({ em, requeridas, asignadas, onListo }) {
   const [plan, setPlan] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
+  const [aMano, setAMano] = useState(false)
+  const [elegidas, setElegidas] = useState([])     // placas elegidas por el administrador
+  const [flota, setFlota] = useState(null)
 
   useEffect(() => {
     let vigente = true
     setCargando(true)
     setError('')
-    planAsignacion(em.id, cantidad)
+    planAsignacion(em.id, cantidad, elegidas)
       .then((r) => { if (vigente) setPlan(r.plan) })
       .catch((e) => { if (vigente) setError(e.message) })
       .finally(() => { if (vigente) setCargando(false) })
     return () => { vigente = false }
-  }, [em.id, cantidad])
+  }, [em.id, cantidad, elegidas])
+
+  useEffect(() => { if (aMano && !flota) obtenerHospitales().then(setFlota).catch(() => {}) }, [aMano, flota])
+
+  const alternar = (placa) => {
+    setElegidas((ps) => {
+      const nuevas = ps.includes(placa) ? ps.filter((p) => p !== placa) : [...ps, placa]
+      if (nuevas.length > cantidad) setCantidad(nuevas.length)
+      return nuevas
+    })
+  }
 
   const confirmar = async () => {
     setCargando(true)
     setError('')
     try {
-      await confirmarAsignacion(em.id, cantidad)
+      await confirmarAsignacion(em.id, cantidad, elegidas)
       onListo()
     } catch (e) {
       setError(e.message)
@@ -106,6 +119,37 @@ function Asignacion({ em, requeridas, asignadas, onListo }) {
             {plan.usa_otros_hospitales && <strong>Se necesitan apoyos de otros hospitales. </strong>}
             {plan.resumen}
           </p>
+          {em.operador && <p className="field-hint">A cargo: <strong>{em.operador}</strong>. Si su ambulancia está lista, sale primero en ella.</p>}
+
+          <button type="button" className="link asignacion-toggle" onClick={() => setAMano((v) => !v)}>
+            {aMano ? 'Ocultar la lista de ambulancias' : 'Elegir las ambulancias a mano'}
+          </button>
+          {aMano && (
+            <div className="asignacion-manual">
+              {!flota && <p className="muted">Cargando ambulancias…</p>}
+              {flota?.hospitales.filter((h) => h.ambulancias.length).map((h) => (
+                <div key={h.id} className="am-hospital">
+                  <strong>{h.nombre}</strong>
+                  <div className="am-placas">
+                    {h.ambulancias.map((a) => {
+                      const lista = a.estado === 'Libre' && a.conductor && !a.combustible_bajo
+                      const on = elegidas.includes(a.placa)
+                      return (
+                        <button key={a.id} type="button" className={`am-placa${on ? ' on' : ''}`} disabled={!lista}
+                          aria-pressed={on} onClick={() => alternar(a.placa)}
+                          title={lista ? `Conduce ${a.conductor}` : `${a.estado}${!a.conductor ? ', sin conductor' : ''}${a.combustible_bajo ? ', gasolina baja' : ''}`}>
+                          <b>{a.placa}</b>
+                          <span>{lista ? a.conductor : a.estado === 'Libre' ? (a.conductor ? 'gasolina baja' : 'sin conductor') : a.estado.toLowerCase()}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              ))}
+              {elegidas.length > 0 && <p className="field-hint">Elegiste {elegidas.join(', ')}. Si faltan, el sistema completa con las más cercanas.</p>}
+            </div>
+          )}
+
           <ul className="asignacion-hospitales">
             {plan.por_hospital.filter((h) => h.aporta.length || h.hospital === 'Hospital IMSS 220').map((h) => (
               <li key={h.hospital}>
@@ -258,7 +302,7 @@ function Documento({ rep }) {
           <div className="rd-bloque">
             <h3>Personal</h3>
             <dl>
-              <dt>Operador (central)</dt><dd>{rep.operador ? `${rep.operador.nombre} · ext. ${rep.operador.extension || '—'}` : em.operador || 'Sin validar'}</dd>
+              <dt>Operador a cargo</dt><dd>{rep.operador ? `${rep.operador.nombre}${rep.operador.celular ? ` · ${rep.operador.celular}` : ''}` : em.operador || 'Sin asignar'}</dd>
               <dt>Doctor</dt><dd>{rep.doctor ? `${rep.doctor.nombre} · ${rep.doctor.especialidad}` : em.doctor || 'Sin doctor'}</dd>
               <dt>Face ID</dt><dd>{rep.verificaciones.length ? `${rep.verificaciones.filter((v) => v.coincide).length} verificación(es) correctas` : 'Sin verificaciones'}</dd>
             </dl>

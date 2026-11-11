@@ -60,10 +60,23 @@ def _mi_ambulancia(op: dict) -> dict | None:
                  if (a.get("conductor") or "").strip().lower() == op["nombre"].strip().lower()), None)
 
 
-def _mi_emergencia_id(op: dict) -> int:
+def _mi_emergencia(op: dict) -> dict | None:
+    """La emergencia abierta del operador: la que atiende su ambulancia o en la que la
+    central lo dejó a cargo."""
     amb = _mi_ambulancia(op)
     folio = flota.normalizar(amb)["emergencia_actual"] if amb else None
-    em = next((e for e in list_rows("emergencies") if e.get("folio") == folio), None) if folio else None
+    abiertas = [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada"]
+    if folio:
+        em = next((e for e in abiertas if e.get("folio") == folio), None)
+        if em:
+            return em
+    nombre = op["nombre"].strip().lower()
+    return next((e for e in sorted(abiertas, key=lambda e: e["id"], reverse=True)
+                 if (e.get("operador") or "").strip().lower() == nombre), None)
+
+
+def _mi_emergencia_id(op: dict) -> int:
+    em = _mi_emergencia(op)
     if not em:
         raise HTTPException(409, "No tienes una emergencia asignada en este momento.")
     return em["id"]
@@ -74,9 +87,8 @@ def portal_operador(user: dict = Depends(solo_operador)):
     op = _mi_operador(user)
     amb = _mi_ambulancia(op)
     ficha = flota_api.ficha_ambulancia(amb["id"]) if amb else None
-    reporte = None
-    if ficha and ficha["emergencia"]:
-        reporte = flota_api.reporte(ficha["emergencia"]["id"])
+    em = _mi_emergencia(op)
+    reporte = flota_api.reporte(em["id"]) if em else None
     verificaciones = sorted((v for v in list_rows("verificaciones") if v.get("operador") == op["nombre"]),
                             key=lambda v: str(v.get("momento", "")), reverse=True)[:5]
     return {

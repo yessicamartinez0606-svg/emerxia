@@ -47,8 +47,9 @@ export const obtenerHistorial = (filtros = {}) => {
   const q = new URLSearchParams(Object.entries(filtros).filter(([, v]) => v)).toString()
   return api(`/flota/historial${q ? `?${q}` : ''}`)
 }
-export const planAsignacion = (id, cantidad) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, confirmar: false } })
-export const confirmarAsignacion = (id, cantidad) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, confirmar: true } })
+// `placas`: las que eligió el administrador a mano (van primero si están listas).
+export const planAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: false } })
+export const confirmarAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: true } })
 export const eventoEmergencia = (id, evento) => api(`/flota/emergencias/${id}/evento`, { method: 'POST', body: evento })
 export const reporteEmergencia = (id) => api(`/flota/emergencias/${id}/reporte`)
 

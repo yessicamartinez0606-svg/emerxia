@@ -20,6 +20,7 @@ export default function OperatorValidationPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [validated, setValidated] = useState(null)   // operador ya validado en esta pantalla
+  const [asignacion, setAsignacion] = useState(null)  // { ambulancia, mensaje, listo }
   const autoOpened = useRef(false)
 
   useEffect(() => {
@@ -53,10 +54,12 @@ export default function OperatorValidationPage() {
     setSaveError('')
     try {
       const wasEnCurso = emergency.estado === 'En curso'
-      const changes = { operador: operator.nombre }
-      if (emergency.estado === 'Pendiente') changes.estado = 'Asignada'
-      const updated = await api(`/emergencias/${emergency.id}`, { method: 'PATCH', body: changes })
-      setEmergency(updated)
+      // Queda a cargo de la emergencia y, si su ambulancia está lista, sale en ella:
+      // así le aparece en su perfil de Operador.
+      const r = await api(`/flota/emergencias/${emergency.id}/operador`, { method: 'POST', body: { operador: operator.nombre } })
+      setAsignacion(r)
+      const lista = await api('/emergencias')
+      setEmergency(lista.items.find((e) => e.id === emergency.id) ?? emergency)
       setValidated(operator)
       // Bitácora de auditoría: no debe bloquear el flujo si falla.
       api('/verificaciones', {
@@ -165,6 +168,12 @@ export default function OperatorValidationPage() {
         {operators && operators.length > 0 && withPhoto === 0 && (
           <p className="field-hint warn">Ningún operador tiene foto de referencia. Agrégala en el módulo de Operadores.</p>
         )}
+        {asignacion && (
+          <p className={`asignacion-resumen${asignacion.listo ? '' : ' apoyo'}`}>
+            {asignacion.mensaje}{' '}
+            {asignacion.listo ? 'Ya le aparece en su perfil de Operador.' : <Link to={`/emergencias/${emergency.id}`}>Elegir ambulancia</Link>}
+          </p>
+        )}
         {saveError && <p className="form-error validation-error">{saveError}</p>}
 
         <div className="validation-actions">
@@ -178,7 +187,7 @@ export default function OperatorValidationPage() {
           </button>
           {assigned ? (
             <>
-              <Link to={`/emergencias/${emergency.id}`} className="btn-ghost tall">Ver emergencia</Link>
+              <Link to={`/emergencias/${emergency.id}`} className="btn-ghost tall">Ver reporte y ambulancias</Link>
               <Link to="/emergencias" className="btn-ghost tall">Ir a emergencias <ArrowRight size={15} /></Link>
             </>
           ) : (

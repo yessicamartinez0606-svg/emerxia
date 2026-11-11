@@ -131,22 +131,30 @@ def orden_hospitales(destino: dict | None) -> list[dict]:
     return [base, *otros]
 
 
-def planear(ambulancias: list[dict], cantidad: int, destino: dict | None = None) -> dict:
-    """Elige `cantidad` ambulancias: primero del hospital base y, si no alcanzan, de los
-    hospitales más cercanos. Regresa el plan y un resumen en lenguaje sencillo."""
+def planear(ambulancias: list[dict], cantidad: int, destino: dict | None = None,
+            preferidas: list[str] | tuple = ()) -> dict:
+    """Elige `cantidad` ambulancias. Primero las `preferidas` (las que eligió el
+    administrador o la del operador asignado), si están listas; después las libres del
+    hospital base y, si no alcanzan, las de los hospitales más cercanos. Regresa el plan y
+    un resumen en lenguaje sencillo."""
     if cantidad < 1:
         raise ValueError("Se necesita al menos una ambulancia.")
     flota = [normalizar(a) for a in ambulancias]
     p = a_plano(destino["lat"], destino["lng"]) if destino else None
 
-    elegidas, por_hospital = [], []
+    por_placa = {a["placa"]: a for a in flota}
+    primero = [por_placa[pl] for pl in dict.fromkeys(preferidas)
+               if pl in por_placa and motivo_no_disponible(por_placa[pl]) is None][:cantidad]
+    elegidas, por_hospital = list(primero), []
     for h in orden_hospitales(destino):
         propias = sorted((a for a in flota if a["hospital"] == h["nombre"]), key=lambda a: a["placa"])
         libres = [a for a in propias if motivo_no_disponible(a) is None]
         # Entre las libres, primero las de tipo Avanzada y con más gasolina.
         libres.sort(key=lambda a: (a.get("tipo") != "Avanzada", -a["combustible_pct"], a["placa"]))
-        toma = libres[: max(0, cantidad - len(elegidas))]
-        elegidas += toma
+        de_aqui = [a for a in primero if a["hospital"] == h["nombre"]]
+        resto = [a for a in libres if a not in primero]
+        toma = de_aqui + resto[: max(0, cantidad - len(elegidas))]
+        elegidas += toma[len(de_aqui):]
         por_hospital.append({
             "hospital": h["nombre"],
             "municipio": h["municipio"],

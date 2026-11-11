@@ -69,7 +69,8 @@ export default function MiTurno() {
 
 function EmergenciaAsignada({ rep, onCambio }) {
   const em = rep.emergencia
-  const siguiente = PASOS.find((p) => !em[p.campo])
+  const sinAmbulancia = rep.ambulancias.length === 0
+  const siguiente = sinAmbulancia ? null : PASOS.find((p) => !em[p.campo])
   const [km, setKm] = useState('')
   const [obs, setObs] = useState('')
   const [destino, setDestino] = useState('Hospital IMSS 220')
@@ -109,10 +110,14 @@ function EmergenciaAsignada({ rep, onCambio }) {
           <div><dt><MapPin size={13} /> Dirección</dt><dd>{em.direccion}</dd></div>
           <div><dt><UserRound size={13} /> Paciente</dt><dd>{em.paciente_nombre}{em.paciente_edad ? `, ${em.paciente_edad} años` : ''}</dd></div>
           {em.paciente_telefono && <div><dt><Phone size={13} /> Teléfono</dt><dd><a href={`tel:${em.paciente_telefono}`}>{em.paciente_telefono}</a></dd></div>}
-          <div><dt><Ambulance size={13} /> Van</dt><dd>{rep.ambulancias.map((a) => `${a.placa} (${a.conductor || 'sin conductor'})`).join(', ')}</dd></div>
+          <div><dt><Ambulance size={13} /> Van</dt><dd>{sinAmbulancia ? 'Todavía sin ambulancia' : rep.ambulancias.map((a) => `${a.placa} (${a.conductor || 'sin conductor'})`).join(', ')}</dd></div>
           {em.canal && <div><dt>Reportada por</dt><dd>{em.canal === 'llamada' ? 'Llamada' : 'Mensaje'}{em.reportante ? ` de ${em.reportante}` : ''}</dd></div>}
         </dl>
 
+        {sinAmbulancia && (
+          <p className="asignacion-resumen apoyo">La central te dejó a cargo de esta emergencia, pero todavía no le asigna ambulancia. En cuanto lo haga, aquí aparecen la ambulancia, los pasos y la ruta.</p>
+        )}
+        {!sinAmbulancia && (
         <ol className="op-pasos">
           {PASOS.map((p) => (
             <li key={p.key} className={em[p.campo] ? 'hecho' : p === siguiente ? 'actual' : ''}>
@@ -122,6 +127,7 @@ function EmergenciaAsignada({ rep, onCambio }) {
             </li>
           ))}
         </ol>
+        )}
 
         {siguiente && (
           <div className="op-accion">
@@ -157,7 +163,7 @@ function EmergenciaAsignada({ rep, onCambio }) {
       </section>
 
       {/* Ruta del IMSS 220 a la emergencia, con las rutas alternas de cada algoritmo. */}
-      <RutaAmbulancia emergencia={em} />
+      {!sinAmbulancia && <RutaAmbulancia emergencia={em} />}
     </>
   )
 }

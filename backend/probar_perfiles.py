@@ -201,6 +201,27 @@ def main() -> int:
     p = portal.operador_estado(AmbulanciaPatch(estado="En reparación", motivo="Llanta ponchada"), mariana)
     revisar(p["ficha"]["ambulancia"]["estado"] == "En reparación", "Puede reportar su ambulancia en reparación con el motivo")
 
+    print("\nLa central crea la emergencia y asigna al operador con Face ID")
+    portal.operador_estado(AmbulanciaPatch(estado="Libre"), mariana)
+    em2 = repository.insert_row("emergencies", {"paciente_nombre": "Luis Romero", "direccion": "Av. Morelos 1200",
+                                                "descripcion": "Dolor torácico", "prioridad": "Alta", "estado": "Pendiente",
+                                                "ambulancias_requeridas": 1})
+    r = flota_api.asignar_operador(em2["id"], flota_api.OperadorEmergenciaIn(operador="Mariana Torres"), "admin")
+    em2 = next(e for e in repository.list_rows("emergencies") if e["id"] == em2["id"])
+    revisar(r["listo"] and r["ambulancia"] == "AMB-101" and em2["ambulancia"] == "AMB-101" and em2["operador"] == "Mariana Torres",
+            "Al validar a Mariana, la emergencia queda con ella y con su ambulancia")
+    p = portal.portal_operador(mariana)
+    revisar(p["emergencia"]["emergencia"]["folio"] == em2["folio"] and p["ficha"]["ambulancia"]["estado"] == "Ocupada",
+            "En su perfil de Operador le aparece la emergencia con la ambulancia asignada")
+    em3 = repository.insert_row("emergencies", {"paciente_nombre": "Ana", "direccion": "Centro", "descripcion": "Caída",
+                                                "prioridad": "Media", "estado": "Pendiente", "ambulancias_requeridas": 1})
+    r = flota_api.asignar_operador(em3["id"], flota_api.OperadorEmergenciaIn(operador="Elena Cruz"), "admin")
+    revisar(not r["listo"] and "no maneja ninguna ambulancia" in r["mensaje"], "Si el operador no maneja ambulancia, se avisa a la central")
+    elena = repository.find_user("operador-3")
+    p = portal.portal_operador(elena)
+    revisar(p["emergencia"] and p["emergencia"]["emergencia"]["folio"] == em3["folio"] and p["ficha"] is None,
+            "Elena ve la emergencia a su cargo aunque todavía no tenga ambulancia")
+
     print("\nTodo bien.\n" if not fallas else f"\n{fallas} regla(s) fallaron.\n")
     return 1 if fallas else 0
 

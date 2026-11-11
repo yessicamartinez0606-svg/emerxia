@@ -889,3 +889,40 @@ tbody tr:hover { background: #fcfcfd; }
 .us-mis .head-actions a, .us-vacio a { text-decoration: none; }
 .us-buscar { min-width: 0; max-width: 100%; }
 .us-ubicacion > .btn-ghost { flex: none; }
+
+/* ───────── Inicio de la central: emergencias por atender ───────── */
+.central { position: relative; z-index: 1; display: flex; flex-direction: column; gap: 12px; }
+.central-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.central-head h2 { display: flex; align-items: center; gap: 8px; font-size: 16px; margin: 0; color: var(--red-700); }
+.central-head p { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+.central-head .btn-primary { text-decoration: none; }
+.central-lista { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.central-fila { display: grid; grid-template-columns: 6px minmax(0, 1fr) auto auto auto; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; color: var(--ink); text-decoration: none; }
+.central-fila:hover { border-color: var(--red-500); background: var(--red-50); }
+.central-prio { align-self: stretch; border-radius: 3px; background: #c9ced8; }
+.central-prio.p-alta { background: var(--red-600); }
+.central-prio.p-media { background: #e3a114; }
+.central-info { min-width: 0; display: grid; }
+.central-info strong { font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.central-info span { font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; display: flex; align-items: center; gap: 4px; }
+.central-asig { display: grid; gap: 2px; font-size: 12px; color: var(--muted); }
+.central-asig span { display: flex; align-items: center; gap: 5px; white-space: nowrap; }
+.central-hora { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.central-falta { font-size: 11.5px; font-weight: 700; padding: 4px 10px; border-radius: 999px; background: #e6eefc; color: #1d5fd6; white-space: nowrap; }
+.central-falta.urgente { background: var(--red-100); color: var(--red-800); }
+@media (max-width: 760px) {
+  .central-fila { grid-template-columns: 6px minmax(0, 1fr) auto; }
+  .central-asig, .central-hora { display: none; }
+}
+
+/* Asignación a mano */
+.asignacion-toggle { align-self: flex-start; color: #1d5fd6; font-size: 12.5px; }
+.asignacion-manual { display: grid; gap: 10px; padding: 12px; border-radius: 10px; background: var(--field); }
+.am-hospital strong { font-size: 12.5px; }
+.am-placas { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.am-placa { display: grid; text-align: left; gap: 1px; padding: 6px 10px; border-radius: 9px; border: 1px solid var(--line); background: #fff; font-size: 12px; color: var(--ink); }
+.am-placa span { font-size: 11px; color: var(--muted); }
+.am-placa:hover:not(:disabled) { border-color: #1d5fd6; }
+.am-placa.on { background: #1d5fd6; border-color: #1d5fd6; color: #fff; }
+.am-placa.on span { color: rgba(255,255,255,.85); }
+.am-placa:disabled { opacity: .5; cursor: not-allowed; }

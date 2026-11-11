@@ -6,6 +6,7 @@
     POST  /api/flota/ambulancias/{id}/combustible     carga de gasolina (solo su conductor)
     GET   /api/flota/historial                        historial (filtros: ambulancia, emergencia, tipo)
     POST  /api/flota/emergencias/{id}/asignar         plan de ambulancias (confirmar=true lo aplica)
+    POST  /api/flota/emergencias/{id}/operador        operador validado por Face ID (sale en su ambulancia)
     POST  /api/flota/emergencias/{id}/evento          salida, llegada, traslado o cierre
     GET   /api/flota/emergencias/{id}/reporte         reporte completo de la emergencia
 """
@@ -13,7 +14,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from .. import flota
 from ..repository import insert_row, list_rows, update_row
-from ..schemas import AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn
+from ..schemas import AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn, OperadorEmergenciaIn
 from ..security import current_username
 
 router = APIRouter(prefix="/api/flota", tags=["flota"], dependencies=[Depends(current_username)])
@@ -229,8 +230,15 @@ def asignar(em_id: int, body: AsignarIn, usuario: str = Depends(current_username
     if faltan <= 0:
         return {"plan": None, "asignadas": ya, "mensaje": f"Ya tiene las {len(ya)} ambulancia(s) que necesita."}
 
-    plan = flota.planear(list_rows("ambulances"), faltan, destino)
+    # Primero las que eligió el administrador; si la emergencia ya tiene operador asignado,
+    # también su ambulancia, para que salga en la que maneja.
+    preferidas = list(body.placas)
+    amb_op = _ambulancia_de(em.get("operador"))
+    if amb_op and amb_op["placa"] not in ya:
+        preferidas.append(amb_op["placa"])
+    plan = flota.planear(list_rows("ambulances"), faltan, destino, preferidas)
     plan["ubicada"] = destino is not None
+    plan["manual"] = bool(body.placas)
     if not body.confirmar:
         return {"plan": plan, "asignadas": ya}
     if not plan["elegidas"]:
@@ -251,9 +259,50 @@ def asignar(em_id: int, body: AsignarIn, usuario: str = Depends(current_username
         "ambulancias_requeridas": cantidad,
         "hospital_salida": em.get("hospital_salida") or plan["elegidas"][0]["hospital"],
         "estado": "Asignada" if em.get("estado") == "Pendiente" else em.get("estado"),
-        "asignada_en": flota.ahora(),
+        "asignada_en": em.get("asignada_en") or flota.ahora(),
+        # El operador de la emergencia es quien maneja la primera ambulancia (si no había uno).
+        "operador": em.get("operador") or plan["elegidas"][0]["conductor"],
     })
     return {"plan": plan, "asignadas": todas}
+
+
+def _ambulancia_de(operador: str | None) -> dict | None:
+    if not operador:
+        return None
+    return next((a for a in list_rows("ambulances") if (a.get("conductor") or "").strip().lower() == operador.strip().lower()), None)
+
+
+@router.post("/emergencias/{em_id}/operador")
+def asignar_operador(em_id: int, body: OperadorEmergenciaIn, usuario: str = Depends(current_username)):
+    """El operador validado por Face ID queda en la emergencia y, si su ambulancia está
+    lista, sale en ella. Así le aparece en su perfil de Operador."""
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    op = _por("operators", "nombre", body.operador)
+    if not op:
+        raise HTTPException(422, f"No hay un operador llamado {body.operador}.")
+    folio = em["folio"]
+    update_row("emergencies", em_id, {"operador": op["nombre"],
+                                      "estado": "Asignada" if em.get("estado") == "Pendiente" else em.get("estado")})
+    registrar("asignacion", f"{op['nombre']} queda a cargo de {folio} (Face ID).", usuario, operador=op["nombre"], emergencia=folio)
+
+    amb = _ambulancia_de(op["nombre"])
+    ya = _placas(em)
+    if not amb:
+        mensaje = f"{op['nombre']} no maneja ninguna ambulancia. Asígnale una en Ambulancias o elige una para la emergencia."
+        return {"operador": op["nombre"], "ambulancia": None, "mensaje": mensaje, "listo": False}
+    if amb["placa"] in ya:
+        return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": f"{op['nombre']} sale con {amb['placa']}.", "listo": True}
+    motivo = flota.motivo_no_disponible(amb)
+    if motivo:
+        mensaje = f"{amb['placa']}, la ambulancia de {op['nombre']}, no puede salir ({motivo}). Elige otra para la emergencia."
+        return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": mensaje, "listo": False}
+    requeridas = max(int(em.get("ambulancias_requeridas") or 1), len(ya) + 1)
+    asignar(em_id, AsignarIn(cantidad=len(ya) + 1, placas=[amb["placa"]], confirmar=True), usuario)
+    if requeridas > len(ya) + 1:
+        update_row("emergencies", em_id, {"ambulancias_requeridas": requeridas})
+    return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": f"{op['nombre']} sale con {amb['placa']}.", "listo": True}
 
 
 @router.post("/emergencias/{em_id}/evento")

@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { ArrowRight, HeartPulse } from 'lucide-react'
 import { useAuth } from '../lib/auth.jsx'
 import { MODULES } from '../lib/modules.js'
+import PendientesCentral from '../components/PendientesCentral.jsx'
 
 function HeroArt() {
   return (
@@ -48,8 +49,10 @@ export default function Home() {
       <HeroArt />
       <header className="home-head">
         <h1>¡Bienvenido, {firstName}!</h1>
-        <p>Selecciona un módulo para comenzar</p>
+        <p>{user?.role === 'Administrador' ? 'Tú creas, asignas y das seguimiento a las emergencias' : 'Selecciona un módulo para comenzar'}</p>
       </header>
+
+      <PendientesCentral />
 
       <div className="module-grid">
         {MODULES.map(({ key, label, description, icon: Icon }) => (

@@ -232,7 +232,14 @@ class CargaCombustibleIn(BaseModel):
 
 class AsignarIn(BaseModel):
     cantidad: int | None = Field(None, ge=1, le=20)
+    # Placas que eligió el administrador a mano (van primero si están listas).
+    placas: list[str] = Field(default_factory=list)
     confirmar: bool = False
+
+
+class OperadorEmergenciaIn(BaseModel):
+    """Operador que atenderá la emergencia (validado por Face ID en la central)."""
+    operador: str = Field(min_length=2)
 
 
 class EventoEmergenciaIn(BaseModel):
