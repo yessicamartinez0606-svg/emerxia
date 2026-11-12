@@ -4,6 +4,7 @@ import { Ambulance, Check, Fuel, MapPin, Phone, ScanFace, Siren, UserRound, Wren
 import RutaAmbulancia from '../../components/RutaAmbulancia.jsx'
 import ClimaZonas from '../../components/ClimaZonas.jsx'
 import LlegadaEstimada from '../../components/LlegadaEstimada.jsx'
+import { LlegaATiempo, TriajeEmergencia } from '../../components/IAEmergencia.jsx'
 import { ESTADOS_MANUALES, ESTADO_INFO, HOSPITALES, colorGasolina, fmtFecha, fmtHoraCorta } from '../../lib/flota.js'
 import { estadoOperador, eventoOperador, portalOperador } from '../../lib/portal.js'
 
@@ -166,6 +167,10 @@ function EmergenciaAsignada({ rep, onCambio }) {
         {error && <p className="form-error">{error}</p>}
       </section>
 
+      <div className="ia-em-grid">
+        <TriajeEmergencia emergenciaId={em.id} />
+        {!em.hora_llegada && <LlegaATiempo emergenciaId={em.id} />}
+      </div>
       {!em.hora_llegada && <LlegadaEstimada emergenciaId={em.id} />}
 
       {/* Ruta del IMSS 220 a la emergencia, con las rutas alternas de cada algoritmo. */}

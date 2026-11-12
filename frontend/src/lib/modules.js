@@ -133,6 +133,11 @@ export const MODULES = [
         hint: 'Si son más de las que hay libres en el Hospital IMSS 220, se piden a los hospitales más cercanos.',
       },
       { key: 'estado', label: 'Estado', options: ['Pendiente', 'Asignada', 'En curso', 'Cerrada'], group: 'Emergencia' },
+      // Opcionales. Con los tres, el modelo de triaje (práctica 05) estima si es crítica.
+      { key: 'saturacion_oxigeno', label: 'Saturación de oxígeno (SpO₂ %)', type: 'number', group: 'Signos vitales',
+        hint: 'Opcional. Con saturación, frecuencia cardiaca y Glasgow, la IA estima si la emergencia es crítica.' },
+      { key: 'frecuencia_cardiaca', label: 'Frecuencia cardiaca (latidos por minuto)', type: 'number', group: 'Signos vitales' },
+      { key: 'escala_glasgow', label: 'Escala de Glasgow (3 a 15)', type: 'number', group: 'Signos vitales' },
 
       // Asignación: se elige de las bases de datos reales, no se escribe a mano
       {
@@ -199,6 +204,8 @@ export const MODULES = [
       { key: 'turno', label: 'Turno', options: ['Matutino', 'Vespertino', 'Nocturno'], group: 'Datos personales' },
       { key: 'extension', label: 'Extensión', group: 'Datos personales' },
       { key: 'estado', label: 'Estado', options: ['En línea', 'Desconectado'], group: 'Datos personales' },
+      { key: 'experiencia', label: 'Años de experiencia', type: 'number', group: 'Datos personales',
+        hint: 'La IA lo usa para estimar si la ambulancia llegará a tiempo.' },
       {
         key: 'foto',
         label: 'Foto de referencia (rostro)',
@@ -229,8 +236,8 @@ export const MODULES = [
   {
     // Pantalla propia (pages/TiempoLlegadaPage.jsx): árbol de regresión + clima de las zonas.
     key: 'llegada',
-    label: 'Tiempo de llegada (IA)',
-    description: 'Clima de las zonas y cuánto tarda la ambulancia: fórmula fija vs. modelo que aprende',
+    label: 'Inteligencia artificial',
+    description: 'Clima, tiempo de llegada, ¿llega a tiempo? y triaje de emergencias críticas',
     icon: CloudRain,
     navIcon: BrainCircuit,
     custom: true,

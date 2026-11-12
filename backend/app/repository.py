@@ -140,14 +140,14 @@ def seed_demo() -> None:
             {"paciente_nombre": "Luis Romero", "direccion": "Av. Tecnológico 100, Metepec", "descripcion": "Caída con posible fractura", "prioridad": "Media", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 1},
         ],
         "operators": [
-            {"nombre": "Mariana Torres", "turno": "Matutino", "extension": "201", "estado": "En línea"},
-            {"nombre": "Ricardo Paredes", "turno": "Vespertino", "extension": "202", "estado": "En línea"},
-            {"nombre": "Daniela Ibarra", "turno": "Nocturno", "extension": "203", "estado": "En línea"},
-            {"nombre": "Jorge Salinas", "turno": "Matutino", "extension": "204", "estado": "Desconectado"},
-            {"nombre": "Elena Cruz", "turno": "Vespertino", "extension": "205", "estado": "En línea"},
-            {"nombre": "Pablo Núñez", "turno": "Nocturno", "extension": "206", "estado": "En línea"},
-            {"nombre": "Marcos Herrera", "turno": "Matutino", "extension": "207", "estado": "En línea"},
-            {"nombre": "Lucía Gómez", "turno": "Vespertino", "extension": "208", "estado": "En línea"},
+            {"nombre": "Mariana Torres", "experiencia": 8, "turno": "Matutino", "extension": "201", "estado": "En línea"},
+            {"nombre": "Ricardo Paredes", "experiencia": 3, "turno": "Vespertino", "extension": "202", "estado": "En línea"},
+            {"nombre": "Daniela Ibarra", "experiencia": 12, "turno": "Nocturno", "extension": "203", "estado": "En línea"},
+            {"nombre": "Jorge Salinas", "experiencia": 1, "turno": "Matutino", "extension": "204", "estado": "Desconectado"},
+            {"nombre": "Elena Cruz", "experiencia": 6, "turno": "Vespertino", "extension": "205", "estado": "En línea"},
+            {"nombre": "Pablo Núñez", "experiencia": 10, "turno": "Nocturno", "extension": "206", "estado": "En línea"},
+            {"nombre": "Marcos Herrera", "experiencia": 2, "turno": "Matutino", "extension": "207", "estado": "En línea"},
+            {"nombre": "Lucía Gómez", "experiencia": 5, "turno": "Vespertino", "extension": "208", "estado": "En línea"},
         ],
     }
     for name, rows in samples.items():

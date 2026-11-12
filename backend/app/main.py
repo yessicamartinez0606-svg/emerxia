@@ -1,4 +1,5 @@
 import logging
+import threading
 from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI
@@ -16,6 +17,17 @@ log = logging.getLogger("emergexia")
 VERSION = "2.0-mongodb"
 
 
+def _preparar_modelos():
+    """Entrena los modelos de IA al arrancar (tardan unos segundos) para que la primera
+    pantalla que los use no espere. Si falta scikit-learn, no pasa nada."""
+    from . import a_tiempo, eta, triaje
+    for m in (eta, a_tiempo, triaje):
+        try:
+            m.entrenar()
+        except Exception:  # noqa: BLE001
+            pass
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     log.info("Emergexia API v%s · base de datos '%s' · %s", VERSION, settings.mongo_db, "MongoDB")
@@ -23,6 +35,7 @@ async def lifespan(_: FastAPI):
         readiness.mongo_service.ensure()   # conecta con MongoDB y crea datos de ejemplo la primera vez
     except Exception:                      # noqa: BLE001
         pass                               # la API arranca igual; el error se ve en /api/health y en la app
+    threading.Thread(target=_preparar_modelos, daemon=True).start()
     yield
     stop_spark()
     close_client()

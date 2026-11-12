@@ -164,7 +164,14 @@ class EmergencyIn(BaseModel):
     # libres el hospital base, las demás se piden a otros hospitales (app/flota.py).
     ambulancias_requeridas: int = Field(1, ge=1, le=20)
 
+    # Signos vitales reportados (opcionales). Con los tres, el modelo de triaje (app/triaje.py)
+    # estima si la emergencia es crítica.
+    saturacion_oxigeno: float | None = Field(None, ge=50, le=100)
+    frecuencia_cardiaca: float | None = Field(None, ge=20, le=250)
+    escala_glasgow: int | None = Field(None, ge=3, le=15)
+
     _req = field_validator("ambulancias_requeridas", mode="before")(_numero(1))
+    _signos = field_validator("saturacion_oxigeno", "frecuencia_cardiaca", "escala_glasgow", mode="before")(_numero(None))
 
 
 class EmergencyPatch(BaseModel):
@@ -185,6 +192,9 @@ class OperatorIn(BaseModel):
     turno: Literal["Matutino", "Vespertino", "Nocturno"] = "Matutino"
     extension: str = ""
     estado: Literal["En línea", "Desconectado"] = "En línea"
+    # Años de experiencia manejando ambulancia (lo usa el modelo "¿llega a tiempo?", app/a_tiempo.py).
+    experiencia: float | None = Field(None, ge=0, le=50)
+    _exp = field_validator("experiencia", mode="before")(_numero(None))
     # Foto de referencia (imagen en base64, formato data URL) tomada al registrar
     # al operador. Se usa después para verificar por reconocimiento facial que es
     # el mismo operador antes de asignarlo a una emergencia y antes de que salga

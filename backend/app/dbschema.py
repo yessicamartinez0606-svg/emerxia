@@ -53,7 +53,8 @@ DEFINITIONS: dict[str, dict] = {
         "validator": _schema(
             {"id": NUM, "folio": STR, "descripcion": STR, "prioridad": STR, "estado": STR},
             {"ambulancia": [STR, "null"], "ambulancias": "array", "ambulancias_requeridas": NUM,
-             "hospital_salida": [STR, "null"], "hospital_destino": [STR, "null"], "km_recorridos": [NUM, "null"],
+             "hospital_salida": [STR, "null"],
+             "saturacion_oxigeno": [NUM, "null"], "frecuencia_cardiaca": [NUM, "null"], "escala_glasgow": [NUM, "null"], "hospital_destino": [STR, "null"], "km_recorridos": [NUM, "null"],
              "created_at": "date"},
         ),
         "indexes": [("id", True), ("folio", True), ("estado", False), ("created_at", False)],
@@ -65,7 +66,7 @@ DEFINITIONS: dict[str, dict] = {
             # "foto" no es requerida aquí (a nivel de MongoDB) para no romper
             # operadores que ya existían antes de esta función; la API
             # (schemas.py) sí la exige para operadores nuevos.
-            {"extension": STR, "foto": STR, "celular": STR, "correo": STR, "rostro": "array", "rostro_de": STR,
+            {"extension": STR, "experiencia": [NUM, "null"], "foto": STR, "celular": STR, "correo": STR, "rostro": "array", "rostro_de": STR,
              "created_at": "date"},
         ),
         "indexes": [("id", True), ("estado", False)],

@@ -2,25 +2,56 @@ import { useEffect, useState } from 'react'
 import { BrainCircuit, Calculator, Trophy } from 'lucide-react'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 import { estimarLlegada, modeloLlegada } from '../lib/clima.js'
+import ATiempoPanel from './ia/ATiempoPanel.jsx'
+import TriajePanel from './ia/TriajePanel.jsx'
 
 // Práctica de regresión (backend/ia/enfoque2_tiempo_llegada.py) dentro del sistema:
 // ¿cuánto tarda en llegar la ambulancia? Fórmula fija vs. árbol de regresión.
+const PESTANAS = [
+  { key: 'llegada', label: 'Tiempo de llegada', sub: 'Regresión' },
+  { key: 'a-tiempo', label: '¿Llega a tiempo?', sub: 'Práctica 04' },
+  { key: 'triaje', label: 'Triaje', sub: 'Práctica 05' },
+]
+
 export default function TiempoLlegadaPage() {
+  const [tab, setTab] = useState(() => {
+    try { return sessionStorage.getItem('ia.tab') || 'llegada' } catch { return 'llegada' }
+  })
+  const elegir = (k) => { setTab(k); try { sessionStorage.setItem('ia.tab', k) } catch { /* sin almacenamiento */ } }
+
+  return (
+    <section className="ia">
+      <header className="view-head">
+        <div>
+          <h1>Inteligencia artificial</h1>
+          <p>Modelos que aprenden de servicios pasados para apoyar a la central: cuánto tarda la ambulancia, si llegará a tiempo y qué emergencias son críticas. Los datos de entrenamiento son ficticios, como en las prácticas.</p>
+        </div>
+        <BrainCircuit size={28} className="rutas-head-icon" aria-hidden="true" />
+      </header>
+
+      <div className="segmentado ia-tabs" role="tablist" aria-label="Modelo">
+        {PESTANAS.map((p) => (
+          <button key={p.key} type="button" role="tab" aria-selected={tab === p.key} className={tab === p.key ? 'on' : ''} onClick={() => elegir(p.key)}>
+            {p.label} <small>{p.sub}</small>
+          </button>
+        ))}
+      </div>
+
+      {tab === 'llegada' && <Llegada />}
+      {tab === 'a-tiempo' && <ATiempoPanel />}
+      {tab === 'triaje' && <TriajePanel />}
+    </section>
+  )
+}
+
+function Llegada() {
   const [ev, setEv] = useState(null)
   const [error, setError] = useState('')
 
   useEffect(() => { modeloLlegada().then(setEv).catch((e) => setError(e.message)) }, [])
 
   return (
-    <section className="ia">
-      <header className="view-head">
-        <div>
-          <h1>Tiempo de llegada (IA)</h1>
-          <p>¿Cuánto tarda en llegar la ambulancia? Una fórmula fija contra un modelo que aprende de servicios pasados (árbol de regresión). La lluvia de cada emergencia sale del clima real de su zona.</p>
-        </div>
-        <BrainCircuit size={28} className="rutas-head-icon" aria-hidden="true" />
-      </header>
-
+    <>
       <ClimaZonas puedeSimular />
 
       {error && <p className="form-error">{error}</p>}
@@ -36,7 +67,7 @@ export default function TiempoLlegadaPage() {
           <Comparacion ev={ev} />
         </>
       )}
-    </section>
+    </>
   )
 }
 

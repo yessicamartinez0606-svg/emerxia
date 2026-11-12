@@ -1006,3 +1006,73 @@ tbody tr:hover { background: #fcfcfd; }
 .ia-tabla th { font-size: 11.5px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .03em; }
 .ia-tabla td.mejor { color: #1a7a41; font-weight: 700; }
 @media (max-width: 560px) { .ia-barras li { grid-template-columns: 96px 1fr 48px; } }
+
+/* ───────────── IA: pestañas y prácticas 04 / 05 ───────────── */
+.ia-tabs { margin-bottom: 16px; }
+.ia-tabs button small { font-weight: 500; opacity: .7; margin-left: 4px; font-size: 11px; }
+.ia-intro { font-size: 13.5px; color: var(--muted); max-width: 900px; margin-bottom: 14px; }
+.ia-sub { margin-top: 20px; }
+.ia-conjuntos { display: flex; gap: 3px; border-radius: 8px; overflow: hidden; font-size: 12px; }
+.ia-conjuntos div { padding: 8px 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.ia-conjuntos .ent { background: #fbe3e6; color: var(--red-800); }
+.ia-conjuntos .val { background: #e6eefc; color: #1d4f9c; }
+.ia-conjuntos .pru { background: #e5f6ec; color: #1a7a41; }
+.ia-prof { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 8px; }
+.ia-prof-col { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 10px 4px; border-radius: 10px; text-align: center; }
+.ia-prof-col.elegido { background: var(--red-50); outline: 1.5px solid var(--red-500); }
+.ia-prof-barras { height: 140px; width: 100%; max-width: 70px; display: flex; gap: 4px; align-items: flex-end; justify-content: center; }
+.ia-prof-barras i { width: 22px; border-radius: 4px 4px 0 0; }
+i.ent { background: var(--red-600); }
+i.val { background: #1d5fd6; }
+.ia-prof-col b { font-size: 15px; }
+.ia-prof-col small { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.ia-prof-col em { font-style: normal; font-size: 10.5px; font-weight: 600; color: #1a7a41; }
+.ia-prof-col em.sobre { color: #a0630a; }
+.ia-prof-col em.sub { color: var(--red-700); }
+.ia-leyenda { font-size: 12px; color: var(--muted); margin-top: 10px; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.ia-leyenda i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+.ia-metricas { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+.ia-metricas div { background: var(--field); border-radius: 10px; padding: 10px; display: flex; flex-direction: column; }
+.ia-metricas b { font-size: 20px; }
+.ia-metricas span { font-size: 11.5px; color: var(--muted); }
+.ia-metricas p { grid-column: 1 / -1; font-size: 12px; }
+.ia-matriz { display: grid; grid-template-columns: auto 1fr 1fr; gap: 6px; align-items: stretch; }
+.ia-matriz .eje { font-size: 11.5px; font-weight: 600; color: var(--muted); text-align: center; align-self: end; }
+.ia-matriz .eje.lado { align-self: center; text-align: right; }
+.ia-celda { border-radius: 10px; padding: 10px; background: #fff2dc; display: flex; flex-direction: column; gap: 2px; }
+.ia-celda.ok { background: #e5f6ec; }
+.ia-celda.grave { background: var(--red-100); outline: 1.5px solid var(--red-500); }
+.ia-celda b { font-size: 22px; }
+.ia-celda small { font-size: 11px; color: var(--muted); }
+.ia-matriz-nota { font-size: 12px; color: var(--muted); margin-top: 10px; }
+.ia-cv-barras { display: flex; gap: 10px; height: 110px; align-items: flex-end; }
+.ia-cv-barras div { flex: 1; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 4px; }
+.ia-cv-barras i { width: 100%; max-width: 46px; background: #1d5fd6; border-radius: 4px 4px 0 0; }
+.ia-cv-barras small { font-size: 11px; color: var(--muted); }
+.ia-cv p { font-size: 13px; margin-top: 8px; }
+.ia-tabla tr.elegido td { background: var(--red-50); }
+.ia-chip { margin-left: 8px; font-size: 10.5px; font-weight: 700; background: var(--red-600); color: #fff; padding: 2px 7px; border-radius: 999px; }
+.ia-experimentos { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.ia-exp { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 2px; }
+.ia-exp small { color: var(--muted); margin-bottom: 6px; }
+.ia-tabla.compacta th, .ia-tabla.compacta td { padding: 6px 8px; }
+.ia-em-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px; }
+.ia-em-grid .panel { margin-bottom: 16px; }
+.ia-em.bien { border-left: 4px solid #1a7a41; }
+.ia-em.mal { border-left: 4px solid var(--red-600); }
+.ia-em-veredicto { display: flex; gap: 10px; align-items: center; }
+.ia-em.bien .ia-em-veredicto svg { color: #1a7a41; }
+.ia-em.mal .ia-em-veredicto svg { color: var(--red-600); }
+.ia-em-veredicto b { display: block; font-size: 17px; }
+.ia-em-veredicto span { font-size: 12px; color: var(--muted); }
+.ia-em-veredicto .ia-em-prob { font-size: 24px; font-weight: 700; color: var(--red-700); min-width: 64px; }
+.ia-em.bien .ia-em-veredicto .ia-em-prob { color: #1a7a41; }
+.ia-em-aviso { margin-top: 8px; font-size: 13px; font-weight: 600; color: var(--red-700); }
+.ia-em-aviso.suave { color: var(--muted); font-weight: 500; }
+.central-triaje { font-style: normal; font-size: 10.5px; font-weight: 700; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: #e5f6ec; color: #1a7a41; vertical-align: 1px; }
+.central-triaje.critica { background: var(--red-600); color: #fff; }
+@media (max-width: 700px) {
+  .ia-prof { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ia-metricas { grid-template-columns: repeat(2, 1fr); }
+  .ia-conjuntos { flex-direction: column; }
+}

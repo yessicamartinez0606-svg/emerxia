@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Ambulance, MessageSquare, Phone, Plus, Siren, UserRound } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { fmtHoraCorta } from '../lib/flota.js'
+import { colaTriaje } from '../lib/clima.js'
 
 // Inicio del administrador: las emergencias abiertas, de la más urgente a la menos, con lo
 // que falta en cada una (asignar operador y ambulancia, salida, cierre). Se actualiza cada 30 s
@@ -21,11 +22,15 @@ function falta(e) {
 export default function PendientesCentral() {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
+  const [triaje, setTriaje] = useState({})      // id -> probabilidad de ser crítica (práctica 05)
 
   useEffect(() => {
     const cargar = () => api('/emergencias')
       .then((d) => { setItems((d.items ?? []).filter((e) => e.estado !== 'Cerrada')); setError('') })
       .catch((e) => setError(e.message))
+      .then(() => colaTriaje())
+      .then((c) => c && setTriaje(Object.fromEntries(c.cola.map((x) => [x.id, x.triaje]))))
+      .catch(() => {})          // sin scikit-learn la lista funciona igual, solo sin triaje
     cargar()
     const t = setInterval(cargar, 30000)
     return () => clearInterval(t)
@@ -33,6 +38,7 @@ export default function PendientesCentral() {
 
   const ordenadas = [...(items ?? [])].sort((a, b) =>
     (PESO_ESTADO[a.estado] ?? 9) - (PESO_ESTADO[b.estado] ?? 9)
+    || Number(!!triaje[b.id]?.critica) - Number(!!triaje[a.id]?.critica)      // primero las críticas según la IA
     || (PESO_PRIORIDAD[a.prioridad] ?? 9) - (PESO_PRIORIDAD[b.prioridad] ?? 9)
     || b.id - a.id)
   const sinAsignar = ordenadas.filter((e) => !e.ambulancia).length
@@ -60,7 +66,14 @@ export default function PendientesCentral() {
                 <Link to={`/emergencias/${e.id}`} className="central-fila">
                   <span className={`central-prio p-${(e.prioridad || '').toLowerCase()}`} aria-label={`Prioridad ${e.prioridad}`} />
                   <span className="central-info">
-                    <strong>{e.folio} · {e.descripcion}</strong>
+                    <strong>
+                      {e.folio} · {e.descripcion}
+                      {triaje[e.id] && (
+                        <em className={`central-triaje${triaje[e.id].critica ? ' critica' : ''}`} title="Probabilidad de ser crítica según la IA (signos vitales)">
+                          {triaje[e.id].critica ? 'Crítica' : 'No crítica'} {Math.round(triaje[e.id].probabilidad * 100)} %
+                        </em>
+                      )}
+                    </strong>
                     <span>
                       {e.canal === 'llamada' ? <><Phone size={11} /> Llamada · </> : e.canal === 'mensaje' ? <><MessageSquare size={11} /> Mensaje · </> : null}
                       {e.direccion}
