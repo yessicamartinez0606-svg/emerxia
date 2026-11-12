@@ -304,3 +304,34 @@ Documentación interactiva: <http://localhost:8000/docs>
 - **Módulos, columnas y formularios**: `frontend/src/lib/modules.js`.
 - **Campos/tablas nuevas**: `backend/app/tables.py` (esquemas) y `backend/app/schemas.py` (validación).
 >>>>>>> ecb314e0be1671f363a199180d1176f6feb81edb
+
+## Machine Learning: triage de ambulancias
+
+Aplica al proyecto las Prácticas 04 (entrenamiento / validación / prueba) y 05 (comparación de
+Decision Tree, Random Forest y KNN). El modelo responde: **¿la emergencia requiere ambulancia
+Avanzada?** a partir de edad, frecuencia cardiaca, SpO2, presión sistólica, Glasgow y dolor torácico.
+Complementa la regla lógica `M = u ∧ (p → v)` de `app/logica.py`.
+
+```
+backend/
+├── entrenar_ml.py        ← entrena, compara, corre los experimentos A/B/C y genera gráficas
+├── ml_resultados/        ← tablas CSV, gráficas PNG, reporte.json y el modelo (.joblib)
+└── app/
+    ├── ml/datos.py           ← datos sintéticos (1000 emergencias ficticias)
+    ├── ml/entrenamiento.py   ← división 60/20/20, modelos, métricas, selección por F2
+    ├── ml/prediccion.py      ← carga el modelo y predice (lo usa la API)
+    └── routers/ml.py         ← POST /api/ml/predecir · GET /api/ml/reporte
+frontend/src/components/PanelTriageML.jsx  ← panel en "Nueva emergencia"
+```
+
+```bash
+cd backend
+pip install -r requirements.txt
+python entrenar_ml.py
+```
+
+Se selecciona el modelo con **F2-score** (pesa más el recall): dejar sin ambulancia Avanzada a un
+paciente grave (falso negativo) es peor que enviar una Avanzada de más. Si no se ha corrido
+`entrenar_ml.py`, la API entrena el modelo la primera vez que se usa.
+
+> Datos sintéticos con fines educativos: no es un protocolo clínico y la decisión final es del personal médico.

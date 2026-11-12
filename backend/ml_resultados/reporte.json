@@ -1,0 +1,228 @@
+{
+  "algoritmo_seleccionado": "Random Forest",
+  "criterio": "f2_score",
+  "comparacion": [
+    {
+      "algoritmo": "Random Forest",
+      "exactitud": 0.85,
+      "precision": 0.8064516129032258,
+      "recall": 0.7352941176470589,
+      "f1_score": 0.7692307692307693,
+      "f2_score": 0.7485029940119761,
+      "exactitud_entrenamiento": 0.98,
+      "ajuste": "Posible sobreajuste"
+    },
+    {
+      "algoritmo": "KNN",
+      "exactitud": 0.85,
+      "precision": 0.8958333333333334,
+      "recall": 0.6323529411764706,
+      "f1_score": 0.7413793103448276,
+      "f2_score": 0.671875,
+      "exactitud_entrenamiento": 1.0,
+      "ajuste": "Posible sobreajuste"
+    },
+    {
+      "algoritmo": "Decision Tree",
+      "exactitud": 0.795,
+      "precision": 0.7454545454545455,
+      "recall": 0.6029411764705882,
+      "f1_score": 0.6666666666666666,
+      "f2_score": 0.6269113149847095,
+      "exactitud_entrenamiento": 0.8716666666666667,
+      "ajuste": "Buen ajuste"
+    }
+  ],
+  "metricas_prueba": {
+    "exactitud": 0.855,
+    "precision": 0.8095238095238095,
+    "recall": 0.75,
+    "f1_score": 0.7786259541984732,
+    "f2_score": 0.7611940298507462
+  },
+  "matriz_confusion": [
+    [
+      120,
+      12
+    ],
+    [
+      17,
+      51
+    ]
+  ],
+  "cv_recall": {
+    "particiones": [
+      0.6363636363636364,
+      0.7222222222222222,
+      0.7037037037037037,
+      0.7222222222222222,
+      0.7777777777777778
+    ],
+    "promedio": 0.7124579124579125,
+    "desviacion": 0.04544082596295169
+  },
+  "ajuste_profundidad": [
+    {
+      "profundidad": 1,
+      "entrenamiento": 0.745,
+      "validacion": 0.75,
+      "diferencia": -0.0050000000000000044,
+      "ajuste": "Buen ajuste"
+    },
+    {
+      "profundidad": 2,
+      "entrenamiento": 0.785,
+      "validacion": 0.78,
+      "diferencia": 0.0050000000000000044,
+      "ajuste": "Buen ajuste"
+    },
+    {
+      "profundidad": 3,
+      "entrenamiento": 0.7983333333333333,
+      "validacion": 0.77,
+      "diferencia": 0.02833333333333332,
+      "ajuste": "Buen ajuste"
+    },
+    {
+      "profundidad": 5,
+      "entrenamiento": 0.8716666666666667,
+      "validacion": 0.795,
+      "diferencia": 0.07666666666666666,
+      "ajuste": "Buen ajuste"
+    },
+    {
+      "profundidad": 10,
+      "entrenamiento": 0.9216666666666666,
+      "validacion": 0.805,
+      "diferencia": 0.11666666666666659,
+      "ajuste": "Posible sobreajuste"
+    },
+    {
+      "profundidad": "Sin limite",
+      "entrenamiento": 0.9216666666666666,
+      "validacion": 0.805,
+      "diferencia": 0.11666666666666659,
+      "ajuste": "Posible sobreajuste"
+    }
+  ],
+  "experimentos": {
+    "A_knn_n_neighbors": [
+      {
+        "n_neighbors": 3,
+        "exactitud_entrenamiento": 1.0,
+        "exactitud_validacion": 0.82,
+        "recall": 0.6323529411764706,
+        "f2_score": 0.6595092024539877,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_neighbors": 5,
+        "exactitud_entrenamiento": 1.0,
+        "exactitud_validacion": 0.84,
+        "recall": 0.6323529411764706,
+        "f2_score": 0.6677018633540373,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_neighbors": 7,
+        "exactitud_entrenamiento": 1.0,
+        "exactitud_validacion": 0.85,
+        "recall": 0.6323529411764706,
+        "f2_score": 0.671875,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_neighbors": 9,
+        "exactitud_entrenamiento": 1.0,
+        "exactitud_validacion": 0.85,
+        "recall": 0.6470588235294118,
+        "f2_score": 0.6832298136645962,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_neighbors": 15,
+        "exactitud_entrenamiento": 1.0,
+        "exactitud_validacion": 0.83,
+        "recall": 0.5735294117647058,
+        "f2_score": 0.6170886075949367,
+        "ajuste": "Posible sobreajuste"
+      }
+    ],
+    "B_rf_n_estimators": [
+      {
+        "n_estimators": 50,
+        "exactitud_entrenamiento": 0.9733333333333334,
+        "exactitud_validacion": 0.865,
+        "recall": 0.7647058823529411,
+        "f2_score": 0.7761194029850746,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_estimators": 100,
+        "exactitud_entrenamiento": 0.98,
+        "exactitud_validacion": 0.855,
+        "recall": 0.7647058823529411,
+        "f2_score": 0.771513353115727,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_estimators": 200,
+        "exactitud_entrenamiento": 0.98,
+        "exactitud_validacion": 0.85,
+        "recall": 0.7352941176470589,
+        "f2_score": 0.7485029940119761,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "n_estimators": 500,
+        "exactitud_entrenamiento": 0.985,
+        "exactitud_validacion": 0.86,
+        "recall": 0.75,
+        "f2_score": 0.7634730538922155,
+        "ajuste": "Posible sobreajuste"
+      }
+    ],
+    "C_dt_max_depth": [
+      {
+        "max_depth": 2,
+        "exactitud_entrenamiento": 0.785,
+        "exactitud_validacion": 0.78,
+        "recall": 0.6617647058823529,
+        "f2_score": 0.665680473372781,
+        "ajuste": "Buen ajuste"
+      },
+      {
+        "max_depth": 3,
+        "exactitud_entrenamiento": 0.7983333333333333,
+        "exactitud_validacion": 0.77,
+        "recall": 0.4117647058823529,
+        "f2_score": 0.45751633986928103,
+        "ajuste": "Buen ajuste"
+      },
+      {
+        "max_depth": 5,
+        "exactitud_entrenamiento": 0.8716666666666667,
+        "exactitud_validacion": 0.795,
+        "recall": 0.6029411764705882,
+        "f2_score": 0.6269113149847095,
+        "ajuste": "Buen ajuste"
+      },
+      {
+        "max_depth": 8,
+        "exactitud_entrenamiento": 0.9133333333333333,
+        "exactitud_validacion": 0.81,
+        "recall": 0.6323529411764706,
+        "f2_score": 0.6554878048780488,
+        "ajuste": "Posible sobreajuste"
+      },
+      {
+        "max_depth": "Sin limite",
+        "exactitud_entrenamiento": 0.9216666666666666,
+        "exactitud_validacion": 0.805,
+        "recall": 0.6617647058823529,
+        "f2_score": 0.6756756756756757,
+        "ajuste": "Posible sobreajuste"
+      }
+    ]
+  }
+}

@@ -6,6 +6,7 @@ import { findModule } from '../lib/modules.js'
 import { emptyForm, useSourcedOptions } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
 import PanelLogica from '../components/PanelLogica.jsx'
+import PanelTriageML from '../components/PanelTriageML.jsx'
 
 const OLD_BACKEND =
   'El servidor no confirmó que guardó en MongoDB: seguramente hay una versión ANTIGUA del backend corriendo en el puerto 8000. ' +
@@ -242,6 +243,13 @@ function FormView({ mod }) {
             </div>
           </div>
         ))}
+
+        {mod.key === 'emergencias' && (
+          <PanelTriageML
+            edadPaciente={form.paciente_edad}
+            ambulancia={sourcedOptions.ambulancia?.find((o) => o.value === form.ambulancia)?.raw}
+          />
+        )}
 
         {mod.key === 'emergencias' && (
           <PanelLogica

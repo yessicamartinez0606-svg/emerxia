@@ -1,0 +1,6 @@
+n_neighbors,exactitud_entrenamiento,exactitud_validacion,recall,f2_score,ajuste
+3,1.0,0.82,0.6323529411764706,0.6595092024539877,Posible sobreajuste
+5,1.0,0.84,0.6323529411764706,0.6677018633540373,Posible sobreajuste
+7,1.0,0.85,0.6323529411764706,0.671875,Posible sobreajuste
+9,1.0,0.85,0.6470588235294118,0.6832298136645962,Posible sobreajuste
+15,1.0,0.83,0.5735294117647058,0.6170886075949367,Posible sobreajuste
