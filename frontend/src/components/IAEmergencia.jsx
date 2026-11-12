@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Activity, CircleCheck, CircleAlert } from 'lucide-react'
-import { aTiempoEmergencia, pct, triajeEmergencia } from '../lib/clima.js'
+import { Activity, CircleCheck, CircleAlert, Shapes } from 'lucide-react'
+import { COLOR_PERFIL, aTiempoEmergencia, pct, segmentacionEmergencia, triajeEmergencia } from '../lib/clima.js'
 
 function useDato(fn, id) {
   const [d, setD] = useState(null)
@@ -61,7 +61,7 @@ export function TriajeEmergencia({ emergenciaId }) {
         <span className="ia-em-prob">{pct(r.probabilidad)}</span>
         <div>
           <b>{r.critica ? 'Emergencia CRÍTICA' : 'No crítica'}</b>
-          <span>probabilidad de ser crítica · {r.algoritmo === 'Random Forest' ? 'bosque aleatorio' : r.algoritmo}</span>
+          <span>probabilidad de ser crítica · {r.algoritmo === 'Random Forest' ? 'bosque aleatorio' : r.algoritmo}{r.optimizado ? ' optimizado' : ''}</span>
         </div>
       </div>
       <p className={`ia-em-aviso${r.critica ? '' : ' suave'}`}>{r.mensaje}</p>
@@ -70,6 +70,33 @@ export function TriajeEmergencia({ emergenciaId }) {
         <li>{r.signos.frecuencia_cardiaca} lpm</li>
         <li>Glasgow {r.signos.escala_glasgow}</li>
         <li>{r.signos.edad} años{r.edad_estimada ? ' (sin edad, se supone 40)' : ''}</li>
+      </ul>
+    </section>
+  )
+}
+
+// Práctica 07 aplicada a la emergencia: ¿a qué perfil de servicio se parece? (K-Means)
+export function PerfilServicio({ emergenciaId }) {
+  const [r, error] = useDato(segmentacionEmergencia, emergenciaId)
+  if (error) return <section className="panel ia-em"><h2 className="form-section-title">Perfil del servicio</h2><p className="muted">{error}</p></section>
+  if (!r) return <section className="panel ia-em muted">Buscando el perfil del servicio…</section>
+  const c = COLOR_PERFIL[r.perfil]
+  return (
+    <section className="panel ia-em perfil" style={{ '--c': c }}>
+      <h2 className="form-section-title titulo-icono"><Shapes size={15} /> Perfil del servicio</h2>
+      <div className="ia-em-veredicto">
+        <span className="ia-em-nivel" aria-hidden="true">{[0, 1, 2].map((i) => <i key={i} className={i <= r.nivel ? 'on' : ''} />)}</span>
+        <div>
+          <b style={{ color: c }}>{r.perfil}</b>
+          <span>grupo de K-Means al que más se parece</span>
+        </div>
+      </div>
+      <p className="ia-em-aviso suave">{r.estrategia}</p>
+      <ul className="llegada-factores">
+        <li>{r.datos.distancia_km} km</li>
+        <li>Tráfico {r.datos.nivel_trafico}/10</li>
+        <li>~{r.datos.tiempo_respuesta_min} min (estimado)</li>
+        <li>{r.datos.ambulancias_libres} ambulancia(s) libres</li>
       </ul>
     </section>
   )

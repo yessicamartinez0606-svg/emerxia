@@ -16,11 +16,20 @@
     POST /api/ia/triaje/estimar              signos vitales escritos a mano
     GET  /api/ia/triaje/cola                 emergencias abiertas ordenadas por probabilidad de ser críticas
     GET  /api/ia/triaje/emergencias/{id}
+
+    Práctica 06 (app/optimizacion.py): GridSearchCV y RandomizedSearchCV del triaje
+    GET  /api/ia/optimizacion                estado ("entrenando" / "listo") y resultados
+    POST /api/ia/optimizacion/iniciar        vuelve a lanzarla si falló
+
+    Práctica 07 (app/segmentacion.py): perfiles de servicio con K-Means
+    GET  /api/ia/segmentacion/modelo         codo, silhouette, perfiles y puntos
+    POST /api/ia/segmentacion/estimar        datos escritos a mano
+    GET  /api/ia/segmentacion/emergencias/{id}
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .. import a_tiempo, clima, eta, flota, readiness, triaje
+from .. import a_tiempo, clima, eta, flota, optimizacion, readiness, segmentacion, triaje
 from ..repository import list_rows
 from ..security import OPERADOR, PERSONAL, require_roles
 
@@ -45,7 +54,7 @@ class EstimarIn(BaseModel):
 def _modelo(fn):
     try:
         return fn()
-    except (eta.SinScikitLearn, a_tiempo.SinScikitLearn, triaje.SinScikitLearn) as exc:
+    except (eta.SinScikitLearn, a_tiempo.SinScikitLearn, triaje.SinScikitLearn, segmentacion.SinScikitLearn) as exc:
         raise HTTPException(503, str(exc)) from exc
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
@@ -238,4 +247,69 @@ def triaje_emergencia(emergencia_id: int):
         edad_capturada = str(em.get("paciente_edad") or "").strip() != ""
         return {**triaje.clasificar(triaje.signos_de(em)), "folio": em.get("folio"), "sin_signos": False,
                 "edad_estimada": not edad_capturada}
+    return _modelo(calcular)
+
+
+# ─────────────── Práctica 06: optimización de hiperparámetros ───────────────
+
+def _sin_sklearn() -> str | None:
+    try:
+        import sklearn  # noqa: F401
+        return None
+    except ImportError:
+        return "Falta instalar numpy, pandas y scikit-learn: pip install -r requirements.txt"
+
+
+@router.get("/api/ia/optimizacion", dependencies=[Depends(solo_personal)])
+def ver_optimizacion():
+    if (falta := _sin_sklearn()):
+        raise HTTPException(503, falta)
+    if optimizacion.estado()["estado"] == "pendiente":
+        optimizacion.iniciar()
+    return optimizacion.estado()
+
+
+@router.post("/api/ia/optimizacion/iniciar", dependencies=[Depends(solo_personal)])
+def iniciar_optimizacion():
+    if (falta := _sin_sklearn()):
+        raise HTTPException(503, falta)
+    return optimizacion.iniciar()
+
+
+# ─────────────── Práctica 07: perfiles de servicio (K-Means) ───────────────
+
+class ServicioIn(BaseModel):
+    distancia_km: float = Field(gt=0, le=100)
+    nivel_trafico: float = Field(ge=0, le=10)
+    tiempo_respuesta_min: float = Field(gt=0, le=180)
+    ambulancias_libres: float = Field(ge=0, le=50)
+
+
+@router.get("/api/ia/segmentacion/modelo", dependencies=[Depends(solo_personal)])
+def segmentacion_modelo():
+    return _modelo(segmentacion.evaluacion)
+
+
+@router.post("/api/ia/segmentacion/estimar", dependencies=[Depends(solo_personal)])
+def segmentacion_estimar(body: ServicioIn):
+    return _modelo(lambda: segmentacion.clasificar(body.distancia_km, body.nivel_trafico, body.tiempo_respuesta_min,
+                                                   body.ambulancias_libres))
+
+
+@router.get("/api/ia/segmentacion/emergencias/{emergencia_id}",
+            dependencies=[Depends(readiness.require_mongo), Depends(personal_y_operador)])
+def segmentacion_emergencia(emergencia_id: int, km: float | None = Query(None, gt=0, le=100)):
+    em = _emergencia(emergencia_id)
+
+    def calcular():
+        lat, lng = _ubicacion(em)
+        cond = clima.lluvia_en(lat, lng)
+        ahora = eta.ahora_mx()
+        distancia = _distancia(em, km)
+        trafico = a_tiempo.trafico_0_10(ahora.hour, cond["velocidad_relativa"])
+        # El tiempo de respuesta todavía no ocurre: se usa el que estima el modelo de llegada.
+        minutos = eta.estimar(cond["zona"], distancia, ahora.hour, int(ahora.weekday() >= 5), int(cond["lluvia"]))["modelo_min"]
+        libres = _libres_en_base() + (len(em.get("ambulancias") or []) if em.get("estado") != "Pendiente" else 0)
+        return {**segmentacion.clasificar(distancia, trafico, minutos, libres), "folio": em.get("folio"),
+                "tiempo_estimado": True}
     return _modelo(calcular)

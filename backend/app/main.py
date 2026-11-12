@@ -20,12 +20,17 @@ VERSION = "2.0-mongodb"
 def _preparar_modelos():
     """Entrena los modelos de IA al arrancar (tardan unos segundos) para que la primera
     pantalla que los use no espere. Si falta scikit-learn, no pasa nada."""
-    from . import a_tiempo, eta, triaje
-    for m in (eta, a_tiempo, triaje):
+    from . import a_tiempo, eta, optimizacion, segmentacion, triaje
+    for m in (eta, a_tiempo, triaje, segmentacion):
         try:
             m.entrenar()
         except Exception:  # noqa: BLE001
             pass
+    try:
+        import sklearn  # noqa: F401
+        optimizacion.iniciar()     # práctica 06: ~1 minuto en segundo plano (o al instante si ya se guardó)
+    except ImportError:
+        pass
 
 
 @asynccontextmanager

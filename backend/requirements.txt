@@ -9,3 +9,5 @@ pymongo==4.10.1
 numpy>=1.26
 pandas>=2.1
 scikit-learn>=1.4
+# Solo para correr las prácticas sueltas de backend/ia/ (sus gráficas)
+matplotlib>=3.8

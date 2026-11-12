@@ -4,6 +4,8 @@ import ClimaZonas from '../components/ClimaZonas.jsx'
 import { estimarLlegada, modeloLlegada } from '../lib/clima.js'
 import ATiempoPanel from './ia/ATiempoPanel.jsx'
 import TriajePanel from './ia/TriajePanel.jsx'
+import OptimizacionPanel from './ia/OptimizacionPanel.jsx'
+import SegmentacionPanel from './ia/SegmentacionPanel.jsx'
 
 // Práctica de regresión (backend/ia/enfoque2_tiempo_llegada.py) dentro del sistema:
 // ¿cuánto tarda en llegar la ambulancia? Fórmula fija vs. árbol de regresión.
@@ -11,6 +13,8 @@ const PESTANAS = [
   { key: 'llegada', label: 'Tiempo de llegada', sub: 'Regresión' },
   { key: 'a-tiempo', label: '¿Llega a tiempo?', sub: 'Práctica 04' },
   { key: 'triaje', label: 'Triaje', sub: 'Práctica 05' },
+  { key: 'optimizacion', label: 'Optimización', sub: 'Práctica 06' },
+  { key: 'perfiles', label: 'Perfiles K-Means', sub: 'Práctica 07' },
 ]
 
 export default function TiempoLlegadaPage() {
@@ -24,7 +28,7 @@ export default function TiempoLlegadaPage() {
       <header className="view-head">
         <div>
           <h1>Inteligencia artificial</h1>
-          <p>Modelos que aprenden de servicios pasados para apoyar a la central: cuánto tarda la ambulancia, si llegará a tiempo y qué emergencias son críticas. Los datos de entrenamiento son ficticios, como en las prácticas.</p>
+          <p>Modelos que aprenden de servicios pasados para apoyar a la central: cuánto tarda la ambulancia, si llegará a tiempo, qué emergencias son críticas y a qué perfil de servicio se parece cada una. Los datos de entrenamiento son ficticios, como en las prácticas.</p>
         </div>
         <BrainCircuit size={28} className="rutas-head-icon" aria-hidden="true" />
       </header>
@@ -40,6 +44,8 @@ export default function TiempoLlegadaPage() {
       {tab === 'llegada' && <Llegada />}
       {tab === 'a-tiempo' && <ATiempoPanel />}
       {tab === 'triaje' && <TriajePanel />}
+      {tab === 'optimizacion' && <OptimizacionPanel />}
+      {tab === 'perfiles' && <SegmentacionPanel />}
     </section>
   )
 }

@@ -66,7 +66,8 @@ def _constructores(L):
 
 
 @lru_cache(maxsize=1)
-def entrenar() -> dict:
+def datos():
+    """Los 500 reportes sintéticos de la práctica 05 (también los usa la práctica 06)."""
     L = _libs()
     np, pd = L["np"], L["pd"]
     rng = np.random.default_rng(SEMILLA)
@@ -78,8 +79,15 @@ def entrenar() -> dict:
     riesgo = ((100 - sat) / 25) * 0.35 + (np.abs(fc - 85) / 75) * 0.25 + ((15 - gcs) / 12) * 0.30 + (edad / 95) * 0.10
     ruido = rng.normal(loc=0, scale=0.10, size=n)
     critica = ((riesgo + ruido) >= 0.50).astype(int)
-    df = pd.DataFrame({"saturacion_oxigeno": sat, "frecuencia_cardiaca": fc, "escala_glasgow": gcs, "edad": edad,
-                       "es_critica": critica})
+    return pd.DataFrame({"saturacion_oxigeno": sat, "frecuencia_cardiaca": fc, "escala_glasgow": gcs, "edad": edad,
+                         "es_critica": critica})
+
+
+@lru_cache(maxsize=1)
+def entrenar() -> dict:
+    L = _libs()
+    pd = L["pd"]
+    df = datos()
     X, y = df[COLUMNAS], df["es_critica"]
 
     X_ev, X_pru, y_ev, y_pru = L["tts"](X, y, test_size=0.20, random_state=SEMILLA, stratify=y)
@@ -123,7 +131,7 @@ def entrenar() -> dict:
     conteo = df["es_critica"].value_counts()
     return {
         "modelo": final,
-        "reportes": n,
+        "reportes": len(df),
         "clases": {"no_critica": int(conteo.get(0, 0)), "critica": int(conteo.get(1, 0))},
         "conjuntos": {"entrenamiento": len(X_ent), "validacion": len(X_val), "prueba": len(X_pru)},
         "comparacion": comparacion,
@@ -173,11 +181,16 @@ def signos_de(em: dict) -> dict:
 def clasificar(signos: dict) -> dict:
     L = _libs()
     s = validar(signos)
-    e = entrenar()
-    m = e["modelo"]
+    # Si la práctica 06 ya terminó, se usa el modelo con hiperparámetros optimizados.
+    from . import optimizacion
+    m, algoritmo, optimizado = optimizacion.modelo_optimo(), optimizacion.descripcion_optima(), True
+    if m is None:
+        e = entrenar()
+        m, algoritmo, optimizado = e["modelo"], e["elegido"], False
     prob = float(m.predict_proba(L["pd"].DataFrame([s])[COLUMNAS])[0][list(m.classes_).index(1)])
     critica = prob >= UMBRAL
-    return {"signos": s, "probabilidad": round(prob, 3), "critica": critica, "algoritmo": e["elegido"],
+    return {"signos": s, "probabilidad": round(prob, 3), "critica": critica, "algoritmo": algoritmo,
+            "optimizado": optimizado,
             "prioridad": "CRÍTICA" if critica else "No crítica",
             "mensaje": ("Emergencia CRÍTICA: asigna ambulancia de inmediato." if critica
                         else "No crítica según el modelo: puede esperar en la cola si no hay unidades libres.")}

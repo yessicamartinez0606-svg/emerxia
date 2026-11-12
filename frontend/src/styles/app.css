@@ -1076,3 +1076,54 @@ i.val { background: #1d5fd6; }
   .ia-metricas { grid-template-columns: repeat(2, 1fr); }
   .ia-conjuntos { flex-direction: column; }
 }
+
+/* ───────────── IA: prácticas 06 y 07 ───────────── */
+.ia-esperando { display: flex; gap: 14px; align-items: flex-start; }
+.ia-esperando svg { color: var(--red-600); flex: none; margin-top: 2px; }
+.girando { animation: girar 1s linear infinite; }
+@keyframes girar { to { transform: rotate(360deg); } }
+.ia-gs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
+.ia-gs-alg { border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ia-gs-alg.elegido { border-color: var(--red-500); background: var(--red-50); }
+.ia-gs-alg small { color: var(--muted); font-size: 11.5px; }
+.ia-gs-barra { display: grid; grid-template-columns: 128px 1fr 56px; gap: 8px; align-items: center; font-size: 12px; }
+.ia-gs-barra > div { height: 10px; background: var(--field); border-radius: 5px; overflow: hidden; }
+.ia-gs-barra i { display: block; height: 100%; border-radius: 5px; }
+.ia-gs-barra i.grid { background: var(--red-600); }
+.ia-gs-barra i.rnd { background: #1d5fd6; }
+.ia-gs-barra b { text-align: right; font-variant-numeric: tabular-nums; }
+.ia-gs-params { display: flex; gap: 6px; align-items: baseline; font-size: 11.5px; }
+.ia-gs-params > span { color: var(--muted); width: 46px; flex: none; }
+.ia-params { display: inline-flex; flex-wrap: wrap; gap: 4px; }
+.ia-params code { font-size: 11px; background: #fff; border: 1px solid var(--line); border-radius: 5px; padding: 1px 5px; }
+.ia-tabla td.envolver { white-space: normal; }
+.ia-antes { display: flex; align-items: center; gap: 12px; margin: 4px 0 14px; padding: 10px 12px; border-radius: 10px; background: var(--field); }
+.ia-antes > div { display: flex; flex-direction: column; }
+.ia-antes span, .ia-antes small { font-size: 11.5px; color: var(--muted); }
+.ia-antes b { font-size: 20px; }
+.ia-antes .despues b { color: #1a7a41; }
+.ia-antes .flecha { font-size: 20px; color: var(--muted); }
+.ia-perfiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; }
+.ia-perfil { border: 1px solid var(--line); border-top: 4px solid var(--c); border-radius: 10px; padding: 12px; }
+.ia-perfil strong { color: var(--c); font-size: 15px; display: block; }
+.ia-perfil small { color: var(--muted); }
+.ia-perfil dl { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 10px 0; }
+.ia-perfil dt { font-size: 11px; color: var(--muted); }
+.ia-perfil dd { margin: 0; font-weight: 700; }
+.ia-perfil p { font-size: 12.5px; }
+.ia-svg { width: 100%; height: auto; display: block; }
+.ia-svg text { font-size: 11px; fill: var(--muted); }
+.ia-svg text.eje { font-size: 11.5px; }
+.ia-svg text.valor { fill: var(--red-700); font-weight: 700; }
+.ia-svg .rejilla { stroke: var(--line); stroke-width: 1; }
+.ia-svg .linea { fill: none; stroke: #1d5fd6; stroke-width: 2.2; }
+.ia-svg .punto { fill: #1d5fd6; }
+.ia-svg .marca { fill: var(--red-600); stroke: #fff; stroke-width: 2; }
+.ia-leyenda span { display: inline-flex; align-items: center; gap: 5px; margin-right: 10px; }
+.ia-resultado.neutro { background: var(--field); border-left: 4px solid var(--c); }
+.ia-em.perfil { border-left: 4px solid var(--c); }
+.ia-em-nivel { display: flex; gap: 3px; align-items: flex-end; height: 26px; }
+.ia-em-nivel i { width: 7px; border-radius: 2px; background: var(--line); }
+.ia-em-nivel i:nth-child(1) { height: 40%; } .ia-em-nivel i:nth-child(2) { height: 70%; } .ia-em-nivel i:nth-child(3) { height: 100%; }
+.ia-em-nivel i.on { background: var(--c); }
+@media (max-width: 560px) { .ia-gs-barra { grid-template-columns: 1fr 52px; } .ia-gs-barra > span { grid-column: 1 / -1; } }
