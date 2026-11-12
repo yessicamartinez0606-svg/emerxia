@@ -5,3 +5,7 @@ PyJWT==2.10.1
 python-dotenv==1.0.1
 pydantic==2.10.4
 pymongo==4.10.1
+# Tiempo estimado de llegada (app/eta.py): árbol de regresión
+numpy>=1.26
+pandas>=2.1
+scikit-learn>=1.4

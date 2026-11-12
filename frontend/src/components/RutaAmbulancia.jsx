@@ -204,6 +204,9 @@ export default function RutaAmbulancia({ emergencia }) {
                     <span>{fmtKm(actual.km)} · {datos.periodo_nombre.toLowerCase()} · {fmtHora(datos.hora)}</span>
                   </div>
                 </div>
+                {actual.lluvia_en?.length > 0 && (
+                  <p className="ruta-lluvia">Llueve en {actual.lluvia_en.join(', ')}: el tránsito va más lento y la ruta ya lo considera.</p>
+                )}
                 {avance && (
                   <Simulacion
                     ruta={actual}

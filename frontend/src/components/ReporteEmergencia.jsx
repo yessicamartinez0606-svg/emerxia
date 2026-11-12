@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ambulance, Check, FileText, Hospital, Printer, Truck, UserRound } from 'lucide-react'
+import LlegadaEstimada from './LlegadaEstimada.jsx'
 import {
   ESTADO_INFO, HOSPITALES, confirmarAsignacion, obtenerHospitales, eventoEmergencia, fmtFecha, fmtHoraCorta, fmtLitros, planAsignacion,
   reporteEmergencia,
@@ -43,6 +44,7 @@ export default function ReporteEmergencia({ emergencia, onCambio }) {
 
   return (
     <div className="reporte">
+      {!cerrada && !em.hora_llegada && <LlegadaEstimada emergenciaId={em.id} />}
       {!cerrada && faltan > 0 && <Asignacion em={em} requeridas={rep.requeridas} asignadas={rep.ambulancias.length} onListo={() => actualizar()} />}
       {rep.ambulancias.length > 0 && !cerrada && <Pasos em={em} onListo={actualizar} />}
       <Documento rep={rep} />

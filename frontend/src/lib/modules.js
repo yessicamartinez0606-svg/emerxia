@@ -1,4 +1,4 @@
-import { Ambulance, CircleDot, Dna, Headset, History, Hospital, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
+import { Ambulance, BrainCircuit, CircleDot, CloudRain, Dna, Headset, History, Hospital, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
 import { HOSPITALES } from './flota.js'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
@@ -224,6 +224,15 @@ export const MODULES = [
     description: 'Elige con un algoritmo genético de qué hospital sale la ambulancia',
     icon: Dna,
     navIcon: Hospital,
+    custom: true,
+  },
+  {
+    // Pantalla propia (pages/TiempoLlegadaPage.jsx): árbol de regresión + clima de las zonas.
+    key: 'llegada',
+    label: 'Tiempo de llegada (IA)',
+    description: 'Clima de las zonas y cuánto tarda la ambulancia: fórmula fija vs. modelo que aprende',
+    icon: CloudRain,
+    navIcon: BrainCircuit,
     custom: true,
   },
   {

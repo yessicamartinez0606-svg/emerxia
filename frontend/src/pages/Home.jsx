@@ -3,6 +3,7 @@ import { ArrowRight, HeartPulse } from 'lucide-react'
 import { useAuth } from '../lib/auth.jsx'
 import { MODULES } from '../lib/modules.js'
 import PendientesCentral from '../components/PendientesCentral.jsx'
+import ClimaZonas from '../components/ClimaZonas.jsx'
 
 function HeroArt() {
   return (
@@ -53,6 +54,7 @@ export default function Home() {
       </header>
 
       <PendientesCentral />
+      <ClimaZonas compacto />
 
       <div className="module-grid">
         {MODULES.map(({ key, label, description, icon: Icon }) => (

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ChevronDown, Search, Siren, X } from 'lucide-react'
 import MapaToluca from '../components/MapaToluca.jsx'
+import ClimaZonas from '../components/ClimaZonas.jsx'
+import { useAuth } from '../lib/auth.jsx'
+import { PERSONAL } from '../lib/clima.js'
 import {
   ALGORITMOS, ALGORITMO_COLOR, HORAS, NIVEL_COLOR, NIVEL_LABEL, calcularRuta, fmtHora, fmtKm, fmtMin,
   geocodificar, obtenerZona,
@@ -12,6 +15,8 @@ import {
 // ve la búsqueda paso a paso.
 
 export default function RutasPage() {
+  const { user } = useAuth()
+  const [climaV, setClimaV] = useState(0)            // al simular lluvia se recalcula todo
   const [hora, setHora] = useState(null)
   const [zona, setZona] = useState(null)
   const [errorZona, setErrorZona] = useState('')
@@ -27,7 +32,7 @@ export default function RutasPage() {
   useEffect(() => {
     setErrorZona('')
     obtenerZona(hora).then(setZona).catch((e) => setErrorZona(e.message))
-  }, [hora])
+  }, [hora, climaV])
 
   const h = zona?.hospital
   useEffect(() => {
@@ -40,7 +45,7 @@ export default function RutasPage() {
       .catch((e) => { if (vigente) { setErrorRuta(e.message); setRuta(null) } })
       .finally(() => { if (vigente) setCargandoRuta(false) })
     return () => { vigente = false }
-  }, [punto, hora, h?.lat, h?.lng]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [punto, hora, h?.lat, h?.lng, climaV]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const buscar = async (e) => {
     e.preventDefault()
@@ -121,6 +126,8 @@ export default function RutasPage() {
         </div>
         <Siren size={28} className="rutas-head-icon" aria-hidden="true" />
       </header>
+
+      <ClimaZonas compacto puedeSimular={PERSONAL.includes(user?.role)} onCambio={() => setClimaV((v) => v + 1)} />
 
       <div className="panel rutas-barra">
         <form className="rutas-buscar" onSubmit={buscar} role="search">
@@ -228,6 +235,9 @@ export default function RutasPage() {
                     <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} /> Mostrar todas las rutas en el mapa
                   </label>
 
+                  {elegido?.lluvia_en?.length > 0 && (
+                    <p className="ruta-lluvia">Esta ruta pasa por zona con lluvia ({elegido.lluvia_en.join(', ')}): sus minutos ya incluyen que el tránsito va más lento.</p>
+                  )}
                   {elegido?.encontrado && (
                     <ol className="ruta-pasos">
                       {elegido.indicaciones.map((p, i) => (

@@ -27,7 +27,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from . import busqueda
+from . import busqueda, clima
 from .config import settings
 
 # ─────────────────────────── Lugares fijos ───────────────────────────
@@ -548,7 +548,8 @@ def _minutos(t: Tramo, hora: int, cerradas: set[int]) -> float | None:
     factor = busqueda.NIVELES[nivel]
     if factor is None:
         return None
-    return t.metros / 1000 / VELOCIDAD[t.highway] * 60 * factor
+    # Si llueve en la zona de esta calle, la ambulancia va más lento (app/clima.py).
+    return t.metros / 1000 / VELOCIDAD[t.highway] * 60 * factor * clima.factor_minutos(*t.geom[0])
 
 
 def velocidad_maxima(grafo: Grafo, hora: int, cerradas: set[int] = frozenset()) -> float:
@@ -694,6 +695,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
     """Ruta real de `origen` a `destino` ({lat, lng}) con cada algoritmo de búsqueda
     (ciega y heurística)."""
     hora = hora_actual() if hora is None else hora
+    clima.actualizar()   # clima actual de las zonas (la lluvia frena el tránsito)
     puntos = [(origen["lat"], origen["lng"]), (destino["lat"], destino["lng"])]
     datos = calles_para_ruta(puntos)
     a = nodo_mas_cercano(datos, *puntos[0])
@@ -710,6 +712,9 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
         if r["encontrado"]:
             salida.update(describir_ruta(grafo, r["aristas"], hora))
             salida["minutos"] = round(r["minutos"], 1)
+            # Zonas con lluvia por las que pasa esta ruta.
+            salida["lluvia_en"] = sorted({z["nombre"] for z in (clima.zona_de(la, ln) for la, ln in salida["coords"][::5])
+                                          if clima.lluvia_en(z["lat"], z["lng"])["lluvia"]})
         resultados.append(salida)
 
     encontrados = [r for r in resultados if r["encontrado"]]
@@ -723,6 +728,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
         "esquinas": len(grafo.coords),
         # Para explicar h(n) en pantalla: con qué velocidad se estimó y cuánto vale en la salida.
         "heuristica": {"velocidad_kmh": round(vmax, 1), "h_inicial": round(h(a), 1)},
+        "clima": clima.resumen(),
         "resultados": resultados,
         # En empate gana costo uniforme, que es el que garantiza la ruta más rápida.
         "mas_rapido": min(encontrados, key=lambda r: (r["minutos"], r["algoritmo"] != "costo_uniforme"))["algoritmo"]
@@ -733,6 +739,7 @@ def calcular_ruta(origen: dict, destino: dict, hora: int | None = None,
 def zona(hora: int | None = None) -> dict:
     """Avenidas principales de la zona con su tráfico estimado, para el mapa general."""
     hora = hora_actual() if hora is None else hora
+    clima.actualizar()
     datos = calles_principales_zona()
     nodos = {e["id"]: (e["lat"], e["lon"]) for e in datos.get("elements", []) if e["type"] == "node"}
     vias = []
@@ -748,6 +755,8 @@ def zona(hora: int | None = None) -> dict:
             "nombre": w["tags"].get("name") or w["tags"].get("ref"),
             "tipo": hw,
             "nivel": nivel_trafico(hw, w["id"], hora),
+            # Llueve en esta avenida: la ambulancia va más lento aunque el tráfico sea el mismo.
+            "lluvia": clima.factor_minutos(*geom[len(geom) // 2]) > 1,
             "coords": _redondear(geom),
         })
     return {
@@ -757,4 +766,5 @@ def zona(hora: int | None = None) -> dict:
         "zona": ZONA,
         "hospital": HOSPITAL,
         "vias": vias,
+        "clima": clima.resumen(),
     }

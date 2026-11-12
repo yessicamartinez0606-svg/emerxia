@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Ambulance, Check, Fuel, MapPin, Phone, ScanFace, Siren, UserRound, Wrench } from 'lucide-react'
 import RutaAmbulancia from '../../components/RutaAmbulancia.jsx'
+import ClimaZonas from '../../components/ClimaZonas.jsx'
+import LlegadaEstimada from '../../components/LlegadaEstimada.jsx'
 import { ESTADOS_MANUALES, ESTADO_INFO, HOSPITALES, colorGasolina, fmtFecha, fmtHoraCorta } from '../../lib/flota.js'
 import { estadoOperador, eventoOperador, portalOperador } from '../../lib/portal.js'
 
@@ -56,6 +58,8 @@ export default function MiTurno() {
             </div>
           </section>
         )}
+
+      <ClimaZonas compacto />
 
       {ficha ? <MiAmbulancia ficha={ficha} minimo={datos.combustible_minimo} onCambio={setDatos} /> : (
         <section className="panel">
@@ -161,6 +165,8 @@ function EmergenciaAsignada({ rep, onCambio }) {
         )}
         {error && <p className="form-error">{error}</p>}
       </section>
+
+      {!em.hora_llegada && <LlegadaEstimada emergenciaId={em.id} />}
 
       {/* Ruta del IMSS 220 a la emergencia, con las rutas alternas de cada algoritmo. */}
       {!sinAmbulancia && <RutaAmbulancia emergencia={em} />}

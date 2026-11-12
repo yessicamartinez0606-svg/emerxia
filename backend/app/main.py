@@ -7,7 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from . import readiness
 from .config import settings
 from .mongo import close_client
-from .routers import auth, busqueda, despacho, flota, modules, portal, system, verificaciones
+from .routers import auth, busqueda, despacho, flota, inteligencia, modules, portal, system, verificaciones
 from .security import OPERADOR, PERSONAL, require_roles, solo_personal
 from .spark import stop_spark
 
@@ -50,6 +50,7 @@ app.include_router(flota.router, dependencies=PERSONAL_DB)   # flota, gasolina, 
 app.include_router(portal.router, dependencies=[Depends(readiness.require_mongo)])   # portales Operador y Usuario
 app.include_router(busqueda.router, dependencies=[Depends(require_roles(*PERSONAL, OPERADOR))])   # rutas (búsqueda ciega y heurística)
 app.include_router(despacho.router, dependencies=[Depends(solo_personal)])   # algoritmo genético
+app.include_router(inteligencia.router)   # clima de las zonas y tiempo estimado de llegada (regresión)
 
 @app.get("/api/health")
 def health():

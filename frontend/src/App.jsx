@@ -14,6 +14,7 @@ import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 import RutasPage from './pages/RutasPage.jsx'
 import DespachoPage from './pages/DespachoPage.jsx'
 import HistorialPage from './pages/HistorialPage.jsx'
+import TiempoLlegadaPage from './pages/TiempoLlegadaPage.jsx'
 import { ClipboardList, Fuel, History, Route as RouteIcon, Siren, Truck } from 'lucide-react'
 import PortalLayout from './components/PortalLayout.jsx'
 import MiTurno from './pages/operador/MiTurno.jsx'
@@ -92,6 +93,7 @@ function PorPerfil() {
         <Route path="rutas" element={<RutasPage />} />
         <Route path="despacho" element={<DespachoPage />} />
         <Route path="historial" element={<HistorialPage />} />
+        <Route path="llegada" element={<TiempoLlegadaPage />} />
         <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />
         <Route path=":module/nuevo" element={<ModuleFormPage />} />
         <Route path=":module/:id" element={<RecordDetailPage />} />
