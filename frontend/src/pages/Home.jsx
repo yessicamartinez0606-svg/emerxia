@@ -1,7 +1,5 @@
-import { Link } from 'react-router-dom'
-import { ArrowRight, HeartPulse } from 'lucide-react'
+import { HeartPulse } from 'lucide-react'
 import { useAuth } from '../lib/auth.jsx'
-import { MODULES } from '../lib/modules.js'
 import PendientesCentral from '../components/PendientesCentral.jsx'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 
@@ -50,22 +48,11 @@ export default function Home() {
       <HeroArt />
       <header className="home-head">
         <h1>¡Bienvenido, {firstName}!</h1>
-        <p>{user?.role === 'Administrador' ? 'Tú creas, asignas y das seguimiento a las emergencias' : 'Selecciona un módulo para comenzar'}</p>
+        <p>{user?.role === 'Administrador' ? 'Tú creas, asignas y das seguimiento a las emergencias' : 'Usa las pestañas de arriba para ir a cada sección'}</p>
       </header>
 
       <PendientesCentral />
       <ClimaZonas compacto />
-
-      <div className="module-grid">
-        {MODULES.map(({ key, label, description, icon: Icon }) => (
-          <Link key={key} to={`/${key}`} className="module-card">
-            <Icon className="module-icon" size={40} strokeWidth={1.7} />
-            <h2>{label}</h2>
-            <p>{description}</p>
-            <span className="go" aria-hidden="true"><ArrowRight size={16} /></span>
-          </Link>
-        ))}
-      </div>
 
       <footer className="banner">
         <span className="banner-icon"><HeartPulse size={18} /></span>
