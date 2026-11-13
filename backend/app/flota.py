@@ -178,7 +178,7 @@ def planear(ambulancias: list[dict], cantidad: int, destino: dict | None = None,
         if apoyos:
             partes.append("Se piden " + _lista([f"{len(h['aporta'])} a {h['hospital']}" for h in apoyos]) + ".")
         if faltan:
-            partes.append(f"Faltan {faltan}: no hay más ambulancias libres en la zona.")
+            partes.append(f"Falta{'n' if faltan > 1 else ''} {faltan}: no hay más ambulancias libres en la zona.")
         resumen = " ".join(partes)
 
     return {

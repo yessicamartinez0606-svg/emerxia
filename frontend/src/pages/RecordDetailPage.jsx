@@ -1,6 +1,6 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, CalendarClock, ScanFace } from 'lucide-react'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowUpRight, CalendarClock } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
@@ -9,7 +9,7 @@ import ControlAmbulancia from '../components/ControlAmbulancia.jsx'
 import ReporteEmergencia from '../components/ReporteEmergencia.jsx'
 
 // Campo que se usa como título principal del perfil, por módulo.
-const TITLE_KEY = { doctores: 'nombre', ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
+const TITLE_KEY = { ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
 const SUBTITLE_KEY = { emergencias: 'paciente_nombre' }
 
 function formatDate(value) {
@@ -47,6 +47,8 @@ export default function RecordDetailPage() {
 }
 
 function DetailView({ mod, id }) {
+  // Aviso que deja el formulario al guardar (p. ej. qué ambulancias se asignaron solas).
+  const notice = useLocation().state?.notice
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [related, setRelated] = useState({})
@@ -131,12 +133,8 @@ function DetailView({ mod, id }) {
           <h1>{(titleKey && item[titleKey]) || `${mod.singular} #${item.id}`}</h1>
           {subtitleKey && item[subtitleKey] && <p>{item[subtitleKey]}</p>}
         </div>
-        {mod.key === 'emergencias' && !item.operador && (
-          <Link to={`/operadores/validar/${item.id}`} className="btn-primary compact record-screen-cta">
-            <ScanFace size={16} /> Validar operador
-          </Link>
-        )}
       </header>
+      {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
       <div className="panel profile-hero">
         <div className="profile-avatar">

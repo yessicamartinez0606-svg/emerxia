@@ -31,14 +31,6 @@ DEFINITIONS: dict[str, dict] = {
         ),
         "indexes": [("id", True), ("username", True)],
     },
-    # Personal médico
-    "doctors": {
-        "validator": _schema(
-            {"id": NUM, "nombre": STR, "especialidad": STR, "estado": STR},
-            {"telefono": STR, "celular": STR, "correo": STR, "created_at": "date"},
-        ),
-        "indexes": [("id", True), ("estado", False)],
-    },
     # Flota de ambulancias
     "ambulances": {
         "validator": _schema(

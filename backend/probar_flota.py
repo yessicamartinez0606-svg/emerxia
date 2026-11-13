@@ -61,8 +61,8 @@ def ejemplo() -> BaseEnMemoria:
                                              "Elena Cruz", "Pablo Núñez", "Marcos Herrera", "Lucía Gómez", "Ana Ruiz"], 1)],
         "emergencies": [{"id": 1, "folio": "EMG-0001", "paciente_nombre": "Juan Pérez", "direccion": "Av. Independencia 300, Toluca",
                          "descripcion": "Choque múltiple", "prioridad": "Alta", "estado": "Pendiente", "ambulancias_requeridas": 5,
-                         "operador": "Mariana Torres", "doctor": None}],
-        "doctors": [], "historial": [], "cargas_combustible": [], "verificaciones": [],
+                         "operador": "Mariana Torres"}],
+        "historial": [], "cargas_combustible": [], "verificaciones": [],
     })
 
 

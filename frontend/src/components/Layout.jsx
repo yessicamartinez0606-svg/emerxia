@@ -1,19 +1,33 @@
 import { useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
-import { ChevronDown, LogOut, Search, UserRound } from 'lucide-react'
+import { Clock, LogOut, Search } from 'lucide-react'
 import { Logo } from './Logo.jsx'
-import ClockWidget from './ClockWidget.jsx'
 import PrepararRostros from './PrepararRostros.jsx'
 import { useAuth } from '../lib/auth.jsx'
+import { useNow } from '../lib/useNow.js'
 import { HOME, MODULES } from '../lib/modules.js'
 
+// Marco de la central (Administrador, Despachador, Supervisor). Usa el mismo diseño que el
+// portal del Operador (components/PortalLayout.jsx): barra roja arriba con pestañas, en lugar
+// del menú lateral, para que todo el sistema se vea igual.
+
 const NAV = [{ ...HOME, key: 'inicio', path: '/' }, ...MODULES.map((m) => ({ ...m, path: `/${m.key}` }))]
+
+function Reloj() {
+  const now = useNow()
+  const hora = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now)
+  const fecha = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).format(now)
+  return (
+    <span className="portal-reloj" role="status" aria-label="Fecha y hora actual">
+      <Clock size={14} aria-hidden="true" /> <b>{hora}</b> <span>{fecha}</span>
+    </span>
+  )
+}
 
 export default function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
-  const [menuOpen, setMenuOpen] = useState(false)
 
   const onSearch = (e) => {
     e.preventDefault()
@@ -27,65 +41,42 @@ export default function Layout() {
   }
 
   return (
-    <div className="app-shell">
-      <aside className="sidebar">
-        <Logo size={34} className="sidebar-logo" />
-        <nav aria-label="Principal">
-          {NAV.map(({ key, path, label, navIcon: Icon }) => (
-            <NavLink key={key} to={path} end={path === '/'} className="nav-item">
-              <Icon size={19} strokeWidth={2.2} />
-              <span>{label}</span>
-            </NavLink>
-          ))}
-        </nav>
-        <button type="button" className="nav-item logout" onClick={logout}>
-          <LogOut size={19} strokeWidth={2.2} />
-          <span>Cerrar sesión</span>
-        </button>
-      </aside>
-
-      <div className="content">
-        <header className="topbar">
-          <form className="search" onSubmit={onSearch} role="search">
-            <Search size={16} aria-hidden="true" />
+    <div className="portal central">
+      <header className="portal-top">
+        <div className="portal-top-in">
+          <Logo size={28} className="portal-logo" />
+          <span className="portal-perfil">{user?.role || 'Central'}</span>
+          <form className="portal-buscar" onSubmit={onSearch} role="search">
+            <Search size={15} aria-hidden="true" />
             <input
               type="search"
-              placeholder="Buscar en el sistema..."
+              placeholder="Buscar sección…"
               aria-label="Buscar en el sistema"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </form>
-
-          <div className="user-wrap">
-            <button
-              type="button"
-              className="user-chip"
-              aria-haspopup="menu"
-              aria-expanded={menuOpen}
-              onClick={() => setMenuOpen((v) => !v)}
-            >
-              <span className="avatar"><UserRound size={18} /></span>
-              <span className="user-meta">
-                <strong>{user?.full_name}</strong>
-                <small>{user?.role}</small>
-              </span>
-              <ChevronDown size={15} />
+          <div className="portal-user">
+            <Reloj />
+            <span className="portal-nombre">{user?.full_name}</span>
+            <button type="button" className="portal-salir" onClick={logout} aria-label="Cerrar sesión">
+              <LogOut size={16} /> <span>Salir</span>
             </button>
-            {menuOpen && (
-              <div className="user-menu" role="menu">
-                <button role="menuitem" onClick={logout}><LogOut size={15} /> Cerrar sesión</button>
-              </div>
-            )}
           </div>
-        </header>
+        </div>
+        <nav className="portal-tabs" aria-label="Secciones">
+          {NAV.map(({ key, path, label, navIcon: Icon }) => (
+            <NavLink key={key} to={path} end={path === '/'} className="portal-tab">
+              <Icon size={16} aria-hidden="true" /> {label}
+            </NavLink>
+          ))}
+        </nav>
+      </header>
 
-        <main className="page">
-          <Outlet />
-        </main>
-      </div>
+      <main className="page central-page">
+        <Outlet />
+      </main>
 
-      <ClockWidget />
       {/* Descriptores faciales de los operadores, para que entren solo con su rostro. */}
       <PrepararRostros />
     </div>

@@ -50,6 +50,8 @@ export const obtenerHistorial = (filtros = {}) => {
 // `placas`: las que eligió el administrador a mano (van primero si están listas).
 export const planAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: false } })
 export const confirmarAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: true } })
+// Vuelve a buscar ambulancias libres para una emergencia que se quedó en espera.
+export const reintentarAsignacion = (id) => api(`/flota/emergencias/${id}/asignar-automatico`, { method: 'POST' })
 export const eventoEmergencia = (id, evento) => api(`/flota/emergencias/${id}/evento`, { method: 'POST', body: evento })
 export const reporteEmergencia = (id) => api(`/flota/emergencias/${id}/reporte`)
 

@@ -16,7 +16,7 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Crear usuario o cambiar contraseña")
     ap.add_argument("usuario")
     ap.add_argument("--nombre", help="Nombre completo")
-    ap.add_argument("--rol", default="Administrador", help="Administrador, Operador, Doctor…")
+    ap.add_argument("--rol", default="Administrador", help="Administrador, Despachador, Supervisor, Usuario…")
     args = ap.parse_args()
 
     pw = getpass.getpass("Contraseña nueva: ")

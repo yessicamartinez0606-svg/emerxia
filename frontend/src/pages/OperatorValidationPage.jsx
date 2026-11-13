@@ -103,7 +103,6 @@ export default function OperatorValidationPage() {
     ['Paciente', emergency.paciente_nombre],
     ['Ubicación', emergency.direccion],
     ['Descripción', emergency.descripcion],
-    ['Doctor', emergency.doctor],
     ['Teléfono', emergency.paciente_telefono],
   ]
 

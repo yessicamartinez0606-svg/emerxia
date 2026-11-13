@@ -9,7 +9,7 @@ export const slug = (v) =>
 export const PHOTO_KEYS = ['foto', 'photo', 'imagen', 'foto_perfil', 'avatar']
 
 // Foto de un registro: usa el campo que el módulo declara como tipo "photo"
-// (p. ej. Operadores/Doctores) o, si el documento trae una foto guardada bajo
+// (p. ej. Operadores) o, si el documento trae una foto guardada bajo
 // otra clave habitual, esa. Se usa tanto en la tabla como en el perfil, para
 // que un mismo ícono/avatar se vea igual en toda la app.
 export function getPhoto(mod, item) {

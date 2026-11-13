@@ -13,7 +13,7 @@ const PESO_ESTADO = { Pendiente: 0, Asignada: 1, 'En curso': 2 }
 const PESO_PRIORIDAD = { Alta: 0, Media: 1, Baja: 2 }
 
 function falta(e) {
-  if (!e.ambulancia) return { texto: 'Asignar ambulancia', urgente: true }
+  if (!e.ambulancia) return { texto: 'En espera de ambulancia', urgente: true }
   if (!e.operador) return { texto: 'Validar operador', urgente: true }
   if (e.estado === 'Asignada') return { texto: 'Esperando salida', urgente: false }
   return { texto: 'En atención', urgente: false }

@@ -12,7 +12,7 @@ const OLD_BACKEND =
   'Ciérrala (python diagnostico.py te dice cuál) y vuelve a iniciar el backend.'
 
 // Etiqueta legible del módulo dueño de una colección referenciada por `source`
-// (p. ej. "doctores" → "Doctores"), para armar mensajes genéricos sin
+// (p. ej. "operadores" → "Operadores"), para armar mensajes genéricos sin
 // hardcodear qué módulos existen.
 const sourceLabel = (src) => findModule(src)?.label ?? src
 
@@ -51,7 +51,7 @@ function FormView({ mod }) {
   const { options: sourcedOptions, loading: sourcedLoading } = useSourcedOptions(formFields)
 
   // Verificación por reconocimiento facial: modal de cámara abierto y, por
-  // cada campo que la requiere (operador, doctor…), qué valor quedó
+  // cada campo que la requiere (p. ej. operador), qué valor quedó
   // verificado en este formulario (se reinicia si cambia la selección).
   const [faceModal, setFaceModal] = useState(null)
   const [verifiedFields, setVerifiedFields] = useState({})
@@ -116,7 +116,6 @@ function FormView({ mod }) {
       const body = { ...form }
       if (body.ambulancia === '') body.ambulancia = null
       if (body.operador === '') body.operador = null
-      if (body.doctor === '') body.doctor = null
       const saved = await api(`/${mod.key}`, { method: 'POST', body })
       if (!saved.saved_in) {
         setFormError(OLD_BACKEND)
@@ -126,11 +125,13 @@ function FormView({ mod }) {
       const done = mod.nuevo === 'Nueva' ? 'guardada' : 'guardado'
       const name = mod.singular.charAt(0).toUpperCase() + mod.singular.slice(1)
       // Si el módulo define `afterSave`, ese paso va justo después de guardar
-      // (Emergencias → ventana del operador para validar su Face ID); si no, se
+      // (Emergencias → su reporte, con las ambulancias ya asignadas); si no, se
       // regresa a la lista con el aviso de guardado.
-      navigate(mod.afterSave ? mod.afterSave(saved) : `/${mod.key}`, {
-        state: { notice: { kind: 'ok', text: `✓ ${name} ${done} en MongoDB (${saved.saved_in}), id ${saved.id}.` } },
-      })
+      const asig = saved.asignacion
+      const notice = asig
+        ? { kind: asig.faltan ? 'warn' : 'ok', text: `✓ ${name} ${saved.folio || ''} ${done}. ${asig.mensaje}` }
+        : { kind: 'ok', text: `✓ ${name} ${done} en MongoDB (${saved.saved_in}), id ${saved.id}.` }
+      navigate(mod.afterSave ? mod.afterSave(saved) : `/${mod.key}`, { state: { notice } })
     } catch (err) {
       setFormError(err.message)
       setSaving(false)
@@ -244,12 +245,7 @@ function FormView({ mod }) {
         ))}
 
         {mod.key === 'emergencias' && (
-          <PanelLogica
-            prioridad={form.prioridad}
-            doctor={sourcedOptions.doctor?.find((o) => o.value === form.doctor)?.raw}
-            doctorVerificado={!!form.doctor && verifiedFields.doctor === form.doctor}
-            ambulancia={sourcedOptions.ambulancia?.find((o) => o.value === form.ambulancia)?.raw}
-          />
+          <PanelLogica prioridad={form.prioridad} requeridas={form.ambulancias_requeridas} />
         )}
 
         <div className="record-form-actions">

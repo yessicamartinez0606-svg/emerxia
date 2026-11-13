@@ -176,6 +176,7 @@ def cambiar_ambulancia(amb_id: int, body: AmbulanciaPatch, usuario: str = Depend
     if not cambios:
         return ficha_ambulancia(amb_id)
     update_row("ambulances", amb_id, cambios)
+    asignar_pendientes(usuario)        # si quedó libre, atiende a las emergencias en espera
     return ficha_ambulancia(amb_id)
 
 
@@ -206,6 +207,7 @@ def cargar_combustible(amb_id: int, body: CargaCombustibleIn, usuario: str = Dep
               f"{body.operador} cargó {body.litros:g} L a {placa}{costo}: {int(carga['antes'])} % → {int(carga['despues'])} %."
               + (" Identidad verificada con Face ID." if body.verificado_facial else ""),
               usuario, ambulancia=placa, operador=body.operador.strip(), hospital=flota.normalizar(amb)["hospital"])
+    asignar_pendientes(usuario)        # con gasolina suficiente ya puede salir
     return ficha_ambulancia(amb_id)
 
 
@@ -264,6 +266,82 @@ def asignar(em_id: int, body: AsignarIn, usuario: str = Depends(current_username
         "operador": em.get("operador") or plan["elegidas"][0]["conductor"],
     })
     return {"plan": plan, "asignadas": todas}
+
+
+# ─────────────────────── asignación automática ───────────────────────
+# Al registrar una emergencia (desde la central o desde el perfil de Usuario) las ambulancias
+# se asignan solas con flota.planear: primero las libres del IMSS 220 y, si no alcanzan, las
+# de los hospitales más cercanos. El operador de la emergencia es quien maneja la primera.
+# Si no hay ambulancias libres, la emergencia queda esperando y se completa sola en cuanto
+# se libera una (al cerrar otra emergencia, al cambiar el estatus o al cargar gasolina).
+
+PESO_PRIORIDAD = {"Alta": 0, "Media": 1, "Baja": 2}
+
+
+def _faltan(em: dict) -> int:
+    return int(em.get("ambulancias_requeridas") or 1) - len(_placas(em))
+
+
+def asignar_automatico(em_id: int, usuario: str | None = None) -> dict:
+    """Asigna las ambulancias que le faltan a la emergencia. Nunca lanza error: si no hay
+    ambulancias libres, lo deja anotado en el historial y regresa cuántas faltan."""
+    em = _emergencia(em_id)
+    folio = em["folio"]
+    if em.get("estado") == "Cerrada" or _faltan(em) <= 0:
+        return {"automatica": True, "asignadas": _placas(em), "faltan": 0, "operador": em.get("operador"),
+                "mensaje": f"{folio} ya tiene sus ambulancias."}
+    try:
+        r = asignar(em_id, AsignarIn(confirmar=True), usuario or "sistema")
+    except HTTPException as exc:
+        if exc.status_code != 409:
+            raise
+        n = _faltan(em)
+        if not em.get("sin_ambulancias_avisado"):
+            registrar("aviso", f"{folio}: no hay ambulancias libres en la zona. Se asignarán solas en cuanto se libere una.",
+                      usuario, emergencia=folio)
+            update_row("emergencies", em_id, {"sin_ambulancias_avisado": True})
+        return {"automatica": True, "asignadas": _placas(em), "faltan": n, "operador": em.get("operador"),
+                "mensaje": f"No hay ambulancias libres: {folio} queda en espera y se asignará sola en cuanto se libere una."}
+    plan = r["plan"]
+    em = _emergencia(em_id)
+    if plan["faltan"]:
+        update_row("emergencies", em_id, {"sin_ambulancias_avisado": True})
+    return {"automatica": True, "asignadas": r["asignadas"], "faltan": plan["faltan"], "operador": em.get("operador"),
+            "usa_otros_hospitales": plan["usa_otros_hospitales"],
+            "mensaje": plan["resumen"] + (f" A cargo: {em['operador']}." if em.get("operador") else "")}
+
+
+def _orden_espera(em: dict) -> tuple:
+    """Primero prioridad Alta; entre iguales, las críticas según el triaje (si hay signos
+    vitales) y luego la más antigua."""
+    critica = 0
+    try:
+        from .. import triaje
+        if triaje.tiene_signos(em):
+            critica = -triaje.clasificar(triaje.signos_de(em))["probabilidad"]
+    except Exception:  # noqa: BLE001  (sin scikit-learn o signos fuera de rango)
+        pass
+    return (PESO_PRIORIDAD.get(em.get("prioridad"), 1), critica, str(em.get("created_at") or ""), em.get("id", 0))
+
+
+def asignar_pendientes(usuario: str | None = None) -> list[dict]:
+    """Completa las emergencias abiertas que se quedaron sin todas sus ambulancias."""
+    esperando = [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada" and _faltan(e) > 0]
+    hechas = []
+    for em in sorted(esperando, key=_orden_espera):
+        antes = len(_placas(em))
+        r = asignar_automatico(em["id"], usuario)
+        if len(r["asignadas"]) > antes:
+            hechas.append({"folio": em["folio"], **r})
+        if r["faltan"]:
+            break          # ya no hay más ambulancias libres: las demás siguen esperando
+    return hechas
+
+
+@router.post("/emergencias/{em_id}/asignar-automatico")
+def reintentar_asignacion(em_id: int, usuario: str = Depends(current_username)):
+    """Vuelve a buscar ambulancias para la emergencia (por si se liberó alguna)."""
+    return {**asignar_automatico(em_id, usuario), "reporte": reporte(em_id)}
 
 
 def _ambulancia_de(operador: str | None) -> dict | None:
@@ -353,6 +431,8 @@ def evento(em_id: int, body: EventoEmergenciaIn, usuario: str = Depends(current_
     if nota:
         cambios["observaciones"] = ((em.get("observaciones") or "") + ("\n" if em.get("observaciones") else "") + nota).strip()
     update_row("emergencies", em_id, cambios)
+    if body.tipo == "cierre":
+        asignar_pendientes(usuario)    # las ambulancias liberadas van a las emergencias en espera
     return reporte(em_id)
 
 
@@ -373,7 +453,6 @@ def reporte(em_id: int):
         "emergencia": em,
         "ambulancias": ambulancias,
         "operador": _sin_foto(_por("operators", "nombre", em.get("operador"))),
-        "doctor": _sin_foto(_por("doctors", "nombre", em.get("doctor"))),
         "hospital_salida": em.get("hospital_salida"),
         "linea_tiempo": sorted(_historial(emergencia=folio), key=lambda f: f["id"]),
         "verificaciones": [_sin_foto(v) for v in verificaciones],

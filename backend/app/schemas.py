@@ -75,33 +75,6 @@ class ResetPasswordIn(BaseModel):
     password: str = Field(min_length=6)
 
 
-class DoctorIn(BaseModel):
-    nombres: str = Field(min_length=2)
-    apellidos: str = Field(min_length=2)
-    fecha_nacimiento: str = ""
-    direccion: str = ""
-    celular: str = Field(min_length=10, max_length=20)
-    correo: str = Field(min_length=5)
-    contacto_emergencia: str = ""
-    especialidad: str = Field(min_length=2)
-    cedula_profesional: str = Field(min_length=2)
-    turno: Literal["Matutino", "Vespertino", "Nocturno"] = "Matutino"
-    estado: Literal["Activo", "En guardia", "Descanso"] = "Activo"
-    # Foto de referencia (igual que en Operadores): se usa para verificar por
-    # reconocimiento facial que es el mismo doctor antes de asignarlo a una emergencia.
-    foto: str = Field(min_length=1, description="Foto de referencia en base64 (data URL)")
-
-    @field_validator("celular")
-    @classmethod
-    def _celular_valido(cls, v: str) -> str:
-        return _valida_celular(v)
-
-    @field_validator("correo")
-    @classmethod
-    def _correo_valido(cls, v: str) -> str:
-        return _valida_correo(v)
-
-
 def _numero(default: float):
     """Los formularios mandan los números como texto; vacío = valor por defecto."""
     def convertir(v):
@@ -156,10 +129,10 @@ class EmergencyIn(BaseModel):
     def _tel_paciente_valido(cls, v: str) -> str:
         return _valida_celular(v) if v.strip() else v
 
-    # Asignación (idealmente elegidos de las bases de operadores/ambulancias/doctores)
+    # Asignación: las ambulancias (y el operador que maneja la primera) se asignan solas al
+    # guardar la emergencia (routers/flota.py → asignar_automatico).
     operador: str | None = None
     ambulancia: str | None = None
-    doctor: str | None = None
     # Cuántas ambulancias necesita (p. ej. un choque múltiple). Si son más de las que tiene
     # libres el hospital base, las demás se piden a otros hospitales (app/flota.py).
     ambulancias_requeridas: int = Field(1, ge=1, le=20)
@@ -180,7 +153,6 @@ class EmergencyPatch(BaseModel):
     operador una vez que su rostro fue validado."""
     operador: str | None = None
     ambulancia: str | None = None
-    doctor: str | None = None
     estado: Literal["Pendiente", "Asignada", "En curso", "Cerrada"] | None = None
 
 

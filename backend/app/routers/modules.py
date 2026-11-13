@@ -1,17 +1,17 @@
-"""Doctores, Ambulancias, Emergencias y Operadores: mismo patrón, colecciones distintas (MongoDB)."""
+"""Ambulancias, Emergencias y Operadores: mismo patrón, colecciones distintas (MongoDB)."""
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from pymongo.errors import DuplicateKeyError, WriteError
 
 from .. import flota
 from ..repository import insert_row, list_rows, source_name, update_row
-from ..schemas import AmbulanceIn, DoctorIn, EmergencyIn, EmergencyPatch, OperatorIn
+from ..schemas import AmbulanceIn, EmergencyIn, EmergencyPatch, OperatorIn
 from ..security import current_username
 
 
 def build_router(
     path: str, collection: str, model: type[BaseModel], derive=None, patch_model: type[BaseModel] | None = None,
-    normalize=None, check=None,
+    normalize=None, check=None, after_create=None,
 ) -> APIRouter:
     router = APIRouter(prefix=f"/api/{path}", tags=[path], dependencies=[Depends(current_username)])
 
@@ -29,11 +29,12 @@ def build_router(
             if check:
                 check(data)   # reglas extra; lanza ValueError con el mensaje para el usuario
             if derive:
-                # p. ej. doctores: junta nombres + apellidos en un campo "nombre"
+                # p. ej. operadores: junta nombres + apellidos en un campo "nombre"
                 # para poder mostrarlo/enlazarlo igual que en los demás módulos.
                 data = {**data, **derive(data)}
             saved = insert_row(collection, data)
-            return {**saved, "saved_in": source_name(collection)}
+            extra = after_create(saved) if after_create else {}
+            return {**saved, **(extra or {}), "saved_in": source_name(collection)}
         except DuplicateKeyError as exc:
             field = next(iter((exc.details or {}).get("keyPattern", {"valor": 1})))
             raise HTTPException(409, f"Ya existe un registro con ese valor de '{field}'.")
@@ -66,13 +67,23 @@ def _check_ambulancia(data: dict) -> None:
         raise ValueError(f"{data['conductor']} ya conduce {otra['placa']}. Elige otro operador.")
 
 
+def _emergencia_nueva(em: dict) -> dict:
+    """Al guardar una emergencia, sus ambulancias (y el operador) se asignan solas."""
+    from .flota import asignar_automatico
+    return {"asignacion": asignar_automatico(em["id"])}
+
+
+def _ambulancia_nueva(_: dict) -> dict:
+    """Una ambulancia nueva y libre atiende a las emergencias que esperan."""
+    from .flota import asignar_pendientes
+    asignar_pendientes()
+    return {}
+
+
 routers = [
-    build_router(
-        "doctores", "doctors", DoctorIn,
-        derive=lambda d: {"nombre": f"{d['nombres']} {d['apellidos']}".strip()},
-    ),
-    build_router("ambulancias", "ambulances", AmbulanceIn, normalize=flota.normalizar, check=_check_ambulancia),
-    build_router("emergencias", "emergencies", EmergencyIn, patch_model=EmergencyPatch),
+    build_router("ambulancias", "ambulances", AmbulanceIn, normalize=flota.normalizar, check=_check_ambulancia,
+                 after_create=_ambulancia_nueva),
+    build_router("emergencias", "emergencies", EmergencyIn, patch_model=EmergencyPatch, after_create=_emergencia_nueva),
     build_router(
         "operadores", "operators", OperatorIn,
         derive=lambda d: {"nombre": f"{d['nombres']} {d['apellidos']}".strip()},

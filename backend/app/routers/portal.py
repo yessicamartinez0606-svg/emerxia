@@ -175,7 +175,7 @@ def reportar(body: ReporteUsuarioIn, user: dict = Depends(solo_usuario)):
         "descripcion": descripcion,
         "prioridad": TIPOS.get(tipo, "Media"),
         "estado": "Pendiente",
-        "operador": None, "ambulancia": None, "doctor": None,
+        "operador": None, "ambulancia": None,
         # Una ambulancia por cada dos personas afectadas (máximo 10).
         "ambulancias_requeridas": min(10, max(1, math.ceil(body.personas / 2))),
         "canal": canal,
@@ -187,7 +187,9 @@ def reportar(body: ReporteUsuarioIn, user: dict = Depends(solo_usuario)):
     })
     flota_api.registrar("aviso", f"Nueva emergencia {em['folio']} reportada por {canal} por {user['full_name']}: {tipo}.",
                         user["username"], emergencia=em["folio"])
-    return _reporte_publico(em)
+    # Las ambulancias salen solas: no espera a que la central la atienda.
+    flota_api.asignar_automatico(em["id"], user["username"])
+    return _reporte_publico(flota_api._emergencia(em["id"]))
 
 
 def _reporte_publico(em: dict) -> dict:

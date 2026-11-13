@@ -1,4 +1,4 @@
-"""Acceso a datos en MongoDB: usuarios, doctores, ambulancias, emergencias y operadores."""
+"""Acceso a datos en MongoDB: usuarios, ambulancias, emergencias y operadores."""
 import hashlib
 import logging
 import secrets
@@ -116,12 +116,6 @@ def seed_demo() -> None:
     """Rellena las colecciones vacías con datos de ejemplo (SEED_DEMO_DATA=true)."""
     db = get_db()
     samples = {
-        "doctors": [
-            {"nombres": "Laura", "apellidos": "Méndez", "nombre": "Laura Méndez", "especialidad": "Medicina de urgencias", "cedula_profesional": "8451203", "celular": "55 1234 5601", "turno": "Matutino", "estado": "Activo"},
-            {"nombres": "Carlos", "apellidos": "Ortega", "nombre": "Carlos Ortega", "especialidad": "Cardiología", "cedula_profesional": "8451204", "celular": "55 1234 5602", "turno": "Vespertino", "estado": "Activo"},
-            {"nombres": "Sofía", "apellidos": "Ramírez", "nombre": "Sofía Ramírez", "especialidad": "Traumatología", "cedula_profesional": "8451205", "celular": "55 1234 5603", "turno": "Nocturno", "estado": "En guardia"},
-            {"nombres": "Andrés", "apellidos": "Villalobos", "nombre": "Andrés Villalobos", "especialidad": "Pediatría", "cedula_profesional": "8451206", "celular": "55 1234 5604", "turno": "Matutino", "estado": "Descanso"},
-        ],
         # Ambulancias repartidas en los hospitales de app/genetico.py. El conductor es un
         # operador (más abajo), que es quien registra la gasolina de su ambulancia.
         "ambulances": [

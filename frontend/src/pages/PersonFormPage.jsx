@@ -11,7 +11,7 @@ function emptyForm(fields) {
   )
 }
 
-/** Pantalla completa para dar de alta un doctor u operador: datos personales + fotografía. */
+/** Pantalla completa para dar de alta un operador: datos personales + fotografía. */
 export default function PersonFormPage({ moduleKey }) {
   const mod = findModule(moduleKey)
   const navigate = useNavigate()

@@ -2,7 +2,7 @@
 from .repository import list_rows
 from .spark import get_spark
 
-SOURCES = {"doctores": "doctors", "ambulancias": "ambulances", "emergencias": "emergencies", "operadores": "operators"}
+SOURCES = {"ambulancias": "ambulances", "emergencias": "emergencies", "operadores": "operators"}
 
 
 def count_by_state() -> dict[str, dict[str, int]]:

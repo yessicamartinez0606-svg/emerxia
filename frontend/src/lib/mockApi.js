@@ -9,12 +9,6 @@ const PREFIX = 'emergexia.mock.'
 const ADMIN = { username: 'admin', password: 'admin123', full_name: 'Yessica López', role: 'Administrador' }
 
 const SEEDS = {
-  doctors: [
-    { id: 1, nombre: 'Dra. Laura Méndez', especialidad: 'Medicina de urgencias', telefono: '55 1234 5601', estado: 'Activo' },
-    { id: 2, nombre: 'Dr. Carlos Ortega', especialidad: 'Cardiología', telefono: '55 1234 5602', estado: 'Activo' },
-    { id: 3, nombre: 'Dra. Sofía Ramírez', especialidad: 'Traumatología', telefono: '55 1234 5603', estado: 'En guardia' },
-    { id: 4, nombre: 'Dr. Andrés Villalobos', especialidad: 'Pediatría', telefono: '55 1234 5604', estado: 'Descanso' },
-  ],
   ambulances: [
     { id: 1, placa: 'AMB-101', tipo: 'Avanzada', conductor: 'Jorge Salinas', estado: 'Libre' },
     { id: 2, placa: 'AMB-102', tipo: 'Básica', conductor: 'Marcos Herrera', estado: 'Ocupada' },
@@ -34,7 +28,7 @@ const SEEDS = {
 }
 
 // Mismo mapeo que backend/app/routers/modules.py: ruta pública → tabla interna.
-const TABLE_BY_PATH = { doctores: 'doctors', ambulancias: 'ambulances', emergencias: 'emergencies', operadores: 'operators' }
+const TABLE_BY_PATH = { ambulancias: 'ambulances', emergencias: 'emergencies', operadores: 'operators' }
 
 function loadTable(table) {
   const raw = localStorage.getItem(PREFIX + table)
@@ -100,7 +94,6 @@ export async function mockApi(path, { method = 'GET', body } = {}, token) {
 
   if (path === '/dashboard/summary') {
     return {
-      doctores: countBy('doctors', 'estado'),
       ambulancias: countBy('ambulances', 'estado'),
       emergencias: countBy('emergencies', 'estado'),
       operadores: countBy('operators', 'estado'),
