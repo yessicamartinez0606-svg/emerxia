@@ -3,6 +3,7 @@
 import { api } from './api.js'
 
 // Mismos hospitales que app/genetico.py (el backend valida el nombre).
+export const HOSPITAL_BASE = 'Hospital IMSS 220'
 export const HOSPITALES = [
   'Hospital IMSS 220',
   'Hospital General Nicolás San Juan',
