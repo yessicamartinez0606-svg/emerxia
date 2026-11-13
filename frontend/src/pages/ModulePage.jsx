@@ -68,7 +68,9 @@ function ModuleView({ mod }) {
       {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} onCambio={load} />}
       {mod.key === 'operadores' && <PrepararRostros key={recarga} visible />}
 
-      <div className="panel table-wrap">
+      {mod.sinTabla && error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}
+
+      {!mod.sinTabla && <div className="panel table-wrap">
         {error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}
         {!error && items === null && <p className="muted pad">Cargando datos…</p>}
         {!error && items?.length === 0 && (
@@ -122,7 +124,7 @@ function ModuleView({ mod }) {
               : '⚠ Este servidor no reporta MongoDB: probablemente es una versión antigua del backend.'}
           </p>
         )}
-      </div>
+      </div>}
     </section>
   )
 }

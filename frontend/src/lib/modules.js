@@ -19,6 +19,8 @@ export const MODULES = [
     navIcon: Ambulance,
     singular: 'ambulancia',
     nuevo: 'Nueva',
+    // Sin tabla: las ambulancias se ven por hospital (components/FlotaHospitales.jsx).
+    sinTabla: true,
     columns: [
       { key: 'placa', label: 'Placa' },
       { key: 'vehiculo', label: 'Vehículo' },
