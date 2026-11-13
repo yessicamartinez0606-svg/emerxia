@@ -12,7 +12,6 @@ import RecordDetailPage from './pages/RecordDetailPage.jsx'
 import SettingsPage from './pages/SettingsPage.jsx'
 import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 import RutasPage from './pages/RutasPage.jsx'
-import DespachoPage from './pages/DespachoPage.jsx'
 import HistorialPage from './pages/HistorialPage.jsx'
 import TiempoLlegadaPage from './pages/TiempoLlegadaPage.jsx'
 import { ClipboardList, Fuel, History, Route as RouteIcon, Siren, Truck } from 'lucide-react'
@@ -91,7 +90,8 @@ function PorPerfil() {
         <Route index element={<Home />} />
         <Route path="configuracion" element={<SettingsPage />} />
         <Route path="rutas" element={<RutasPage />} />
-        <Route path="despacho" element={<DespachoPage />} />
+        {/* El despacho ahora es una pestaña de Inteligencia artificial. */}
+        <Route path="despacho" element={<Navigate to="/llegada?tab=despacho" replace />} />
         <Route path="historial" element={<HistorialPage />} />
         <Route path="llegada" element={<TiempoLlegadaPage />} />
         <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />

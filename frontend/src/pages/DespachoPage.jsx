@@ -15,7 +15,8 @@ const REGRESO = '#1d5fd6'
 const fmtKm = (km) => `${km.toFixed(2)} km`
 const fmtMin = (m) => `${m.toFixed(1)} min`
 
-export default function DespachoPage() {
+// incrustado: se muestra como pestaña de Inteligencia artificial (sin el título de página).
+export default function DespachoPage({ incrustado = false }) {
   const [hospitales, setHospitales] = useState(null)
   const [ambulancias, setAmbulancias] = useState({})
   const [accidente, setAccidente] = useState(ACCIDENTE_INICIAL)
@@ -96,13 +97,19 @@ export default function DespachoPage() {
 
   return (
     <section className="rutas despacho">
-      <header className="view-head">
-        <div>
-          <h1>Despacho de ambulancia</h1>
-          <p>Algoritmo genético: elige de qué hospital sale la ambulancia hacia el accidente y a cuál regresa</p>
-        </div>
-        <Dna size={28} className="rutas-head-icon" aria-hidden="true" />
-      </header>
+      {incrustado ? (
+        <p className="ia-intro despacho-intro">
+          <Dna size={15} aria-hidden="true" /> Algoritmo genético: elige de qué hospital sale la ambulancia hacia el accidente y a cuál regresa.
+        </p>
+      ) : (
+        <header className="view-head">
+          <div>
+            <h1>Despacho de ambulancia</h1>
+            <p>Algoritmo genético: elige de qué hospital sale la ambulancia hacia el accidente y a cuál regresa</p>
+          </div>
+          <Dna size={28} className="rutas-head-icon" aria-hidden="true" />
+        </header>
+      )}
 
       <div className="panel rutas-barra">
         <form className="rutas-buscar" onSubmit={buscar} role="search">

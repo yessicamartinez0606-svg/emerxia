@@ -1247,3 +1247,5 @@ i.val { background: #1d5fd6; }
 .fh-vehiculo > span:first-of-type { white-space: normal; overflow: visible; }
 .fh-detalle-titulo p { display: block; }
 .fh-detalle-titulo p svg { vertical-align: -2px; margin-right: 2px; }
+.despacho-intro { display: flex; align-items: center; gap: 6px; margin: 0 0 12px; }
+.despacho-intro svg { color: var(--red-600); flex: none; }

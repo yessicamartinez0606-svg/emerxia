@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { BrainCircuit, Calculator, Trophy } from 'lucide-react'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 import { estimarLlegada, modeloLlegada } from '../lib/clima.js'
@@ -6,6 +7,7 @@ import ATiempoPanel from './ia/ATiempoPanel.jsx'
 import TriajePanel from './ia/TriajePanel.jsx'
 import OptimizacionPanel from './ia/OptimizacionPanel.jsx'
 import SegmentacionPanel from './ia/SegmentacionPanel.jsx'
+import DespachoPage from './DespachoPage.jsx'
 
 // Práctica de regresión (backend/ia/enfoque2_tiempo_llegada.py) dentro del sistema:
 // ¿cuánto tarda en llegar la ambulancia? Fórmula fija vs. árbol de regresión.
@@ -15,10 +17,15 @@ const PESTANAS = [
   { key: 'triaje', label: 'Triaje', sub: 'Práctica 05' },
   { key: 'optimizacion', label: 'Optimización', sub: 'Práctica 06' },
   { key: 'perfiles', label: 'Perfiles K-Means', sub: 'Práctica 07' },
+  // Antes era el módulo "Despacho": el algoritmo genético también es IA.
+  { key: 'despacho', label: 'Despacho', sub: 'Algoritmo genético' },
 ]
 
 export default function TiempoLlegadaPage() {
+  const [params] = useSearchParams()
   const [tab, setTab] = useState(() => {
+    const pedida = params.get('tab')        // p. ej. /llegada?tab=despacho
+    if (PESTANAS.some((p) => p.key === pedida)) return pedida
     try { return sessionStorage.getItem('ia.tab') || 'llegada' } catch { return 'llegada' }
   })
   const elegir = (k) => { setTab(k); try { sessionStorage.setItem('ia.tab', k) } catch { /* sin almacenamiento */ } }
@@ -28,7 +35,7 @@ export default function TiempoLlegadaPage() {
       <header className="view-head">
         <div>
           <h1>Inteligencia artificial</h1>
-          <p>Modelos que aprenden de servicios pasados para apoyar a la central: cuánto tarda la ambulancia, si llegará a tiempo, qué emergencias son críticas y a qué perfil de servicio se parece cada una. Los datos de entrenamiento son ficticios, como en las prácticas.</p>
+          <p>Modelos que aprenden de servicios pasados para apoyar a la central: cuánto tarda la ambulancia, si llegará a tiempo, qué emergencias son críticas a qué perfil de servicio se parece cada una y de qué hospital conviene despachar. Los datos de entrenamiento son ficticios, como en las prácticas.</p>
         </div>
         <BrainCircuit size={28} className="rutas-head-icon" aria-hidden="true" />
       </header>
@@ -46,6 +53,7 @@ export default function TiempoLlegadaPage() {
       {tab === 'triaje' && <TriajePanel />}
       {tab === 'optimizacion' && <OptimizacionPanel />}
       {tab === 'perfiles' && <SegmentacionPanel />}
+      {tab === 'despacho' && <DespachoPage incrustado />}
     </section>
   )
 }
