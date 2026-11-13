@@ -6,6 +6,8 @@ import { useAuth } from '../lib/auth.jsx'
 // Marco de los portales de Operador y Usuario: barra superior con pestañas, pensado para
 // usarse también desde el celular.
 
+const iniciales = (nombre = '') => nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?'
+
 export default function PortalLayout({ nav, etiqueta }) {
   const { user, logout } = useAuth()
   return (
@@ -13,9 +15,13 @@ export default function PortalLayout({ nav, etiqueta }) {
       <header className="portal-top">
         <div className="portal-top-in">
           <Logo size={28} className="portal-logo" />
-          <span className="portal-perfil">{etiqueta}</span>
+          <span className="portal-sep" aria-hidden="true" />
+          <span className="portal-area">{etiqueta}</span>
           <div className="portal-user">
-            <span className="portal-nombre">{user?.full_name}</span>
+            <span className="portal-quien">
+              <span className="portal-avatar" aria-hidden="true">{iniciales(user?.full_name)}</span>
+              <span className="portal-quien-txt"><b>{user?.full_name}</b><small>{etiqueta}</small></span>
+            </span>
             <button type="button" className="portal-salir" onClick={logout} aria-label="Cerrar sesión">
               <LogOut size={16} /> <span>Salir</span>
             </button>

@@ -13,6 +13,8 @@ import { HOME, MODULES } from '../lib/modules.js'
 
 const NAV = [{ ...HOME, key: 'inicio', path: '/' }, ...MODULES.map((m) => ({ ...m, path: `/${m.key}` }))]
 
+const iniciales = (nombre = '') => nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?'
+
 function Reloj() {
   const now = useNow()
   const hora = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now)
@@ -45,7 +47,8 @@ export default function Layout() {
       <header className="portal-top">
         <div className="portal-top-in">
           <Logo size={28} className="portal-logo" />
-          <span className="portal-perfil">{user?.role || 'Central'}</span>
+          <span className="portal-sep" aria-hidden="true" />
+          <span className="portal-area">Central de emergencias</span>
           <form className="portal-buscar" onSubmit={onSearch} role="search">
             <Search size={15} aria-hidden="true" />
             <input
@@ -58,7 +61,13 @@ export default function Layout() {
           </form>
           <div className="portal-user">
             <Reloj />
-            <span className="portal-nombre">{user?.full_name}</span>
+            <span className="portal-quien">
+              <span className="portal-avatar" aria-hidden="true">{iniciales(user?.full_name)}</span>
+              <span className="portal-quien-txt">
+                <b>{user?.full_name}</b>
+                <small>{user?.role || 'Central'}</small>
+              </span>
+            </span>
             <button type="button" className="portal-salir" onClick={logout} aria-label="Cerrar sesión">
               <LogOut size={16} /> <span>Salir</span>
             </button>
