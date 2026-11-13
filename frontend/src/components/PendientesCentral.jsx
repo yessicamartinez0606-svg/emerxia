@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ambulance, MessageSquare, Phone, Plus, Siren, UserRound } from 'lucide-react'
+import { Ambulance, MessageSquare, Phone, Plus, UserRound } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { fmtHoraCorta } from '../lib/flota.js'
 import { colaTriaje } from '../lib/clima.js'
@@ -47,11 +47,11 @@ export default function PendientesCentral() {
     <section className="panel central">
       <header className="central-head">
         <div>
-          <h2><Siren size={18} aria-hidden="true" /> Emergencias por atender</h2>
+          <h2>Emergencias por atender</h2>
           <p>
             {items === null ? 'Cargando…'
               : ordenadas.length === 0 ? 'No hay emergencias abiertas.'
-                : `${ordenadas.length} abierta(s)${sinAsignar ? ` · ${sinAsignar} sin ambulancia` : ''}`}
+                : `${ordenadas.length} ${ordenadas.length === 1 ? 'abierta' : 'abiertas'}${sinAsignar ? `, ${sinAsignar} sin ambulancia` : ''}`}
           </p>
         </div>
         <Link to="/emergencias/nuevo" className="btn-primary compact"><Plus size={15} /> Nueva emergencia</Link>
@@ -67,7 +67,7 @@ export default function PendientesCentral() {
                   <span className={`central-prio p-${(e.prioridad || '').toLowerCase()}`} aria-label={`Prioridad ${e.prioridad}`} />
                   <span className="central-info">
                     <strong>
-                      {e.folio} · {e.descripcion}
+                      <span className="central-folio">{e.folio}</span> {e.descripcion}
                       {triaje[e.id] && (
                         <em className={`central-triaje${triaje[e.id].critica ? ' critica' : ''}`} title="Probabilidad de ser crítica según la IA (signos vitales)">
                           {triaje[e.id].critica ? 'Crítica' : 'No crítica'} {Math.round(triaje[e.id].probabilidad * 100)} %
@@ -75,7 +75,7 @@ export default function PendientesCentral() {
                       )}
                     </strong>
                     <span>
-                      {e.canal === 'llamada' ? <><Phone size={11} /> Llamada · </> : e.canal === 'mensaje' ? <><MessageSquare size={11} /> Mensaje · </> : null}
+                      {e.canal === 'llamada' ? <><Phone size={11} /> Llamada, </> : e.canal === 'mensaje' ? <><MessageSquare size={11} /> Mensaje, </> : null}
                       {e.direccion}
                     </span>
                   </span>
@@ -91,7 +91,7 @@ export default function PendientesCentral() {
           })}
         </ul>
       )}
-      {ordenadas.length > 8 && <Link to="/emergencias" className="ruta-link">Ver las {ordenadas.length} emergencias</Link>}
+      {ordenadas.length > 8 && <Link to="/emergencias" className="central-ver">Ver las {ordenadas.length} emergencias</Link>}
     </section>
   )
 }

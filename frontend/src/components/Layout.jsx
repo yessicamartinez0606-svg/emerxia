@@ -46,7 +46,7 @@ export default function Layout() {
     <div className="portal central">
       <header className="portal-top">
         <div className="portal-top-in">
-          <Logo size={28} className="portal-logo" />
+          <Logo size={26} tone="dark" className="portal-logo" />
           <span className="portal-sep" aria-hidden="true" />
           <span className="portal-area">Central de emergencias</span>
           <form className="portal-buscar" onSubmit={onSearch} role="search">

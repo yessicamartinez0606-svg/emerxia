@@ -6,7 +6,8 @@ const ICONO = { sol: Sun, nublado: CloudSun, niebla: CloudFog, lluvia: CloudRain
 
 // Clima de cada zona y cuánto se frena el tránsito por la lluvia.
 // puedeSimular: el personal de la central puede simular lluvia para una demostración.
-export default function ClimaZonas({ puedeSimular = false, compacto = false, onCambio }) {
+// lista: versión angosta para la columna lateral del Inicio.
+export default function ClimaZonas({ puedeSimular = false, compacto = false, lista = false, onCambio }) {
   const [clima, setClima] = useState(null)
   const [error, setError] = useState('')
   const [ocupado, setOcupado] = useState('')
@@ -37,6 +38,33 @@ export default function ClimaZonas({ puedeSimular = false, compacto = false, onC
   if (!clima) return <section className="panel clima muted">Consultando el clima de las zonas…</section>
 
   const hayLluvia = clima.con_lluvia.length > 0
+  if (lista) {
+    return (
+      <section className="panel clima-lista">
+        <header className="clima-lista-head">
+          <h2>Clima por zona</h2>
+          <button type="button" className="btn-ghost icon" title="Actualizar" aria-label="Actualizar clima" onClick={cargar}><RefreshCw size={14} /></button>
+        </header>
+        <p className={`clima-lista-msg${hayLluvia ? ' alerta' : ''}`}>
+          {hayLluvia ? `Llueve en ${clima.con_lluvia.join(', ')}: ahí el tránsito va más lento.` : 'Sin lluvia: el tránsito va normal en todas las zonas.'}
+        </p>
+        <ul>
+          {clima.zonas.map((z) => {
+            const Icono = ICONO[tipoCielo(z)]
+            return (
+              <li key={z.id} className={z.lluvia ? 'llueve' : ''}>
+                <Icono size={18} aria-hidden="true" className="clima-icono" />
+                <span className="cl-zona">{z.nombre}<small>{z.descripcion}</small></span>
+                <span className="cl-temp">{z.temperatura != null ? `${Math.round(z.temperatura)}°` : '—'}</span>
+                <span className={`cl-transito${z.retraso_pct ? ' lento' : ''}`}>{z.retraso_pct ? `+${z.retraso_pct} %` : 'Normal'}</span>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="clima-lista-fuente">Open-Meteo{clima.actualizado ? `, actualizado ${fmtActualizado(clima.actualizado)}` : ''}</p>
+      </section>
+    )
+  }
   return (
     <section className={`panel clima${compacto ? ' compacto' : ''}`}>
       <header className="clima-head">

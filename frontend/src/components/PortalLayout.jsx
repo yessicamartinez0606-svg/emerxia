@@ -14,7 +14,7 @@ export default function PortalLayout({ nav, etiqueta }) {
     <div className="portal">
       <header className="portal-top">
         <div className="portal-top-in">
-          <Logo size={28} className="portal-logo" />
+          <Logo size={26} tone="dark" className="portal-logo" />
           <span className="portal-sep" aria-hidden="true" />
           <span className="portal-area">{etiqueta}</span>
           <div className="portal-user">
