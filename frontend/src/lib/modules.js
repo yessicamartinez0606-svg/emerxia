@@ -1,5 +1,5 @@
 import { Ambulance, BrainCircuit, CircleDot, CloudRain, Dna, Headset, History, Hospital, Route, Settings, Siren, TrafficCone, UserRound, House } from 'lucide-react'
-import { HOSPITALES } from './flota.js'
+import { ANIOS_VEHICULO, HOSPITALES, MARCAS_VEHICULO } from './flota.js'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
@@ -21,6 +21,7 @@ export const MODULES = [
     nuevo: 'Nueva',
     columns: [
       { key: 'placa', label: 'Placa' },
+      { key: 'vehiculo', label: 'Vehículo' },
       { key: 'tipo', label: 'Tipo' },
       { key: 'hospital', label: 'Hospital' },
       { key: 'conductor', label: 'Conductor' },
@@ -44,6 +45,12 @@ export const MODULES = [
         allowEmpty: true,
         emptyLabel: 'Sin conductor',
       },
+      // Vehículo real: la marca y el año consultan la API vPIC de la NHTSA y el modelo se elige
+      // de lo que responde; al elegirlo se llenan el tanque y el rendimiento de su ficha técnica.
+      { key: 'marca', label: 'Marca', options: MARCAS_VEHICULO, group: 'Vehículo' },
+      { key: 'anio', label: 'Año', options: ANIOS_VEHICULO, group: 'Vehículo' },
+      { key: 'modelo', label: 'Modelo (API vPIC · NHTSA)', type: 'modeloApi', group: 'Vehículo',
+        hint: 'Modelos reales que fabricó esa marca ese año, según la API pública de la NHTSA.' },
       { key: 'tanque_litros', label: 'Capacidad del tanque (L)', type: 'number', default: '80', group: 'Gasolina' },
       { key: 'rendimiento_km_l', label: 'Rendimiento (km por litro)', type: 'number', default: '6', group: 'Gasolina' },
       { key: 'combustible_pct', label: 'Gasolina actual (%)', type: 'number', default: '100', group: 'Gasolina' },

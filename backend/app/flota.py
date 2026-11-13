@@ -65,6 +65,8 @@ def normalizar(amb: dict) -> dict:
     a["kilometraje"] = float(a.get("kilometraje") or 0)
     a["emergencia_actual"] = a.get("emergencia_actual") or None
     a["combustible_bajo"] = a["combustible_pct"] < COMBUSTIBLE_MINIMO
+    # "Ford Transit 2022": vehículo real (app/vehiculos.py), para la tabla y la ficha.
+    a["vehiculo"] = " ".join(str(x) for x in (a.get("marca"), a.get("modelo"), a.get("anio")) if x) or None
     return a
 
 

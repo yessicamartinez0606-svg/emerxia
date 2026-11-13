@@ -1143,3 +1143,8 @@ i.val { background: #1d5fd6; }
 .portal-tabs::-webkit-scrollbar { display: none; }
 @media (max-width: 900px) { .portal-reloj span, .portal-buscar { display: none; } }
 @media (max-width: 560px) { .portal-reloj { display: none; } .central-page { padding-top: 16px; } }
+
+/* Vehículos reales (API vPIC) en la flota */
+.flota-importar { margin-left: auto; }
+.flota-vehiculo { color: var(--ink); font-weight: 600; }
+.flota-importar + .flota-filtro { margin-left: 12px; }

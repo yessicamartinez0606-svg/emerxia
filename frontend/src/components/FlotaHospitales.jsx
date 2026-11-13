@@ -1,15 +1,32 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Fuel, Hospital, UserRound } from 'lucide-react'
-import { ESTADOS, ESTADO_INFO, colorGasolina, obtenerHospitales } from '../lib/flota.js'
+import { DownloadCloud, Fuel, Hospital, Truck, UserRound } from 'lucide-react'
+import { ESTADOS, ESTADO_INFO, colorGasolina, importarFlotaReal, obtenerHospitales } from '../lib/flota.js'
 
 // Ambulancias agrupadas por hospital, con su estatus, conductor y gasolina.
 // Va arriba de la tabla del módulo Ambulancias.
 
-export default function FlotaHospitales({ recarga = 0 }) {
+export default function FlotaHospitales({ recarga = 0, onCambio }) {
   const [datos, setDatos] = useState(null)
   const [error, setError] = useState('')
   const [soloConAmbulancias, setSoloConAmbulancias] = useState(true)
+  const [importando, setImportando] = useState(false)
+  const [aviso, setAviso] = useState(null)
+
+  // Marca, modelo y año reales (API vPIC) para las que no tienen, y las que faltan en cada hospital.
+  const importar = async () => {
+    setImportando(true)
+    setAviso(null)
+    try {
+      const r = await importarFlotaReal()
+      setAviso({ kind: r.fuente.startsWith('Respaldo') ? 'warn' : 'ok', text: r.mensaje })
+      onCambio?.()
+    } catch (e) {
+      setAviso({ kind: 'warn', text: e.message })
+    } finally {
+      setImportando(false)
+    }
+  }
 
   useEffect(() => {
     setError('')
@@ -20,6 +37,7 @@ export default function FlotaHospitales({ recarga = 0 }) {
   if (!datos) return <div className="panel flota-cargando muted">Cargando ambulancias por hospital…</div>
 
   const minimo = datos.combustible_minimo
+  const sinVehiculo = datos.hospitales.flatMap((h) => h.ambulancias).filter((a) => !a.vehiculo).length
   const hospitales = datos.hospitales.filter((h) => !soloConAmbulancias || h.ambulancias.length)
 
   return (
@@ -35,11 +53,17 @@ export default function FlotaHospitales({ recarga = 0 }) {
             <span>{e}</span>
           </div>
         ))}
+        <button type="button" className="btn-ghost tall flota-importar" onClick={importar} disabled={importando}
+                title="Consulta la API vPIC de la NHTSA (marca, modelo y año reales) y completa la flota de cada hospital">
+          <DownloadCloud size={15} /> {importando ? 'Consultando la API…' : sinVehiculo ? `Datos reales (${sinVehiculo} sin vehículo)` : 'Completar flota con datos reales'}
+        </button>
         <label className="flota-filtro">
           <input type="checkbox" checked={soloConAmbulancias} onChange={(e) => setSoloConAmbulancias(e.target.checked)} />
           Solo hospitales con ambulancias
         </label>
       </div>
+
+      {aviso && <p className={`notice ${aviso.kind}`} role="status">{aviso.text}</p>}
 
       <div className="flota-grid">
         {hospitales.map((h) => (
@@ -62,6 +86,11 @@ export default function FlotaHospitales({ recarga = 0 }) {
                         <strong>{a.placa}</strong>
                         <span className="flota-chip" style={{ color: info.color, background: info.fondo }}>{a.estado}</span>
                       </span>
+                      {a.vehiculo && (
+                        <span className="flota-amb-meta flota-vehiculo" title={[a.motor, a.fuente_vehiculo].filter(Boolean).join(' · ')}>
+                          <Truck size={12} aria-hidden="true" /> {a.vehiculo}
+                        </span>
+                      )}
                       <span className="flota-amb-meta">
                         <UserRound size={12} aria-hidden="true" />
                         {a.conductor || <em>Sin conductor</em>}

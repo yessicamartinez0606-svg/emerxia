@@ -33,6 +33,25 @@ def _preparar_modelos():
         pass
 
 
+def _flota_real_una_vez():
+    """La primera vez que arranca, la flota toma vehículos reales de la API vPIC
+    (app/vehiculos.py): marca, modelo y año a las ambulancias que no tienen y las que faltan
+    en cada hospital. Queda anotado en "counters" para no repetirlo."""
+    if not readiness.mongo_service.ready:
+        return
+    try:
+        from .mongo import get_db
+        from .routers.flota import importar_flota_real
+        db = get_db()
+        if db["counters"].find_one({"_id": "flota_real"}):
+            return
+        r = importar_flota_real("sistema")
+        db["counters"].update_one({"_id": "flota_real"}, {"$set": {"hecho": True, "fuente": r["fuente"]}}, upsert=True)
+        log.info("Flota con vehículos reales: %s", r["mensaje"])
+    except Exception:  # noqa: BLE001
+        log.exception("No se pudo preparar la flota con vehículos reales")
+
+
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     log.info("Emergexia API v%s · base de datos '%s' · %s", VERSION, settings.mongo_db, "MongoDB")
@@ -41,6 +60,7 @@ async def lifespan(_: FastAPI):
     except Exception:                      # noqa: BLE001
         pass                               # la API arranca igual; el error se ve en /api/health y en la app
     threading.Thread(target=_preparar_modelos, daemon=True).start()
+    threading.Thread(target=_flota_real_una_vez, daemon=True).start()
     yield
     stop_spark()
     close_client()

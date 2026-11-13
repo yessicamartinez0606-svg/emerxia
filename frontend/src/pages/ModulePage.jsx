@@ -65,7 +65,7 @@ function ModuleView({ mod }) {
 
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
-      {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} />}
+      {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} onCambio={load} />}
       {mod.key === 'operadores' && <PrepararRostros key={recarga} visible />}
 
       <div className="panel table-wrap">

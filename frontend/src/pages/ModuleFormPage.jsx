@@ -6,6 +6,7 @@ import { findModule } from '../lib/modules.js'
 import { emptyForm, useSourcedOptions } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
 import PanelLogica from '../components/PanelLogica.jsx'
+import ModeloVehiculo from '../components/ModeloVehiculo.jsx'
 
 const OLD_BACKEND =
   'El servidor no confirmó que guardó en MongoDB: seguramente hay una versión ANTIGUA del backend corriendo en el puerto 8000. ' +
@@ -200,6 +201,13 @@ function FormView({ mod }) {
                           <Camera size={15} /> {form[f.key] ? 'Repetir foto' : 'Tomar foto'}
                         </button>
                       </div>
+                    ) : f.type === 'modeloApi' ? (
+                      <ModeloVehiculo id={f.key} marca={form.marca} anio={form.anio} value={form[f.key]}
+                        onElegir={(m) => m && setForm((prev) => ({
+                          ...prev, modelo: m.modelo, model_id: m.model_id, motor: m.motor, tipo: m.tipo_sugerido,
+                          tanque_litros: String(m.tanque_litros), rendimiento_km_l: String(m.rendimiento_km_l),
+                          fuente_vehiculo: m.model_id ? 'API vPIC · NHTSA' : 'Respaldo sin conexión',
+                        }))} />
                     ) : f.type === 'date' ? (
                       <input id={f.key} type="date" className="input" value={form[f.key]} required={f.required}
                              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />

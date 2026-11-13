@@ -96,6 +96,14 @@ class AmbulanceIn(BaseModel):
     rendimiento_km_l: float = Field(6, gt=0, le=50)
     combustible_pct: float = Field(100, ge=0, le=100)
     kilometraje: float = Field(0, ge=0)
+    # Vehículo (app/vehiculos.py): marca y modelo confirmados con la API vPIC de la NHTSA.
+    marca: str = ""
+    modelo: str = ""
+    anio: int | None = Field(None, ge=1990, le=2030)
+    motor: str = ""
+    model_id: int | None = None
+    fuente_vehiculo: str = ""
+    _anio = field_validator("anio", "model_id", mode="before")(_numero(None))
 
     _tanque = field_validator("tanque_litros", mode="before")(_numero(80))
     _rend = field_validator("rendimiento_km_l", mode="before")(_numero(6))

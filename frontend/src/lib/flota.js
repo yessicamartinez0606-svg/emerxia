@@ -26,6 +26,7 @@ export const ESTADO_INFO = {
 }
 
 export const TIPO_HISTORIAL = {
+  alta: 'Nueva ambulancia',
   estado: 'Cambio de estatus',
   asignacion: 'Asignada a emergencia',
   salida: 'Salida',
@@ -50,6 +51,13 @@ export const obtenerHistorial = (filtros = {}) => {
 // `placas`: las que eligió el administrador a mano (van primero si están listas).
 export const planAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: false } })
 export const confirmarAsignacion = (id, cantidad, placas = []) => api(`/flota/emergencias/${id}/asignar`, { method: 'POST', body: { cantidad, placas, confirmar: true } })
+// Vehículos reales (backend/app/vehiculos.py, API vPIC de la NHTSA)
+export const marcasVehiculo = () => api('/flota/vehiculos/marcas')
+export const modelosVehiculo = (marca, anio) => api(`/flota/vehiculos/modelos?marca=${encodeURIComponent(marca)}&anio=${anio}`)
+export const importarFlotaReal = () => api('/flota/ambulancias/importar-reales', { method: 'POST' })
+export const MARCAS_VEHICULO = ['Ford', 'Mercedes-Benz', 'Chevrolet', 'RAM']
+export const ANIOS_VEHICULO = ['2025', '2024', '2023', '2022', '2021', '2020', '2019', '2018']
+
 // Vuelve a buscar ambulancias libres para una emergencia que se quedó en espera.
 export const reintentarAsignacion = (id) => api(`/flota/emergencias/${id}/asignar-automatico`, { method: 'POST' })
 export const eventoEmergencia = (id, evento) => api(`/flota/emergencias/${id}/evento`, { method: 'POST', body: evento })

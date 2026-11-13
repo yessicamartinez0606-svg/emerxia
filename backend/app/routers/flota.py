@@ -12,7 +12,7 @@
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from .. import flota
+from .. import flota, vehiculos
 from ..repository import insert_row, list_rows, update_row
 from ..schemas import AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn, OperadorEmergenciaIn
 from ..security import current_username
@@ -20,6 +20,7 @@ from ..security import current_username
 router = APIRouter(prefix="/api/flota", tags=["flota"], dependencies=[Depends(current_username)])
 
 TIPOS_HISTORIAL = {
+    "alta": "Nueva ambulancia",
     "estado": "Cambio de estatus",
     "asignacion": "Asignada a emergencia",
     "salida": "Salida",
@@ -266,6 +267,52 @@ def asignar(em_id: int, body: AsignarIn, usuario: str = Depends(current_username
         "operador": em.get("operador") or plan["elegidas"][0]["conductor"],
     })
     return {"plan": plan, "asignadas": todas}
+
+
+# ─────────────────────── vehículos reales (API vPIC) ───────────────────────
+
+@router.get("/vehiculos/marcas")
+def marcas_vehiculo():
+    """Chasises de ambulancia que se consultan en la API vPIC, con su ficha técnica."""
+    return {"marcas": [{k: f[k] for k in ("marca", "base", "motor", "tanque_litros", "rendimiento_km_l", "tipo", "ficha")}
+                       for f in vehiculos.FICHAS], "anios": vehiculos.ANIOS}
+
+
+@router.get("/vehiculos/modelos")
+def modelos_vehiculo(marca: str, anio: int):
+    """Modelos reales de esa marca y año según la API vPIC (solo los que sirven de ambulancia)."""
+    if anio < 1996 or anio > 2030:
+        raise HTTPException(422, "Elige un año entre 1996 y 2030.")
+    try:
+        return vehiculos.modelos_ambulancia(marca, anio)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+def importar_flota_real(usuario: str | None = None) -> dict:
+    """Pone vehículos reales a las ambulancias que no tienen y crea las que faltan en cada
+    hospital (app/vehiculos.py). Las placas e historial de las que ya existen no cambian."""
+    plan = vehiculos.plan_flota(list_rows("ambulances"), list_rows("operators"))
+    for amb_id, cambios in plan["actualizar"]:
+        update_row("ambulances", amb_id, cambios)
+    creadas = [insert_row("ambulances", a) for a in plan["crear"]]
+    for a in creadas:
+        registrar("alta", f"{a['placa']} ({a['marca']} {a['modelo']} {a['anio']}) se agrega a {a['hospital']}."
+                  + (f" Conduce {a['conductor']}." if a.get("conductor") else ""),
+                  usuario, ambulancia=a["placa"], hospital=a["hospital"], operador=a.get("conductor") or None)
+    if plan["actualizar"] or creadas:
+        registrar("aviso", f"Flota con vehículos reales ({plan['fuente']}): {len(plan['actualizar'])} ambulancia(s) "
+                           f"con marca y modelo nuevos y {len(creadas)} ambulancia(s) nuevas.", usuario)
+        asignar_pendientes(usuario)
+    return {"fuente": plan["fuente"], "actualizadas": len(plan["actualizar"]), "creadas": [a["placa"] for a in creadas],
+            "mensaje": (f"Listo: {len(plan['actualizar'])} ambulancia(s) ya tienen marca y modelo reales y se agregaron "
+                        f"{len(creadas)} nuevas. Fuente: {plan['fuente']}.")
+                       if plan["actualizar"] or creadas else "Todas las ambulancias ya tienen vehículo real y cada hospital tiene las suyas."}
+
+
+@router.post("/ambulancias/importar-reales")
+def importar_reales(usuario: str = Depends(current_username)):
+    return importar_flota_real(usuario)
 
 
 # ─────────────────────── asignación automática ───────────────────────
