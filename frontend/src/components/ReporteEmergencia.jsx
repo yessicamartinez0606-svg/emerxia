@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Check, Clock, FileText, Printer, RefreshCw, Truck, UserRound } from 'lucide-react'
+import { Check, Clock, Compass, FileText, Printer, RefreshCw, Truck, UserRound } from 'lucide-react'
 import LlegadaEstimada from './LlegadaEstimada.jsx'
 import { LlegaATiempo, PerfilServicio, TriajeEmergencia } from './IAEmergencia.jsx'
 import {
@@ -44,14 +44,24 @@ export default function ReporteEmergencia({ emergencia, onCambio }) {
 
   return (
     <div className="reporte">
-      {!cerrada && (
-        <div className="ia-em-grid">
-          <TriajeEmergencia emergenciaId={em.id} />
-          {!em.hora_llegada && <LlegaATiempo emergenciaId={em.id} />}
-          {!em.hora_llegada && <PerfilServicio emergenciaId={em.id} />}
-        </div>
+      {/* Asistente de despacho: mientras la ambulancia va en camino (registrada y sin llegar). */}
+      {!cerrada && !em.hora_llegada && (
+        <section className="asistente-em">
+          <header className="asistente-em-head">
+            <div>
+              <h2><Compass size={17} aria-hidden="true" /> Asistente de despacho</h2>
+              <p>Estimaciones para esta emergencia mientras la ambulancia va en camino.</p>
+            </div>
+            <Link to={`/asistente?emergencia=${em.id}`} className="btn-ghost tall">Abrir asistente completo</Link>
+          </header>
+          <div className="ia-em-grid">
+            <TriajeEmergencia emergenciaId={em.id} />
+            <LlegaATiempo emergenciaId={em.id} />
+            <PerfilServicio emergenciaId={em.id} />
+          </div>
+          <LlegadaEstimada emergenciaId={em.id} />
+        </section>
       )}
-      {!cerrada && !em.hora_llegada && <LlegadaEstimada emergenciaId={em.id} />}
       {!cerrada && faltan > 0 && <EnEspera em={em} faltan={faltan} asignadas={rep.ambulancias.length} onListo={actualizar} />}
       {rep.ambulancias.length > 0 && !cerrada && <Pasos em={em} onListo={actualizar} />}
       <Documento rep={rep} />

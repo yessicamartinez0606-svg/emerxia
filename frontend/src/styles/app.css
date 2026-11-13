@@ -1497,3 +1497,37 @@ body { background: var(--bg); color: var(--ink); }
   .central-fila .central-falta { grid-column: 2; justify-self: start; }
   .central-info strong { white-space: normal; }
 }
+
+/* Barra superior en rojo (plano, sin degradado) */
+.portal-top { background: var(--red-700); color: #fff; border-top: 0; border-bottom: 0; box-shadow: none; }
+.portal-logo .logo-text { color: #fff !important; }
+.portal-sep { background: rgba(255,255,255,.3); }
+.portal-area { color: rgba(255,255,255,.85); }
+.portal-buscar svg { color: rgba(255,255,255,.75); }
+.portal-buscar input { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.2); color: #fff; }
+.portal-buscar input::placeholder { color: rgba(255,255,255,.72); }
+.portal-buscar input:focus { background: rgba(255,255,255,.18); border-color: #fff; }
+.portal-reloj { color: rgba(255,255,255,.85); }
+.portal-reloj b { color: #fff; }
+.portal-avatar { background: #fff; color: var(--red-700); }
+.portal-quien-txt b { color: #fff; }
+.portal-quien-txt small { color: rgba(255,255,255,.75); }
+.portal-salir { color: #fff; background: transparent; border-color: rgba(255,255,255,.4); }
+.portal-salir:hover { background: rgba(255,255,255,.12); }
+.portal-tabs { border-top: 1px solid rgba(255,255,255,.14); }
+.portal-tab { color: rgba(255,255,255,.8); }
+.portal-tab:hover { color: #fff; }
+.portal-tab.active { color: #fff; border-bottom-color: #fff; }
+
+/* Asistente de despacho dentro de una emergencia */
+.asistente-em { display: flex; flex-direction: column; gap: 14px; padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: #f7f8fa; margin-bottom: 16px; }
+.asistente-em .panel { margin-bottom: 0; }
+.asistente-em .ia-em-grid .panel { margin-bottom: 0; }
+.asistente-em-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.asistente-em-head h2 { display: flex; align-items: center; gap: 7px; font-size: 16px; font-weight: 600; }
+.asistente-em-head h2 svg { color: var(--red-600); }
+.asistente-em-head p { font-size: 13px; color: var(--muted); margin-top: 2px; }
+.asistente-em-head .btn-ghost { text-decoration: none; }
+.asistente-volver { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 8px; }
+.asistente-volver:hover { color: var(--ink); }
+.asistente-head p { max-width: 80ch; }

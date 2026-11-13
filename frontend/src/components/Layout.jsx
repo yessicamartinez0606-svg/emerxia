@@ -18,10 +18,9 @@ const iniciales = (nombre = '') => nombre.split(/\s+/).filter(Boolean).slice(0, 
 function Reloj() {
   const now = useNow()
   const hora = new Intl.DateTimeFormat('es-MX', { hour: '2-digit', minute: '2-digit', hour12: true }).format(now)
-  const fecha = new Intl.DateTimeFormat('es-MX', { weekday: 'short', day: 'numeric', month: 'short' }).format(now)
   return (
-    <span className="portal-reloj" role="status" aria-label="Fecha y hora actual">
-      <Clock size={14} aria-hidden="true" /> <b>{hora}</b> <span>{fecha}</span>
+    <span className="portal-reloj" role="status" aria-label="Hora actual">
+      <Clock size={14} aria-hidden="true" /> <b>{hora}</b>
     </span>
   )
 }
@@ -46,7 +45,7 @@ export default function Layout() {
     <div className="portal central">
       <header className="portal-top">
         <div className="portal-top-in">
-          <Logo size={26} tone="dark" className="portal-logo" />
+          <Logo size={26} className="portal-logo" />
           <span className="portal-sep" aria-hidden="true" />
           <span className="portal-area">Central de emergencias</span>
           <form className="portal-buscar" onSubmit={onSearch} role="search">

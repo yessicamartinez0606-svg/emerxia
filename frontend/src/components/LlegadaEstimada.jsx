@@ -27,12 +27,12 @@ export default function LlegadaEstimada({ emergenciaId, km }) {
           <BrainCircuit size={22} aria-hidden="true" />
           <div>
             <b>{r.modelo_min} min</b>
-            <span>según el modelo que aprende</span>
+            <span>tiempo estimado</span>
           </div>
         </div>
         <div className="llegada-secundaria">
           <b>{r.formula_min} min</b>
-          <span>fórmula fija (40 km/h)</span>
+          <span>cuenta simple, solo distancia</span>
         </div>
       </div>
 
@@ -52,7 +52,7 @@ export default function LlegadaEstimada({ emergenciaId, km }) {
         </li>
       </ul>
       {r.diferencia_min > 1 && (
-        <p className="muted llegada-nota">La fórmula fija se queda corta por {r.diferencia_min} min porque no toma en cuenta {[r.hora_pico && 'la hora pico', r.lluvia && 'la lluvia', r.zona === 'Lerma' && 'la zona'].filter(Boolean).join(' ni ') || 'el contexto'}.</p>
+        <p className="muted llegada-nota">La cuenta simple se queda corta por {r.diferencia_min} min porque no toma en cuenta {[r.hora_pico && 'la hora pico', r.lluvia && 'la lluvia', r.zona === 'Lerma' && 'la zona'].filter(Boolean).join(' ni ') || 'el contexto'}.</p>
       )}
     </section>
   )

@@ -169,8 +169,8 @@ def estimar(zona: str, distancia_km: float, hora: int, fin_de_semana: int, lluvi
         "formula_min": round(t_formula, 1), "modelo_min": round(t_modelo, 1),
         "diferencia_min": round(t_modelo - t_formula, 1),
         "meta_min": META_MIN, "cumple_meta": cumple,
-        "mensaje": (f"Según el modelo sí se cumple la meta de {META_MIN} min."
-                    if cumple else f"Según el modelo NO se cumple la meta de {META_MIN} min: conviene enviar la unidad disponible más cercana."),
+        "mensaje": (f"Llega dentro de la meta de {META_MIN} minutos."
+                    if cumple else f"Tardaría más de {META_MIN} minutos: conviene enviar la unidad disponible más cercana."),
     }
 
 

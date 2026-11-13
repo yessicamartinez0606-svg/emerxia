@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
-  Activity, AlarmClock, BrainCircuit, ChevronDown, Hospital, Info, MapPin, Shapes, ShieldCheck, Sparkles, Timer,
+  Activity, AlarmClock, ArrowLeft, ChevronDown, Hospital, Info, MapPin, Shapes, ShieldCheck, Sparkles, Timer,
 } from 'lucide-react'
+import { api } from '../lib/api.js'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 import {
-  COLOR_PERFIL, estimarATiempo, estimarLlegada, estimarSegmentacion, estimarTriaje, modeloATiempo, modeloLlegada,
-  modeloSegmentacion, modeloTriaje, pct, verOptimizacion,
+  COLOR_PERFIL, aTiempoEmergencia, estimarATiempo, estimarLlegada, estimarSegmentacion, estimarTriaje, llegadaEmergencia,
+  modeloATiempo, modeloLlegada, modeloSegmentacion, modeloTriaje, pct, segmentacionEmergencia, triajeEmergencia, verOptimizacion,
 } from '../lib/clima.js'
 import ATiempoPanel from './ia/ATiempoPanel.jsx'
 import DespachoPage from './DespachoPage.jsx'
@@ -15,10 +16,10 @@ import OptimizacionPanel from './ia/OptimizacionPanel.jsx'
 import SegmentacionPanel from './ia/SegmentacionPanel.jsx'
 import TriajePanel from './ia/TriajePanel.jsx'
 
-// Inteligencia artificial, explicada para cualquier persona: cada herramienta responde una
-// pregunta de la central, dice dónde aparece en el sistema, se puede probar con datos sencillos
-// y dice qué tan confiable es. Lo técnico (métricas, tablas, gráficas del modelo) queda dentro
-// de «Ver detalles técnicos».
+// Asistente de despacho (modelos de inteligencia artificial), explicado para cualquier persona:
+// cada herramienta responde una pregunta de la central, dice dónde aparece, se puede probar con
+// datos sencillos y dice qué tan confiable es. Lo técnico queda dentro de «Ver detalles técnicos».
+// Se abre desde cada emergencia en curso (/asistente?emergencia=ID) y llega lleno con sus datos.
 
 const HERRAMIENTAS = [
   {
@@ -34,22 +35,39 @@ const HERRAMIENTAS = [
   {
     key: 'triaje', icono: Activity, titulo: 'Prioridad del paciente', pregunta: '¿Qué emergencia atender primero?',
     explicacion: 'Con los signos vitales del paciente (oxigenación, pulso, nivel de conciencia y edad) estima si la emergencia es crítica. Así, cuando no alcanzan las ambulancias, las críticas se atienden primero.',
-    donde: ['Inicio, en «Emergencias por atender» (las críticas suben)', 'Reporte de cada emergencia («Triaje»)', 'Reparto automático de ambulancias'],
+    donde: ['Inicio, en «Emergencias por atender» (las críticas suben)', 'Reporte de cada emergencia («Prioridad del paciente»)', 'Reparto automático de ambulancias'],
   },
   {
     key: 'perfiles', icono: Shapes, titulo: 'Tipo de servicio', pregunta: '¿Qué tan complicado será este servicio?',
     explicacion: 'Agrupa los servicios en tres tipos según la distancia, el tráfico, el tiempo y las ambulancias libres, y sugiere qué hacer con cada uno. Nadie le dijo cuáles eran los grupos: los descubrió sola comparando servicios parecidos.',
-    donde: ['Reporte de cada emergencia («Perfil del servicio»)', 'App del operador'],
+    donde: ['Reporte de cada emergencia («Tipo de servicio»)', 'App del operador'],
   },
   {
     key: 'despacho', icono: Hospital, titulo: 'Hospital de salida', pregunta: '¿De qué hospital conviene mandar la ambulancia?',
     explicacion: 'Marca un accidente en el mapa y el sistema prueba muchas combinaciones de hospitales (de dónde sale y a cuál regresa la ambulancia) hasta encontrar la ruta más corta, como si fuera evolucionando las mejores opciones.',
-    donde: ['Aquí mismo, para planear desde qué hospital salir'],
+    donde: ['Aquí mismo, con la ubicación de la emergencia'],
   },
 ]
 
+// Datos de la emergencia (si se abrió desde una): sus estimaciones ya calculadas.
+function useEmergencia(id) {
+  const [ctx, setCtx] = useState(null)
+  useEffect(() => {
+    if (!id) return
+    const nada = () => null
+    Promise.all([
+      api('/emergencias').then((d) => (d.items || []).find((e) => String(e.id) === String(id)) || null).catch(nada),
+      llegadaEmergencia(id).catch(nada), aTiempoEmergencia(id).catch(nada), triajeEmergencia(id).catch(nada),
+      segmentacionEmergencia(id).catch(nada),
+    ]).then(([em, llegada, aTiempo, triaje, perfil]) => setCtx({ em, llegada, aTiempo, triaje, perfil }))
+  }, [id])
+  return ctx
+}
+
 export default function TiempoLlegadaPage() {
   const [params] = useSearchParams()
+  const emergenciaId = params.get('emergencia')
+  const ctx = useEmergencia(emergenciaId)
   const [tab, setTab] = useState(() => {
     const pedida = params.get('tab')
     if (HERRAMIENTAS.some((h) => h.key === pedida)) return pedida
@@ -63,12 +81,18 @@ export default function TiempoLlegadaPage() {
 
   return (
     <section className="iah">
-      <header className="view-head">
+      <header className="view-head asistente-head">
         <div>
-          <h1>Inteligencia artificial</h1>
-          <p>Herramientas que aprendieron de servicios anteriores para ayudar a la central a decidir más rápido. Elige una para ver qué hace y probarla.</p>
+          {emergenciaId && (
+            <Link to={`/emergencias/${emergenciaId}`} className="asistente-volver"><ArrowLeft size={15} aria-hidden="true" /> Volver a la emergencia</Link>
+          )}
+          <h1>Asistente de despacho{ctx?.em ? `: ${ctx.em.folio}` : ''}</h1>
+          <p>
+            {emergenciaId
+              ? (ctx?.em ? `${ctx.em.descripcion} en ${ctx.em.direccion}. Las herramientas ya traen los datos de esta emergencia; puedes cambiarlos para comparar.` : 'Cargando los datos de la emergencia…')
+              : 'Herramientas que aprendieron de servicios anteriores para ayudar a la central a decidir más rápido. Lo normal es abrirlo desde una emergencia en curso.'}
+          </p>
         </div>
-        <BrainCircuit size={28} className="rutas-head-icon" aria-hidden="true" />
       </header>
 
       <div className="iah-herramientas" role="tablist" aria-label="Herramientas">
@@ -88,11 +112,14 @@ export default function TiempoLlegadaPage() {
 
       <Presentacion h={h} />
 
-      {tab === 'llegada' && <Llegada />}
-      {tab === 'a-tiempo' && <ATiempo />}
-      {tab === 'triaje' && <Triaje />}
-      {tab === 'perfiles' && <Perfiles />}
-      {tab === 'despacho' && <DespachoPage incrustado />}
+      {tab === 'llegada' && <Llegada ctx={ctx} />}
+      {tab === 'a-tiempo' && <ATiempo ctx={ctx} />}
+      {tab === 'triaje' && <Triaje ctx={ctx} />}
+      {tab === 'perfiles' && <Perfiles ctx={ctx} />}
+      {tab === 'despacho' && (emergenciaId && !ctx
+        ? <div className="panel muted">Cargando la ubicación de la emergencia…</div>
+        : <DespachoPage incrustado key={ctx?.em?.id ?? 'libre'}
+            inicial={ctx?.em?.lat != null ? { lat: ctx.em.lat, lng: ctx.em.lng, texto: ctx.em.folio } : null} />)}
     </section>
   )
 }
@@ -198,10 +225,16 @@ const legible = (items) => (items || []).map((i) => ({ ...i, factor: NOMBRE_FACT
 
 // ─────────────────────────── Tiempo de llegada ───────────────────────────
 
-function Llegada() {
+function Llegada({ ctx }) {
   const [ev, error] = useCargar(modeloLlegada)
   const [f, setF] = useState({ zona: 'Metepec', distancia_km: 7, hora: 8, fin_de_semana: false, lluvia: 'actual' })
   const [r, setR] = useState(null)
+  useEffect(() => {
+    const c = ctx?.llegada
+    if (!c) return
+    setF({ zona: c.zona, distancia_km: c.distancia_km, hora: c.hora, fin_de_semana: !!c.fin_de_semana, lluvia: c.lluvia ? 'si' : 'no' })
+    setR(c)
+  }, [ctx])
   const [msg, setMsg] = useState('')
   const cambiar = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.type === 'checkbox' ? e.target.checked : e.target.value }))
   const calcular = async (e) => {
@@ -257,10 +290,17 @@ function Llegada() {
 
 // ─────────────────────────── ¿Llega a tiempo? ───────────────────────────
 
-function ATiempo() {
+function ATiempo({ ctx }) {
   const [ev, error] = useCargar(modeloATiempo)
   const [f, setF] = useState({ distancia_km: 9.5, nivel_trafico: 7.5, ambulancias_libres: 1, experiencia_operador: 3 })
   const [r, setR] = useState(null)
+  useEffect(() => {
+    const c = ctx?.aTiempo
+    if (!c) return
+    const cercano = NIVEL_TRAFICO.reduce((a, b) => (Math.abs(b.valor - c.datos.nivel_trafico) < Math.abs(a.valor - c.datos.nivel_trafico) ? b : a))
+    setF({ ...c.datos, nivel_trafico: cercano.valor })
+    setR(c)
+  }, [ctx])
   const [msg, setMsg] = useState('')
   const cambiar = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const calcular = async (e) => {
@@ -310,11 +350,17 @@ function ATiempo() {
 
 // ─────────────────────────── Prioridad del paciente ───────────────────────────
 
-function Triaje() {
+function Triaje({ ctx }) {
   const [ev, error] = useCargar(modeloTriaje)
   const [opt] = useCargar(verOptimizacion)
   const [f, setF] = useState({ saturacion_oxigeno: 84, frecuencia_cardiaca: 132, escala_glasgow: 10, edad: 71 })
   const [r, setR] = useState(null)
+  useEffect(() => {
+    const c = ctx?.triaje
+    if (!c || c.sin_signos) return
+    setF(c.signos)
+    setR(c)
+  }, [ctx])
   const [msg, setMsg] = useState('')
   const cambiar = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const calcular = async (e) => {
@@ -328,7 +374,7 @@ function Triaje() {
   return (
     <>
       <div className="iah-grid">
-        <Prueba descripcion="Escribe los signos vitales que reportan del paciente.">
+        <Prueba descripcion={ctx?.triaje?.sin_signos ? 'Esta emergencia no tiene signos vitales capturados. Escríbelos aquí para probar, o captúralos al editar la emergencia.' : 'Escribe los signos vitales que reportan del paciente.'}>
           <form className="iah-form" onSubmit={calcular}>
             <label>Oxigenación (SpO₂ %)
               <input type="number" min="50" max="100" value={f.saturacion_oxigeno} onChange={cambiar('saturacion_oxigeno')} />
@@ -379,10 +425,17 @@ function Triaje() {
 
 // ─────────────────────────── Tipo de servicio ───────────────────────────
 
-function Perfiles() {
+function Perfiles({ ctx }) {
   const [ev, error] = useCargar(modeloSegmentacion)
   const [f, setF] = useState({ distancia_km: 12.5, nivel_trafico: 7.5, tiempo_respuesta_min: 25, ambulancias_libres: 1 })
   const [r, setR] = useState(null)
+  useEffect(() => {
+    const c = ctx?.perfil
+    if (!c) return
+    const cercano = NIVEL_TRAFICO.reduce((a, b) => (Math.abs(b.valor - c.datos.nivel_trafico) < Math.abs(a.valor - c.datos.nivel_trafico) ? b : a))
+    setF({ ...c.datos, nivel_trafico: cercano.valor })
+    setR(c)
+  }, [ctx])
   const [msg, setMsg] = useState('')
   const cambiar = (k) => (e) => setF((x) => ({ ...x, [k]: e.target.value }))
   const calcular = async (e) => {

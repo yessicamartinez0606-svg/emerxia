@@ -16,10 +16,10 @@ const fmtKm = (km) => `${km.toFixed(2)} km`
 const fmtMin = (m) => `${m.toFixed(1)} min`
 
 // incrustado: se muestra como pestaña de Inteligencia artificial (sin el título de página).
-export default function DespachoPage({ incrustado = false }) {
+export default function DespachoPage({ incrustado = false, inicial = null }) {
   const [hospitales, setHospitales] = useState(null)
   const [ambulancias, setAmbulancias] = useState({})
-  const [accidente, setAccidente] = useState(ACCIDENTE_INICIAL)
+  const [accidente, setAccidente] = useState(inicial || ACCIDENTE_INICIAL)
   const [mismo, setMismo] = useState(true)
   const [param, setParam] = useState(() => Object.fromEntries(PARAMETROS.map((p) => [p.key, p.def])))
   const [resultado, setResultado] = useState(null)

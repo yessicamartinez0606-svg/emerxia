@@ -1,4 +1,4 @@
-import { Ambulance, BrainCircuit, CircleDot, CloudRain, Headset, History, Hospital, Route, Settings, Siren, TrafficCone, UserRound, House } from 'lucide-react'
+import { Ambulance, CircleDot, Headset, History, Hospital, Route, Settings, Siren, TrafficCone, UserRound, House } from 'lucide-react'
 import { ANIOS_VEHICULO, HOSPITALES, MARCAS_VEHICULO } from './flota.js'
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
@@ -173,15 +173,6 @@ export const MODULES = [
     description: 'Encuentra la ruta de la ambulancia evitando el tráfico con búsqueda ciega y heurística (A*)',
     icon: TrafficCone,
     navIcon: Route,
-    custom: true,
-  },
-  {
-    // Pantalla propia (pages/TiempoLlegadaPage.jsx): árbol de regresión + clima de las zonas.
-    key: 'llegada',
-    label: 'Inteligencia artificial',
-    description: 'Clima, tiempo de llegada, ¿llega a tiempo?, triaje, perfiles y despacho con algoritmo genético',
-    icon: CloudRain,
-    navIcon: BrainCircuit,
     custom: true,
   },
   {

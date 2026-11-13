@@ -91,9 +91,11 @@ function PorPerfil() {
         <Route path="configuracion" element={<SettingsPage />} />
         <Route path="rutas" element={<RutasPage />} />
         {/* El despacho ahora es una pestaña de Inteligencia artificial. */}
-        <Route path="despacho" element={<Navigate to="/llegada?tab=despacho" replace />} />
+        <Route path="despacho" element={<Navigate to="/asistente?tab=despacho" replace />} />
         <Route path="historial" element={<HistorialPage />} />
-        <Route path="llegada" element={<TiempoLlegadaPage />} />
+        {/* Asistente de despacho: se abre desde cada emergencia en curso (con sus datos). */}
+        <Route path="asistente" element={<TiempoLlegadaPage />} />
+        <Route path="llegada" element={<Navigate to="/asistente" replace />} />
         <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />
         <Route path=":module/nuevo" element={<ModuleFormPage />} />
         <Route path=":module/:id" element={<RecordDetailPage />} />

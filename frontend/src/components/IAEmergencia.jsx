@@ -44,24 +44,24 @@ export function LlegaATiempo({ emergenciaId }) {
 // Práctica 05 aplicada a la emergencia: ¿es crítica según sus signos vitales?
 export function TriajeEmergencia({ emergenciaId }) {
   const [r, error] = useDato(triajeEmergencia, emergenciaId)
-  if (error) return <section className="panel ia-em"><h2 className="form-section-title">Triaje</h2><p className="muted">{error}</p></section>
-  if (!r) return <section className="panel ia-em muted">Evaluando el triaje…</section>
+  if (error) return <section className="panel ia-em"><h2 className="form-section-title">Prioridad del paciente</h2><p className="muted">{error}</p></section>
+  if (!r) return <section className="panel ia-em muted">Evaluando la prioridad…</section>
   if (r.sin_signos) {
     return (
       <section className="panel ia-em">
-        <h2 className="form-section-title titulo-icono"><Activity size={15} /> Triaje</h2>
+        <h2 className="form-section-title titulo-icono"><Activity size={15} /> Prioridad del paciente</h2>
         <p className="muted">{r.mensaje} Se capturan al editar la emergencia, en «Signos vitales».</p>
       </section>
     )
   }
   return (
     <section className={`panel ia-em ${r.critica ? 'mal' : 'bien'}`}>
-      <h2 className="form-section-title titulo-icono"><Activity size={15} /> Triaje</h2>
+      <h2 className="form-section-title titulo-icono"><Activity size={15} /> Prioridad del paciente</h2>
       <div className="ia-em-veredicto">
         <span className="ia-em-prob">{pct(r.probabilidad)}</span>
         <div>
           <b>{r.critica ? 'Emergencia CRÍTICA' : 'No crítica'}</b>
-          <span>probabilidad de ser crítica · {r.algoritmo === 'Random Forest' ? 'bosque aleatorio' : r.algoritmo}{r.optimizado ? ' optimizado' : ''}</span>
+          <span>probabilidad de que sea crítica</span>
         </div>
       </div>
       <p className={`ia-em-aviso${r.critica ? '' : ' suave'}`}>{r.mensaje}</p>
@@ -78,17 +78,17 @@ export function TriajeEmergencia({ emergenciaId }) {
 // Práctica 07 aplicada a la emergencia: ¿a qué perfil de servicio se parece? (K-Means)
 export function PerfilServicio({ emergenciaId }) {
   const [r, error] = useDato(segmentacionEmergencia, emergenciaId)
-  if (error) return <section className="panel ia-em"><h2 className="form-section-title">Perfil del servicio</h2><p className="muted">{error}</p></section>
-  if (!r) return <section className="panel ia-em muted">Buscando el perfil del servicio…</section>
+  if (error) return <section className="panel ia-em"><h2 className="form-section-title">Tipo de servicio</h2><p className="muted">{error}</p></section>
+  if (!r) return <section className="panel ia-em muted">Buscando el tipo de servicio…</section>
   const c = COLOR_PERFIL[r.perfil]
   return (
     <section className="panel ia-em perfil" style={{ '--c': c }}>
-      <h2 className="form-section-title titulo-icono"><Shapes size={15} /> Perfil del servicio</h2>
+      <h2 className="form-section-title titulo-icono"><Shapes size={15} /> Tipo de servicio</h2>
       <div className="ia-em-veredicto">
         <span className="ia-em-nivel" aria-hidden="true">{[0, 1, 2].map((i) => <i key={i} className={i <= r.nivel ? 'on' : ''} />)}</span>
         <div>
           <b style={{ color: c }}>{r.perfil}</b>
-          <span>grupo de K-Means al que más se parece</span>
+          <span>tipo de servicio al que más se parece</span>
         </div>
       </div>
       <p className="ia-em-aviso suave">{r.estrategia}</p>
