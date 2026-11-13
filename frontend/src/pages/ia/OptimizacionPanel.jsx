@@ -43,7 +43,7 @@ export default function OptimizacionPanel() {
         <Loader2 size={22} className="girando" aria-hidden="true" />
         <div>
           <strong>Probando combinaciones de hiperparámetros…</strong>
-          <p className="muted">GridSearchCV entrena más de 1,600 modelos (324 combinaciones × 5 particiones). Tarda alrededor de un minuto la primera vez{r.segundos ? ` · ${r.segundos} s` : ''}. Después queda guardado y carga al instante. Mientras tanto, el triaje usa el modelo de la práctica 05.</p>
+          <p className="muted">GridSearchCV entrena más de 1,600 modelos (324 combinaciones × 5 particiones). Tarda alrededor de un minuto la primera vez{r.segundos ? ` · ${r.segundos} s` : ''}. Después queda guardado y carga al instante. Mientras tanto, el triaje usa el modelo sin optimizar.</p>
         </div>
       </section>
     )
@@ -57,9 +57,9 @@ export default function OptimizacionPanel() {
       <section className="panel">
         <h2 className="form-section-title">Optimización de hiperparámetros del triaje</h2>
         <p className="ia-intro">
-          En la práctica 05 cada algoritmo usó una configuración fija. Aquí se prueban muchas configuraciones con validación cruzada
+          Antes, cada algoritmo usaba una configuración fija. Aquí se prueban muchas configuraciones con validación cruzada
           estratificada de 5 particiones (métrica F1) usando el 80 % de los reportes ({r.conjuntos.entrenamiento});
-          el 20 % de prueba ({r.conjuntos.prueba}) no se toca hasta el final y es el mismo de la práctica 05.
+          el 20 % de prueba ({r.conjuntos.prueba}) no se toca hasta el final y es el mismo de la comparación de algoritmos.
           <b> El triaje del sistema ya usa el modelo optimizado.</b>
         </p>
         <div className="ia-gs">
@@ -79,7 +79,7 @@ export default function OptimizacionPanel() {
         </div>
         <p className="muted ia-nota">
           RandomizedSearchCV probó solo 20 configuraciones por algoritmo y llegó cerca (incluso arriba en el árbol y en KNN, porque
-          explora valores fuera de la rejilla). Se elige con GridSearchCV, como en la práctica: el mayor F1 en validación cruzada.
+          explora valores fuera de la rejilla). Se elige con GridSearchCV: el mayor F1 en validación cruzada.
         </p>
       </section>
 
@@ -88,9 +88,9 @@ export default function OptimizacionPanel() {
           <h2 className="form-section-title">{NOMBRE_ALGORITMO[r.elegido]} optimizado, calificado con PRUEBA</h2>
           <Metricas m={r.prueba} />
           <div className="ia-antes">
-            <div><span>Práctica 05 (sin optimizar)</span><b>{pct(r.antes.prueba.f1, 2)}</b><small>F1 en prueba</small></div>
+            <div><span>Antes (sin optimizar)</span><b>{pct(r.antes.prueba.f1, 2)}</b><small>F1 en prueba</small></div>
             <div className="flecha" aria-hidden="true">→</div>
-            <div className="despues"><span>Práctica 06 (optimizado)</span><b>{pct(r.prueba.f1, 2)}</b><small>{mejora >= 0 ? '+' : ''}{(mejora * 100).toFixed(2)} puntos</small></div>
+            <div className="despues"><span>Después (optimizado)</span><b>{pct(r.prueba.f1, 2)}</b><small>{mejora >= 0 ? '+' : ''}{(mejora * 100).toFixed(2)} puntos</small></div>
           </div>
           <Matriz m={r.matriz} etiquetas={['No crítica', 'Crítica']} positiva="fn"
                   explicacion={`Antes: ${r.antes.matriz.fp} falsas alarmas y ${r.antes.matriz.fn} críticas no detectadas. Ahora: ${r.matriz.fp} y ${r.matriz.fn}. La mejora viene de menos falsas alarmas; las críticas no detectadas siguen igual.`} />

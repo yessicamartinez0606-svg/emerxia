@@ -5,8 +5,8 @@ import { Conjuntos, Matriz, Metricas, ValidacionCruzada } from './comun.jsx'
 
 const NOMBRE = { 'Decision Tree': 'Árbol de decisión', 'Random Forest': 'Bosque aleatorio', KNN: 'KNN (vecinos más cercanos)' }
 
-// Práctica 05: comparación de algoritmos. ¿La emergencia es crítica?
-export default function TriajePanel() {
+// Detalles técnicos del triaje: comparación de algoritmos (backend/app/triaje.py).
+export default function TriajePanel({ sinSimulador = false }) {
   const [ev, setEv] = useState(null)
   const [error, setError] = useState('')
   useEffect(() => { modeloTriaje().then(setEv).catch((e) => setError(e.message)) }, [])
@@ -20,7 +20,7 @@ export default function TriajePanel() {
         <p className="ia-intro">
           Cuando llegan varias emergencias a la vez y hay pocas ambulancias libres, la IA estima cuáles son críticas con
           la saturación de oxígeno, la frecuencia cardiaca, la escala de Glasgow y la edad. Las críticas suben al principio
-          de «Emergencias por atender». Se aprendió con {ev.reportes} reportes ficticios ({ev.clases.critica} críticos);
+          de «Emergencias por atender». Se aprendió con {ev.reportes} reportes de ejemplo ({ev.clases.critica} críticos);
           la regla que los etiqueta <b>no</b> es un protocolo clínico real.
         </p>
         <Conjuntos c={ev.conjuntos} />
@@ -54,7 +54,7 @@ export default function TriajePanel() {
         <section className="panel">
           <h2 className="form-section-title">3. Validación cruzada (F1, 5 particiones)</h2>
           <ValidacionCruzada cv={ev.validacion_cruzada} metrica="F1" />
-          <Simulador />
+          {!sinSimulador && <Simulador />}
         </section>
       </div>
 

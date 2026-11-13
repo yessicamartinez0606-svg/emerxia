@@ -3,8 +3,8 @@ import { Calculator } from 'lucide-react'
 import { estimarATiempo, modeloATiempo, pct } from '../../lib/clima.js'
 import { Conjuntos, Matriz, Metricas, ValidacionCruzada } from './comun.jsx'
 
-// Práctica 04: entrenamiento, validación y prueba. ¿Llega a tiempo (15 min o menos)?
-export default function ATiempoPanel() {
+// Detalles técnicos de «¿Llega a tiempo?»: entrenamiento, validación y prueba (backend/app/a_tiempo.py).
+export default function ATiempoPanel({ sinSimulador = false }) {
   const [ev, setEv] = useState(null)
   const [error, setError] = useState('')
   useEffect(() => { modeloATiempo().then(setEv).catch((e) => setError(e.message)) }, [])
@@ -18,7 +18,7 @@ export default function ATiempoPanel() {
         <p className="ia-intro">
           Al asignar una emergencia, un árbol de decisión estima si la ambulancia llegará en {ev.umbral_min} minutos o menos,
           con la distancia desde el IMSS 220, el tráfico, las ambulancias libres y la experiencia del operador.
-          Se aprendió con {ev.servicios} servicios ficticios ({ev.clases.a_tiempo} a tiempo, {ev.clases.tarde} tarde).
+          Se aprendió con {ev.servicios} servicios de ejemplo ({ev.clases.a_tiempo} a tiempo, {ev.clases.tarde} tarde).
         </p>
         <Conjuntos c={ev.conjuntos} />
       </section>
@@ -65,7 +65,7 @@ export default function ATiempoPanel() {
         </section>
       </div>
 
-      <Simulador />
+      {!sinSimulador && <Simulador />}
     </>
   )
 }

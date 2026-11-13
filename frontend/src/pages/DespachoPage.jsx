@@ -97,11 +97,7 @@ export default function DespachoPage({ incrustado = false }) {
 
   return (
     <section className="rutas despacho">
-      {incrustado ? (
-        <p className="ia-intro despacho-intro">
-          <Dna size={15} aria-hidden="true" /> Algoritmo genético: elige de qué hospital sale la ambulancia hacia el accidente y a cuál regresa.
-        </p>
-      ) : (
+      {incrustado ? null : (
         <header className="view-head">
           <div>
             <h1>Despacho de ambulancia</h1>
@@ -150,7 +146,7 @@ export default function DespachoPage({ incrustado = false }) {
             <li><span className="despacho-swatch-hosp" />Hospital elegido</li>
             <li><span className="despacho-swatch-otro" />Otros hospitales</li>
           </ul>
-          <p className="rutas-nota">Toca el mapa para mover el accidente. La distancia es euclidiana (en línea recta), no por calles.</p>
+          <p className="rutas-nota">Toca el mapa para mover el accidente. Las distancias se miden en línea recta, no por calles.</p>
         </div>
 
         <div className="panel despacho-resumen">
@@ -182,12 +178,12 @@ export default function DespachoPage({ incrustado = false }) {
                   <TriangleAlert size={14} /> El óptimo exacto es {fmtKm(resultado.optimo_exacto_km)}; sube la población o las generaciones.
                 </p>
               )}
-              <button type="button" className="btn-ghost" onClick={() => setCorrida((n) => n + 1)}>Volver a correr el algoritmo</button>
+              <button type="button" className="btn-ghost" onClick={() => setCorrida((n) => n + 1)}>Calcular de nuevo</button>
             </>
           )}
 
           <details className="ruta-comparacion despacho-param">
-            <summary>Parámetros del algoritmo <ChevronDown size={15} aria-hidden="true" /></summary>
+            <summary>Ajustes avanzados <ChevronDown size={15} aria-hidden="true" /></summary>
             <div className="despacho-param-grid">
               {PARAMETROS.map((p) => (
                 <label key={p.key}>
@@ -236,9 +232,10 @@ export default function DespachoPage({ incrustado = false }) {
                 </tbody>
               </table>
             </div>
-            <p className="field-hint">Cambia las ambulancias para ver cómo se adapta el algoritmo: un hospital sin ambulancias no puede ser la salida.</p>
+            <p className="field-hint">Puedes cambiar cuántas ambulancias tiene cada hospital: uno sin ambulancias no puede ser la salida.</p>
           </div>
 
+          <DetallesTecnicos activo={incrustado}>
           <div className="panel">
             <h2 className="panel-title">Evolución del algoritmo genético</h2>
             <Convergencia historial={resultado.historial} optimo={resultado.optimo_exacto_km} />
@@ -282,9 +279,22 @@ export default function DespachoPage({ incrustado = false }) {
               <dt>Mutación</dt><dd>con probabilidad {param.prob_mutacion}, cambia al azar la salida o el regreso</dd>
             </dl>
           </div>
+          </DetallesTecnicos>
         </>
       )}
     </section>
+  )
+}
+
+// Dentro de Inteligencia artificial, lo técnico (evolución, todas las opciones y cómo funciona el
+// algoritmo genético) va plegado para no confundir a quien solo quiere saber de dónde sale.
+function DetallesTecnicos({ activo, children }) {
+  if (!activo) return children
+  return (
+    <details className="iah-tecnico">
+      <summary><ChevronDown size={16} aria-hidden="true" /> Ver detalles técnicos <small>Cómo evolucionó el algoritmo y todas las opciones</small></summary>
+      <div className="iah-tecnico-cuerpo">{children}</div>
+    </details>
   )
 }
 

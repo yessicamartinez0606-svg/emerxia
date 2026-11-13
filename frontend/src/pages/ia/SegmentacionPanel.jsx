@@ -3,7 +3,7 @@ import { Calculator } from 'lucide-react'
 import { COLOR_PERFIL, estimarSegmentacion, modeloSegmentacion } from '../../lib/clima.js'
 
 // Práctica 07: perfiles de servicio con K-Means (aprendizaje no supervisado).
-export default function SegmentacionPanel() {
+export default function SegmentacionPanel({ sinSimulador = false }) {
   const [ev, setEv] = useState(null)
   const [error, setError] = useState('')
   useEffect(() => { modeloSegmentacion().then(setEv).catch((e) => setError(e.message)) }, [])
@@ -15,7 +15,7 @@ export default function SegmentacionPanel() {
       <section className="panel">
         <h2 className="form-section-title">Perfiles de servicio con K-Means</h2>
         <p className="ia-intro">
-          K-Means agrupó {ev.servicios} servicios de ambulancia (ficticios) por su distancia desde el IMSS 220, el tráfico, el tiempo de
+          K-Means agrupó {ev.servicios} servicios de ambulancia (de ejemplo) por su distancia desde el IMSS 220, el tráfico, el tiempo de
           respuesta y las ambulancias libres, <b>sin decirle cuál era cuál</b>: aprendizaje no supervisado. Antes se escalaron las 4 variables
           con StandardScaler para que el tiempo y la distancia no dominen. Cada emergencia abierta se acomoda en el perfil al que más se parece.
         </p>
@@ -54,7 +54,7 @@ export default function SegmentacionPanel() {
         <Dispersion ev={ev} />
       </section>
 
-      <Simulador />
+      {!sinSimulador && <Simulador />}
     </>
   )
 }
