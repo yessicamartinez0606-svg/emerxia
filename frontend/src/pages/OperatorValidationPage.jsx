@@ -47,36 +47,16 @@ export default function OperatorValidationPage() {
     if (!emergency.operador && withPhoto > 0) setFaceOpen(true)
   }, [emergency, operators, withPhoto])
 
-  const onFaceSuccess = async (_photo, result) => {
-    const operator = result.candidate
-    setFaceOpen(false)
-    setSaving(true)
+  // El servidor reconoce al operador (compara su rostro con las fotos de todos), lo deja a
+  // cargo y registra la verificación. El navegador solo calcula los números del rostro.
+  const enviarRostro = async (descriptor) => {
     setSaveError('')
-    try {
-      const wasEnCurso = emergency.estado === 'En curso'
-      // Queda a cargo de la emergencia y, si su ambulancia está lista, sale en ella:
-      // así le aparece en su perfil de Operador.
-      const r = await api(`/flota/emergencias/${emergency.id}/operador`, { method: 'POST', body: { operador: operator.nombre } })
-      setAsignacion(r)
-      const lista = await api('/emergencias')
-      setEmergency(lista.items.find((e) => e.id === emergency.id) ?? emergency)
-      setValidated(operator)
-      // Bitácora de auditoría: no debe bloquear el flujo si falla.
-      api('/verificaciones', {
-        method: 'POST',
-        body: {
-          operador: operator.nombre,
-          contexto: wasEnCurso ? 'salida' : 'asignacion',
-          coincide: true,
-          distancia: result.distance,
-          emergencia_folio: emergency.folio,
-        },
-      }).catch(() => {})
-    } catch (err) {
-      setSaveError(`Se validó el rostro de ${operator.nombre}, pero no se pudo asignar a la emergencia: ${err.message}`)
-    } finally {
-      setSaving(false)
-    }
+    const r = await api(`/flota/emergencias/${emergency.id}/operador`, { method: 'POST', body: { descriptor } })
+    setAsignacion(r)
+    setValidated({ nombre: r.operador })
+    const lista = await api('/emergencias')
+    setEmergency(lista.items.find((e) => e.id === emergency.id) ?? emergency)
+    return { ...r, mensaje: `Es ${r.operador}. ${r.mensaje}` }
   }
 
   if (loadError) {
@@ -116,7 +96,7 @@ export default function OperatorValidationPage() {
         <div className="record-screen-title">
           <span className="record-screen-eyebrow">Operadores</span>
           <h1>Validación de operador</h1>
-          <p>Confirma con Face ID quién atiende la emergencia {emergency.folio}.</p>
+          <p>Confirma con su rostro quién atiende la emergencia {emergency.folio}.</p>
         </div>
       </header>
 
@@ -139,7 +119,7 @@ export default function OperatorValidationPage() {
       </div>
 
       <div className="panel form-section">
-        <h2 className="form-section-title">Face ID del operador</h2>
+        <h2 className="form-section-title">Confirmar al operador con su rostro</h2>
 
         {assigned ? (
           <div className="validation-done">
@@ -182,7 +162,7 @@ export default function OperatorValidationPage() {
             onClick={() => setFaceOpen(true)}
             disabled={saving || withPhoto === 0}
           >
-            <ScanFace size={16} /> {saving ? 'Asignando…' : assigned ? 'Validar de nuevo' : 'Validar con Face ID'}
+            <ScanFace size={16} /> {saving ? 'Asignando…' : assigned ? 'Validar de nuevo' : 'Confirmar con su rostro'}
           </button>
           {assigned ? (
             <>
@@ -199,10 +179,10 @@ export default function OperatorValidationPage() {
 
       <FaceCapture
         open={faceOpen}
-        mode="identify"
-        title={`Validar operador · ${emergency.folio}`}
-        candidates={candidates}
-        onSuccess={onFaceSuccess}
+        mode="servidor"
+        title={`Confirmar operador · ${emergency.folio}`}
+        enviar={enviarRostro}
+        onSuccess={() => setFaceOpen(false)}
         onCancel={() => setFaceOpen(false)}
       />
     </section>

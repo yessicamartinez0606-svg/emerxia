@@ -1,15 +1,18 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
 import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, CalendarClock } from 'lucide-react'
+import { ArrowLeft, ArrowUpRight, CalendarClock, Pencil } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
 import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
 import ControlAmbulancia from '../components/ControlAmbulancia.jsx'
 import ReporteEmergencia from '../components/ReporteEmergencia.jsx'
+import AccesoSistema from '../components/AccesoSistema.jsx'
+import EliminarRegistro from '../components/EliminarRegistro.jsx'
+import ParamedicosEmergencia from '../components/ParamedicosEmergencia.jsx'
 
 // Campo que se usa como título principal del perfil, por módulo.
-const TITLE_KEY = { ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
+const TITLE_KEY = { ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre', paramedicos: 'nombre' }
 const SUBTITLE_KEY = { emergencias: 'paciente_nombre' }
 
 function formatDate(value) {
@@ -27,7 +30,8 @@ function formatDate(value) {
 // "Datos generales". El campo de tipo foto no entra aquí: se usa en el avatar.
 function groupFields(fields) {
   const groups = []
-  fields.filter((f) => f.type !== 'photo').forEach((f) => {
+  // La contraseña (`hideInDetail`) nunca se muestra: se cambia en «Acceso al sistema».
+  fields.filter((f) => f.type !== 'photo' && !f.hideInDetail).forEach((f) => {
     const name = f.group ?? 'Datos generales'
     let bucket = groups.find((b) => b.name === name)
     if (!bucket) {
@@ -133,6 +137,9 @@ function DetailView({ mod, id }) {
           <h1>{(titleKey && item[titleKey]) || `${mod.singular} #${item.id}`}</h1>
           {subtitleKey && item[subtitleKey] && <p>{item[subtitleKey]}</p>}
         </div>
+        {mod.editar && (
+          <Link to={`/${mod.key}/${item.id}/editar`} className="btn-ghost tall record-editar"><Pencil size={15} /> Editar</Link>
+        )}
       </header>
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
@@ -160,7 +167,10 @@ function DetailView({ mod, id }) {
 
       {mod.key === 'ambulancias' && <ControlAmbulancia id={item.id} onCambio={() => setRecarga((n) => n + 1)} />}
       {mod.key === 'emergencias' && <ReporteEmergencia emergencia={item} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.key === 'emergencias' && <ParamedicosEmergencia emergencia={item} onCambio={() => setRecarga((n) => n + 1)} />}
       {mod.key === 'emergencias' && <RutaAmbulancia emergencia={item} />}
+      {mod.credenciales && <AccesoSistema mod={mod} item={item} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.eliminar && <EliminarRegistro mod={mod} item={item} />}
 
       <div className={`profile-sections ${groups.length === 1 ? 'single' : ''}`}>
         {groups.map((g) => (

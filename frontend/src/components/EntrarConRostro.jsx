@@ -4,7 +4,7 @@ import FaceCapture from './FaceCapture.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { descriptorDeFoto } from '../lib/faceVerify.js'
 
-// Entrada del operador: sin usuario ni contraseña. Se toma su foto, se calcula su
+// Entrada de operadores y paramédicos: sin usuario ni contraseña. Se toma su foto, se calcula su
 // descriptor facial y el servidor busca a qué operador registrado corresponde. Si su foto
 // no está registrada en Operadores, no lo reconoce y no entra.
 
@@ -31,8 +31,8 @@ export default function EntrarConRostro({ onVolver }) {
   return (
     <div className="login-form entrar-rostro">
       <span className="entrar-rostro-icono" aria-hidden="true"><ScanFace size={30} /></span>
-      <h1>Entrar como operador</h1>
-      <p className="lead">Mira a la cámara: te reconocemos con la foto que registró la central en Operadores. No necesitas usuario ni contraseña.</p>
+      <h1>Entrar con mi rostro</h1>
+      <p className="lead">Para operadores y paramédicos. Mira a la cámara y te reconocemos con la foto que tomó la central. No necesitas usuario ni contraseña.</p>
 
       <ul className="entrar-rostro-tips">
         <li>Buena luz de frente, sin lentes oscuros ni cubrebocas.</li>
@@ -47,12 +47,12 @@ export default function EntrarConRostro({ onVolver }) {
       <button className="btn-ghost tall entrar-rostro-volver" type="button" onClick={onVolver}>
         <ArrowLeft size={15} /> Entrar con usuario y contraseña
       </button>
-      <p className="field-hint">¿No te reconoce? Pide a la central que registre o actualice tu foto en Operadores.</p>
+      <p className="field-hint">¿No te reconoce? Pide a la central que vuelva a tomar tu foto.</p>
 
       <FaceCapture
         open={camara}
         mode="register"
-        title="Entrar como operador"
+        title="Entrar con mi rostro"
         textoConfirmar="Entrar"
         onSuccess={conFoto}
         onCancel={() => setCamara(false)}

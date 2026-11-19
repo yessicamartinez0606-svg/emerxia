@@ -31,10 +31,11 @@ from pydantic import BaseModel, Field
 
 from .. import a_tiempo, clima, eta, flota, optimizacion, readiness, segmentacion, triaje
 from ..repository import list_rows
-from ..security import OPERADOR, PERSONAL, require_roles
+from ..security import OPERADOR, PARAMEDICO, PERSONAL, require_roles
 
 router = APIRouter(tags=["inteligencia"])
-personal_y_operador = require_roles(*PERSONAL, OPERADOR)
+# El Paramédico también ve el clima, el triaje y la llegada estimada de su emergencia.
+personal_y_operador = require_roles(*PERSONAL, OPERADOR, PARAMEDICO)
 solo_personal = require_roles(*PERSONAL)
 
 

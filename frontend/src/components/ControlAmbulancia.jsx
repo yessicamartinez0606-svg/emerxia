@@ -128,7 +128,7 @@ function Estatus({ ficha, onGuardado, operadores }) {
 function Gasolina({ ficha, onGuardado }) {
   const a = ficha.ambulancia
   const [form, setForm] = useState(CARGA_VACIA)
-  const [verificado, setVerificado] = useState(false)
+  const [rostro, setRostro] = useState(null)   // 128 números del rostro; el servidor lo compara
   const [camara, setCamara] = useState(false)
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
@@ -148,10 +148,10 @@ function Gasolina({ ficha, onGuardado }) {
     try {
       const f = await cargarCombustible(a.id, {
         operador: a.conductor, litros: Number(form.litros), costo: num(form.costo), kilometraje: num(form.kilometraje),
-        estacion: form.estacion, notas: form.notas, verificado_facial: verificado,
+        estacion: form.estacion, notas: form.notas, ...(rostro ? { descriptor: rostro } : {}),
       })
       setForm(CARGA_VACIA)
-      setVerificado(false)
+      setRostro(null)
       setAviso(`Carga registrada: ${fmtLitros(form.litros)}. Ahora tiene ${Math.floor(f.ambulancia.combustible_pct)} %.`)
       onGuardado(f)
     } catch (err) {
@@ -207,12 +207,12 @@ function Gasolina({ ficha, onGuardado }) {
               </div>
             </div>
             <div className="gas-acciones">
-              {verificado ? (
-                <span className="field-hint ok"><CheckCircle2 size={13} /> {a.conductor} verificado con Face ID</span>
+              {rostro ? (
+                <span className="field-hint ok"><CheckCircle2 size={13} /> Rostro tomado: se confirma que es {a.conductor} al registrar</span>
               ) : (
                 <button type="button" className="btn-ghost" onClick={() => setCamara(true)} disabled={!ficha.conductor_foto}
                   title={ficha.conductor_foto ? '' : 'El conductor no tiene foto de referencia'}>
-                  <ScanFace size={15} /> Confirmar con Face ID
+                  <ScanFace size={15} /> Confirmar con su rostro
                 </button>
               )}
               <button className="btn-primary compact" disabled={guardando || !form.litros}>
@@ -227,14 +227,12 @@ function Gasolina({ ficha, onGuardado }) {
 
       <FaceCapture
         open={camara}
-        mode="verify"
+        mode="descriptor"
         title={`Carga de gasolina · ${a.placa}`}
-        reference={ficha.conductor_foto}
         onSuccess={(_foto, r) => {
           setCamara(false)
-          setVerificado(r?.match !== false)
-          if (r?.match === false) setError(`El rostro no coincide con ${a.conductor}.`)
-          api('/verificaciones', { method: 'POST', body: { operador: a.conductor, contexto: 'salida', coincide: r?.match ?? true, distancia: r?.distance ?? null } }).catch(() => {})
+          setRostro(r?.descriptor ?? null)
+          setError('')
         }}
         onCancel={() => setCamara(false)}
       />
@@ -257,7 +255,7 @@ function Cargas({ ficha }) {
             {ficha.cargas.map((c) => (
               <tr key={c.id}>
                 <td>{fmtFecha(c.created_at)}</td>
-                <td>{c.operador}{c.verificado_facial && <CheckCircle2 size={13} className="ok-icon" aria-label="Verificado con Face ID" />}</td>
+                <td>{c.operador}{c.verificado_facial && <CheckCircle2 size={13} className="ok-icon" aria-label="Confirmado con su rostro" />}</td>
                 <td>{fmtLitros(c.litros)}</td>
                 <td>{Math.floor(c.combustible_antes)} % → {Math.floor(c.combustible_despues)} %</td>
                 <td>{fmtDinero(c.costo)}</td>

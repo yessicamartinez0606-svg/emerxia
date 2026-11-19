@@ -9,6 +9,8 @@ import {
 // Ruta de la ambulancia para una emergencia: sale del Hospital IMSS 220, llega a la
 // dirección de la emergencia y regresa al hospital. La dirección se ubica sola en el mapa
 // y la ruta la calcula el backend con búsqueda sobre calles reales (la más rápida: costo uniforme / A*).
+// Para quien no es técnico se muestra solo la ruta más rápida; la comparación de algoritmos
+// queda en «Ver detalles técnicos».
 // Sobre esa ruta se simula el avance de la ambulancia en tiempo acelerado: cada tramo se
 // recorre al ritmo de su tráfico, así se ve cuánto falta y a qué hora llega.
 
@@ -180,20 +182,12 @@ export default function RutaAmbulancia({ emergencia }) {
               <button type="button" className={tramo === 'regreso' ? 'on' : ''} aria-pressed={tramo === 'regreso'} onClick={() => setTramo('regreso')}>Regreso al hospital</button>
             </div>
 
-            <div className="ruta-algoritmo">
-              <span>Algoritmo</span>
-              <div className="segmentado" role="group" aria-label="Algoritmo de búsqueda">
-                {ALGORITMOS.map((a) => (
-                  <button key={a.key} type="button" title={a.label} className={algoritmo === a.key ? 'on' : ''} aria-pressed={algoritmo === a.key} onClick={() => setAlgoritmo(a.key)}>
-                    {a.corto}
-                  </button>
-                ))}
-              </div>
-              <p>
-                <strong>{ALGORITMOS.find((a) => a.key === algoritmo).label}:</strong>{' '}
-                {ALGORITMOS.find((a) => a.key === algoritmo).garantiza}.
+            {algoritmo !== 'costo_uniforme' && (
+              <p className="ruta-otro-metodo">
+                Estás viendo otra forma de calcular la ruta ({ALGORITMOS.find((a) => a.key === algoritmo).label}).{' '}
+                <button type="button" className="link" onClick={() => setAlgoritmo('costo_uniforme')}>Ver la ruta más rápida</button>
               </p>
-            </div>
+            )}
 
             {actual?.encontrado ? (
               <>
@@ -317,11 +311,12 @@ function Comparacion({ resultados, esquinas, algoritmo, onAlgoritmo }) {
   return (
     <details className="ruta-comparacion">
       <summary>
-        Comparar los algoritmos <ChevronDown size={15} aria-hidden="true" />
+        Ver detalles técnicos <ChevronDown size={15} aria-hidden="true" />
       </summary>
       <p>
-        Cada esquina es un estado y cada calle abierta es un operador. Se probaron los cinco
-        algoritmos sobre {esquinas.toLocaleString('es-MX')} esquinas de la zona. Toca uno para ver su ruta en el mapa.
+        La ruta que se muestra es la más rápida. Para encontrarla se compararon cinco algoritmos de
+        búsqueda sobre {esquinas.toLocaleString('es-MX')} esquinas de la zona: cada esquina es un estado
+        y cada calle abierta es un operador. Toca uno para ver su ruta en el mapa.
       </p>
       <table>
         <thead><tr><th>Algoritmo</th><th>Tiempo</th><th>Esquinas revisadas</th></tr></thead>
@@ -331,7 +326,7 @@ function Comparacion({ resultados, esquinas, algoritmo, onAlgoritmo }) {
             if (!r) return null
             return (
               <tr key={a.key} className={a.key === algoritmo ? 'sel' : ''} onClick={() => onAlgoritmo(a.key)}>
-                <td>{a.corto} · {a.label}</td>
+                <td>{a.corto} · {a.label}<span className="rd-sub-celda">Encuentra {a.garantiza}</span></td>
                 <td>{r.encontrado ? fmtMin(r.minutos) : 'sin ruta'}{r.encontrado && r.minutos === mejor && <em className="ruta-mejor"> más rápida</em>}</td>
                 <td>{r.expandidos?.toLocaleString('es-MX') ?? '—'}</td>
               </tr>

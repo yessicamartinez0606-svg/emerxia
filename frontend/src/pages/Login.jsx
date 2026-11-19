@@ -80,9 +80,9 @@ export default function Login() {
             <button className="btn-primary" type="submit" disabled={busy || !username || !password}>
               {busy ? 'Ingresando…' : <>Iniciar sesión <ArrowRight size={16} /></>}
             </button>
-            <div className="login-separador"><span>¿Eres operador de ambulancia?</span></div>
+            <div className="login-separador"><span>¿Trabajas en una ambulancia?</span></div>
             <button className="btn-ghost tall login-operador" type="button" onClick={() => setOperador(true)}>
-              <ScanFace size={17} /> Soy operador · Entrar con mi rostro
+              <ScanFace size={17} /> Entrar con mi rostro
             </button>
             <div className="login-links">
               <Link className="forgot" to="/recuperar">¿Olvidaste tu contraseña?</Link>

@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { Clock, LogOut, Search } from 'lucide-react'
 import { Logo } from './Logo.jsx'
 import PrepararRostros from './PrepararRostros.jsx'
+import AlertasEmergencias from './AlertasEmergencias.jsx'
 import { useAuth } from '../lib/auth.jsx'
 import { useNow } from '../lib/useNow.js'
 import { HOME, MODULES } from '../lib/modules.js'
@@ -11,7 +12,7 @@ import { HOME, MODULES } from '../lib/modules.js'
 // portal del Operador (components/PortalLayout.jsx): barra roja arriba con pestañas, en lugar
 // del menú lateral, para que todo el sistema se vea igual.
 
-const NAV = [{ ...HOME, key: 'inicio', path: '/' }, ...MODULES.map((m) => ({ ...m, path: `/${m.key}` }))]
+const TODO_NAV = [{ ...HOME, key: 'inicio', path: '/' }, ...MODULES.map((m) => ({ ...m, path: `/${m.key}` }))]
 
 const iniciales = (nombre = '') => nombre.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join('') || '?'
 
@@ -28,6 +29,8 @@ function Reloj() {
 export default function Layout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  // «Cuentas» solo la ve el Administrador (el servidor también lo exige).
+  const NAV = TODO_NAV.filter((n) => !n.soloAdmin || user?.role === 'Administrador')
   const [query, setQuery] = useState('')
 
   const onSearch = (e) => {
@@ -87,6 +90,8 @@ export default function Layout() {
 
       {/* Descriptores faciales de los operadores, para que entren solo con su rostro. */}
       <PrepararRostros />
+      {/* Avisos al instante cuando un usuario reporta una emergencia (MongoDB change streams). */}
+      <AlertasEmergencias />
     </div>
   )
 }

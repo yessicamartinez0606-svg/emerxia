@@ -229,7 +229,7 @@ function Documento({ rep }) {
             <h3>Personal</h3>
             <dl>
               <dt>Operador a cargo</dt><dd>{rep.operador ? `${rep.operador.nombre}${rep.operador.celular ? ` · ${rep.operador.celular}` : ''}` : em.operador || 'Sin asignar'}</dd>
-              <dt>Face ID</dt><dd>{rep.verificaciones.length ? `${rep.verificaciones.filter((v) => v.coincide).length} verificación(es) correctas` : 'Sin verificaciones'}</dd>
+              <dt>Identidad confirmada</dt><dd>{rep.verificaciones.length ? `Sí, con su rostro (${rep.verificaciones.filter((v) => v.coincide).length} vez/veces)` : 'Todavía no'}</dd>
             </dl>
           </div>
           <div className="rd-bloque">
@@ -242,6 +242,10 @@ function Documento({ rep }) {
             </dl>
           </div>
         </div>
+
+        {(em.respuestas?.length > 0 || em.prioridad_motivos?.length > 0 || em.reportes_adicionales?.length > 0) && (
+          <ReporteDelUsuario em={em} />
+        )}
 
         <h3 className="rd-sub">Ambulancias y conductores</h3>
         {rep.ambulancias.length === 0 ? (
@@ -290,5 +294,42 @@ function Documento({ rep }) {
         )}
         <p className="rd-pie">Generado por Emergexia · {fmtFecha(new Date())}</p>
       </section>
+  )
+}
+
+// Lo que contestó quien reportó desde su perfil de Usuario (preguntas de sí/no), por qué
+// tiene esa prioridad y quién más reportó la misma emergencia (backend: app/reportes.py).
+function ReporteDelUsuario({ em }) {
+  const extra = em.reportes_adicionales ?? []
+  return (
+    <div className="rd-usuario">
+      <h3 className="rd-sub">
+        Lo que dijo quien reportó{em.num_reportes > 1 ? ` · ${em.num_reportes} reportes de la misma emergencia` : ''}
+      </h3>
+      {em.prioridad_motivos?.length > 0 && (
+        <p className="rd-alarma">
+          <strong>Señales de alarma:</strong> {em.prioridad_motivos.join(' · ')}
+          {em.prioridad_base && em.prioridad_base !== em.prioridad ? ` (por eso pasó de ${em.prioridad_base} a ${em.prioridad})` : ''}
+        </p>
+      )}
+      {em.respuestas?.length > 0 && (
+        <ul className="rd-respuestas">
+          {em.respuestas.map((r) => <li key={r.pregunta}><span>{r.pregunta}</span> <b>{r.respuesta}</b></li>)}
+        </ul>
+      )}
+      {extra.length > 0 && (
+        <ul className="rd-extra">
+          {extra.map((x, i) => (
+            <li key={i}>
+              <strong>{x.nombre}</strong> · {x.canal}{x.distancia_m != null ? ` · a ${x.distancia_m} m` : ''} · {fmtFecha(x.momento)}
+              {x.telefono ? <> · <a href={`tel:${x.telefono}`}>{x.telefono}</a></> : null}
+              {x.personas > 1 ? ` · dice ${x.personas} personas` : ''}
+              {x.motivos?.length > 0 && <span className="rd-sub-celda">Alarma: {x.motivos.join(', ')}</span>}
+              {x.descripcion && <span className="rd-sub-celda">«{x.descripcion}»</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

@@ -33,7 +33,9 @@ export default function PendientesCentral() {
       .catch(() => {})          // sin scikit-learn la lista funciona igual, solo sin triaje
     cargar()
     const t = setInterval(cargar, 30000)
-    return () => clearInterval(t)
+    // Aviso al instante (components/AlertasEmergencias.jsx): se recarga sin esperar los 30 s.
+    window.addEventListener('emergexia:emergencia', cargar)
+    return () => { clearInterval(t); window.removeEventListener('emergexia:emergencia', cargar) }
   }, [])
 
   const ordenadas = [...(items ?? [])].sort((a, b) =>

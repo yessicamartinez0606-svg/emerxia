@@ -3,8 +3,8 @@ import { ScanFace } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { descriptorDeFoto } from '../lib/faceVerify.js'
 
-// Calcula el descriptor facial de las fotos de los operadores que aún no lo tienen (o
-// cuya foto cambió) y lo guarda en el servidor. Así el operador puede entrar solo con su
+// Calcula el descriptor facial de las fotos de operadores y paramédicos que aún no lo
+// tienen (o cuya foto cambió) y lo guarda en el servidor. Así pueden entrar solo con su
 // rostro. Corre en el navegador del personal de la central, en segundo plano.
 
 let enCurso = null   // una sola pasada a la vez aunque se monte en varios lugares
@@ -19,7 +19,7 @@ function preparar(onAvance) {
     for (const op of pendientes) {
       const descriptor = await descriptorDeFoto(op.foto).catch(() => null)
       if (descriptor) {
-        await api(`/auth/rostros/${op.id}`, { method: 'PUT', body: { descriptor } })
+        await api(`/auth/rostros/${op.tipo ?? 'operador'}/${op.id}`, { method: 'PUT', body: { descriptor } })
         listos += 1
       } else {
         sinRostro.push(op.nombre)
@@ -46,8 +46,8 @@ export default function PrepararRostros({ visible = false }) {
     <div className={`rostros-aviso${avance.sinRostro.length ? ' warn' : ''}`} role="status">
       <ScanFace size={16} aria-hidden="true" />
       {terminado
-        ? <span>Face ID listo para {avance.listos} operador(es).{avance.sinRostro.length ? ` No se detectó un rostro en la foto de ${avance.sinRostro.join(', ')}: vuelve a tomarla para que pueda entrar.` : ''}</span>
-        : <span>Preparando el Face ID de {avance.total} operador(es)… ({avance.listos} listos)</span>}
+        ? <span>Listo: {avance.listos} persona(s) ya pueden entrar con su rostro.{avance.sinRostro.length ? ` No se ve bien la cara en la foto de ${avance.sinRostro.join(', ')}: vuelve a tomarla para que pueda entrar.` : ''}</span>
+        : <span>Preparando la entrada con rostro de {avance.total} persona(s)… ({avance.listos} listas)</span>}
     </div>
   )
 }

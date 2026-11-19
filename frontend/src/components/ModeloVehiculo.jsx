@@ -29,13 +29,13 @@ export default function ModeloVehiculo({ id, marca, anio, value, onElegir }) {
     <>
       <select id={id} className="input" value={value} disabled={!r}
               onChange={(e) => onElegir(r.modelos.find((m) => m.modelo === e.target.value))}>
-        {!r && <option value="">Consultando la API…</option>}
+        {!r && <option value="">Buscando modelos…</option>}
         {r && r.modelos.length === 0 && <option value="">Sin modelos de ambulancia ese año</option>}
         {r?.modelos.map((m) => <option key={m.modelo} value={m.modelo}>{m.modelo}</option>)}
       </select>
       {r && (
         <p className={`field-hint${r.aviso ? ' warn' : ' ok'}`}>
-          {r.aviso || `${r.fuente}: ${r.total_modelos_marca} modelos de ${r.marca} en ${r.anio}; ${r.modelos.length} sirven de ambulancia.`}
+          {r.aviso || `${r.marca} fabricó ${r.total_modelos_marca} modelos en ${r.anio}; ${r.modelos.length} sirven como ambulancia.`}
           {r.modelos[0] && ` Motor ${r.modelos[0].motor}, tanque ${r.modelos[0].tanque_litros} L.`}
         </p>
       )}

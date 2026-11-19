@@ -1531,3 +1531,76 @@ body { background: var(--bg); color: var(--ink); }
 .asistente-volver { display: inline-flex; align-items: center; gap: 5px; font-size: 13px; color: var(--muted); text-decoration: none; margin-bottom: 8px; }
 .asistente-volver:hover { color: var(--ink); }
 .asistente-head p { max-width: 80ch; }
+
+/* Paramédicos y acceso al sistema */
+.b-en-servicio { background: #e5f6ec; color: #1a7a41; }
+.b-fuera-de-turno { background: #ececf1; color: #5b5b68; }
+.pm-avatar { display: grid; place-items: center; background: #fdecec; color: var(--red-700); }
+.acceso-sistema { display: flex; flex-direction: column; gap: 12px; }
+.acceso-sistema code { font-size: 13px; padding: 2px 6px; border-radius: 6px; background: var(--field); }
+.acceso-form { display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+
+/* Reportes de usuarios: preguntas de sí/no y reportes repetidos */
+.us-preguntas { display: flex; flex-direction: column; gap: 8px; margin: 12px 0; }
+.us-pregunta { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: #fff; border: 1px solid var(--line); }
+.us-pregunta > span { font-size: 14px; font-weight: 600; }
+.us-pregunta .segmentado button.on { background: #fff; color: var(--red-700); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+.us-duplicado { display: flex; gap: 8px; align-items: flex-start; text-align: left; }
+.us-prioridad { display: flex; gap: 8px; align-items: center; justify-content: center; flex-wrap: wrap; }
+.rd-usuario { margin: 4px 0 8px; }
+.rd-alarma { padding: 8px 12px; border-radius: 10px; background: #fdecec; color: var(--red-700); font-size: 13.5px; }
+.rd-respuestas { list-style: none; padding: 0; margin: 8px 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 4px 16px; font-size: 13px; }
+.rd-respuestas li { display: flex; justify-content: space-between; gap: 8px; border-bottom: 1px dashed var(--line); padding: 3px 0; }
+.rd-extra { margin: 8px 0 0; padding-left: 18px; font-size: 13px; display: flex; flex-direction: column; gap: 6px; }
+
+/* Textos sencillos: lo técnico va en «Ver detalles técnicos» */
+.ruta-otro-metodo { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: var(--field); }
+.detalles-tecnicos { margin-top: 16px; border: 1px solid var(--line); border-radius: 12px; background: #fff; }
+.detalles-tecnicos > summary { cursor: pointer; padding: 12px 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; list-style: none; }
+.detalles-tecnicos > summary::-webkit-details-marker { display: none; }
+.detalles-tecnicos > summary small { font-weight: 400; color: var(--muted); }
+.detalles-tecnicos[open] > summary { border-bottom: 1px solid var(--line); }
+.detalles-tecnicos > .detalles-cuerpo { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
+
+/* Paramédicos por emergencia, Salud y Eliminar */
+.pm-emergencia { display: flex; flex-direction: column; gap: 10px; }
+.pm-emergencia.faltan { border-top: 4px solid #e3a114; }
+.pm-lista { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.pm-lista li { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 8px 10px; border-radius: 10px; background: #e5f6ec; color: #1a6a3b; }
+.pm-lista li small { color: var(--muted); }
+.pm-lista li button { margin-left: auto; }
+.pm-ir-salud { justify-content: center; }
+.input.fuera-rango { border-color: #e3a114; background: #fff8e8; }
+.fuera-rango-celda { color: #a3520b; font-weight: 700; }
+.eliminar-registro { border: 1px solid #f3c7c7; }
+.eliminar-confirmar { display: flex; flex-direction: column; gap: 8px; }
+.eliminar-confirmar p { font-size: 13.5px; color: var(--muted); }
+.btn-ghost.peligro { color: var(--red-700); }
+.btn-primary.peligro { background: var(--red-700); }
+
+/* Ambulancias: agregar, editar y eliminar */
+.fh-agregar { margin-left: auto; white-space: nowrap; }
+.fh-amb-acciones { display: flex; gap: 6px; justify-content: flex-end; padding: 6px 2px 0; }
+.fh-amb-acciones .btn-ghost { font-size: 12.5px; padding: 5px 10px; }
+.record-editar { margin-left: auto; align-self: center; }
+
+/* Avisos al instante de la central */
+.alertas { position: fixed; right: 16px; top: 112px; z-index: 60; display: flex; flex-direction: column; gap: 10px; width: min(380px, calc(100vw - 32px)); pointer-events: none; }
+.alerta-em { pointer-events: auto; display: flex; gap: 10px; align-items: flex-start; background: #fff; border-radius: 14px; padding: 12px 14px; border: 1px solid var(--line); border-left: 5px solid #e3a114; box-shadow: 0 10px 30px rgba(20, 20, 30, .18); animation: alerta-entra .25s ease-out; }
+.alerta-em.alta { border-left-color: var(--red-600); }
+.alerta-icono { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; background: #fdecec; color: var(--red-700); flex: none; }
+.alerta-txt { display: flex; flex-direction: column; gap: 3px; font-size: 13px; flex: 1; min-width: 0; }
+.alerta-txt strong { font-size: 14px; }
+.alerta-dir { color: var(--muted); }
+.alerta-alarma { color: var(--red-700); font-weight: 600; }
+.alerta-txt .btn-primary { align-self: flex-start; margin-top: 4px; }
+.alerta-cerrar { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px; }
+.alertas-estado { pointer-events: auto; align-self: flex-end; font-size: 11px; color: var(--muted); background: #fff; border: 1px solid var(--line); border-radius: 999px; padding: 3px 9px; display: inline-flex; align-items: center; gap: 4px; }
+.alertas-estado.on { color: #1a7a41; }
+@keyframes alerta-entra { from { transform: translateX(30px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .alerta-em { animation: none; } }
+
+/* Cuentas */
+.cuentas-rol { min-width: 150px; height: 32px; padding: 4px 8px; }
+.cuentas-acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.cuentas-acciones .btn-ghost { font-size: 12.5px; padding: 5px 9px; }

@@ -59,9 +59,9 @@ def _start_mongo() -> None:
     created = dbschema.ensure_schema()      # crea colecciones, validaciones e índices
     if created:
         log.info("Colecciones creadas en MongoDB: %s", ", ".join(created))
-    repository.seed_admin()                 # administrador inicial si no hay usuarios
-    if settings.seed_demo_data:
-        repository.seed_demo()
+    # Solo si la base está vacía: el primer administrador (datos de ADMIN_* en el entorno),
+    # para poder entrar y crear lo demás. No se crea ningún otro dato de ejemplo.
+    repository.seed_admin()
 
 
 mongo_service = Service("MongoDB", _start_mongo)

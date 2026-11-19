@@ -65,6 +65,7 @@ export default function MisReportes() {
                   ))}
                 </ul>
               )}
+              {r.num_reportes > 1 && <p className="field-hint">{r.num_reportes} personas reportaron esta emergencia.</p>}
               {r.hospital_destino && <p className="field-hint">Trasladado a {r.hospital_destino}.</p>}
               <p className="us-fecha">Reportado {fmtFecha(r.created_at)}</p>
             </article>

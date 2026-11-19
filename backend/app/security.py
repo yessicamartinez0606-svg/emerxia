@@ -31,19 +31,28 @@ def verify_password(password: str, stored: str) -> bool:
 # ─────────────────────────── perfiles ───────────────────────────
 # Personal de la central: ve todo el sistema.
 PERSONAL = ("Administrador", "Despachador", "Supervisor")
-# Conductor de ambulancia: entra con contraseña + Face ID y ve su ambulancia, su gasolina,
-# su emergencia y las rutas.
+# Conductor de ambulancia: entra con su rostro (Face ID) o con el usuario y la contraseña que
+# le da la central (módulo Operadores); ve su ambulancia, su gasolina, su emergencia y las rutas.
 OPERADOR = "Operador"
+# Paramédico (TUM) que va en la ambulancia: entra con el usuario y la contraseña que le da la
+# central (módulo Paramédicos), ve su ambulancia, al paciente de su emergencia y captura sus
+# signos vitales y la atención que le dio.
+PARAMEDICO = "Paramédico"
 # Persona que reporta emergencias (por mensaje o llamada) y ve el avance de sus reportes.
 USUARIO = "Usuario"
-ROLES = (*PERSONAL, OPERADOR, USUARIO)
+ROLES = (*PERSONAL, OPERADOR, PARAMEDICO, USUARIO)
+# Solo el administrador cambia usuarios y contraseñas de operadores y paramédicos.
+ADMINISTRADOR = "Administrador"
 
 
-def create_token(username: str, purpose: str = "sesion", minutes: int | None = None) -> str:
+def create_token(username: str, purpose: str = "sesion", minutes: int | None = None, metodo: str | None = None) -> str:
     """purpose="sesion" es la sesión normal. purpose="face" es un pase de 5 minutos que
-    solo sirve para terminar el inicio de sesión de un operador con Face ID."""
+    solo sirve para terminar el inicio de sesión de un operador con Face ID.
+    metodo: "rostro" o "contraseña", con qué se entró (p. ej. una carga de gasolina solo
+    cuenta como verificada con el rostro si la sesión se abrió con el rostro)."""
     exp = datetime.now(timezone.utc) + timedelta(minutes=minutes or settings.jwt_expire_minutes)
-    return jwt.encode({"sub": username, "exp": exp, "purpose": purpose}, settings.jwt_secret, algorithm="HS256")
+    datos = {"sub": username, "exp": exp, "purpose": purpose, **({"metodo": metodo} if metodo else {})}
+    return jwt.encode(datos, settings.jwt_secret, algorithm="HS256")
 
 
 def decode_token(token: str, purpose: str = "sesion") -> str:
@@ -54,6 +63,16 @@ def decode_token(token: str, purpose: str = "sesion") -> str:
     if payload.get("purpose", "sesion") != purpose:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Termina de verificar tu rostro para entrar.")
     return payload["sub"]
+
+
+def metodo_de_sesion(creds: HTTPAuthorizationCredentials | None = Depends(bearer)) -> str | None:
+    """Con qué se abrió la sesión actual: "rostro", "contraseña" o None (sesiones anteriores)."""
+    if creds is None:
+        return None
+    try:
+        return jwt.decode(creds.credentials, settings.jwt_secret, algorithms=["HS256"]).get("metodo")
+    except jwt.PyJWTError:
+        return None
 
 
 def current_username(creds: HTTPAuthorizationCredentials | None = Depends(bearer)) -> str:

@@ -135,8 +135,9 @@ def main() -> int:
     revisar("Pablo Núñez" in msg, "Solo el conductor de la ambulancia puede registrar su gasolina")
     msg = error(api.cargar_combustible, 6, api.CargaCombustibleIn(operador="Pablo Núñez", litros=90), "admin")
     revisar("No caben" in msg, "No se aceptan más litros de los que caben en el tanque")
-    ficha = api.cargar_combustible(6, api.CargaCombustibleIn(operador="Pablo Núñez", litros=40, costo=980, kilometraje=10050,
-                                                             verificado_facial=True), "admin")
+    # (verificado=True: el servidor ya comparó su rostro; eso se prueba en probar_perfiles.py)
+    ficha = api.registrar_carga(6, api.CargaCombustibleIn(operador="Pablo Núñez", litros=40, costo=980, kilometraje=10050),
+                                "admin", verificado=True)
     revisar(ficha["ambulancia"]["combustible_pct"] == 65 and not ficha["ambulancia"]["combustible_bajo"],
             "40 L en un tanque de 80 L: 15 % → 65 %, ya puede salir")
     revisar(ficha["cargas"][0]["verificado_facial"] and ficha["gasto_total"] == 980, "La carga queda registrada con su costo y Face ID")

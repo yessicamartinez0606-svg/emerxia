@@ -53,6 +53,7 @@ function FragmentRow({ label, value }) {
 
 export default function SettingsPage() {
   const { user } = useAuth()
+  const [tecnico, setTecnico] = useState(false)
 
   return (
     <section className="module-view">
@@ -72,30 +73,40 @@ export default function SettingsPage() {
             <dt>Rol</dt><dd>{user.role}</dd>
           </dl>
         </div>
-
-        <ServiceCard
-          title="Conexión con MongoDB"
-          path="/mongo/status"
-          rows={(i) => [
-            ['Servidor', i.uri],
-            ['Base de datos', i.database],
-            ['Versión', `MongoDB ${i.version}`],
-            ['Colecciones', Object.entries(i.collections).map(([k, v]) => `${k} (${v})`).join(', ') || '—'],
-          ]}
-        />
-
-        <ServiceCard
-          title="Conexión con Spark"
-          path="/spark/status"
-          note="Iniciando Spark (la primera vez tarda unos segundos)…"
-          rows={(i) => [
-            ['Master', i.master],
-            ['Versión', `Spark ${i.version}`],
-            ['Aplicación', i.app_name],
-            ['ID de aplicación', i.app_id],
-          ]}
-        />
       </div>
+
+      {/* Solo para soporte técnico: estado de la base de datos y de Spark. Se consulta al abrirlo. */}
+      {user.role === 'Administrador' && (
+        <details className="detalles-tecnicos" onToggle={(e) => setTecnico(e.currentTarget.open)}>
+          <summary>Ver detalles técnicos <small>Estado de la conexión, para soporte técnico</small></summary>
+          {tecnico && (
+            <div className="detalles-cuerpo settings-grid">
+              <ServiceCard
+                title="Conexión con MongoDB"
+                path="/mongo/status"
+                rows={(i) => [
+                  ['Servidor', i.uri],
+                  ['Base de datos', i.database],
+                  ['Versión', `MongoDB ${i.version}`],
+                  ['Colecciones', Object.entries(i.collections).map(([k, v]) => `${k} (${v})`).join(', ') || '—'],
+                ]}
+              />
+
+              <ServiceCard
+                title="Conexión con Spark"
+                path="/spark/status"
+                note="Iniciando Spark (la primera vez tarda unos segundos)…"
+                rows={(i) => [
+                  ['Master', i.master],
+                  ['Versión', `Spark ${i.version}`],
+                  ['Aplicación', i.app_name],
+                  ['ID de aplicación', i.app_id],
+                ]}
+              />
+            </div>
+          )}
+        </details>
+      )}
     </section>
   )
 }

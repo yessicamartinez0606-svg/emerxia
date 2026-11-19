@@ -14,11 +14,15 @@ import OperatorValidationPage from './pages/OperatorValidationPage.jsx'
 import RutasPage from './pages/RutasPage.jsx'
 import HistorialPage from './pages/HistorialPage.jsx'
 import TiempoLlegadaPage from './pages/TiempoLlegadaPage.jsx'
-import { ClipboardList, Fuel, History, Route as RouteIcon, Siren, Truck } from 'lucide-react'
+import CuentasPage from './pages/CuentasPage.jsx'
+import { ClipboardList, Fuel, HeartPulse, History, Route as RouteIcon, Siren, Stethoscope, Truck } from 'lucide-react'
 import PortalLayout from './components/PortalLayout.jsx'
 import MiTurno from './pages/operador/MiTurno.jsx'
 import Gasolina from './pages/operador/Gasolina.jsx'
 import MiHistorial from './pages/operador/MiHistorial.jsx'
+import MiAtencion from './pages/paramedico/MiAtencion.jsx'
+import MisAtenciones from './pages/paramedico/MisAtenciones.jsx'
+import Salud from './pages/paramedico/Salud.jsx'
 import Reportar from './pages/usuario/Reportar.jsx'
 import MisReportes from './pages/usuario/MisReportes.jsx'
 
@@ -53,6 +57,12 @@ const NAV_OPERADOR = [
   { to: '/rutas', label: 'Rutas y tráfico', icon: RouteIcon },
   { to: '/historial', label: 'Historial', icon: History },
 ]
+// El paramédico no ve rutas: lo suyo es la salud del paciente.
+const NAV_PARAMEDICO = [
+  { to: '/', label: 'Mi turno', icon: Stethoscope },
+  { to: '/salud', label: 'Salud', icon: HeartPulse },
+  { to: '/atenciones', label: 'Mis atenciones', icon: History },
+]
 const NAV_USUARIO = [
   { to: '/', label: 'Reportar', icon: Siren },
   { to: '/mis-reportes', label: 'Mis reportes', icon: ClipboardList },
@@ -68,6 +78,18 @@ function PorPerfil() {
           <Route path="gasolina" element={<Gasolina />} />
           <Route path="rutas" element={<RutasPage />} />
           <Route path="historial" element={<MiHistorial />} />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
+      </Routes>
+    )
+  }
+  if (user.role === 'Paramédico') {
+    return (
+      <Routes>
+        <Route element={<PortalLayout nav={NAV_PARAMEDICO} etiqueta="Paramédico" />}>
+          <Route index element={<MiAtencion />} />
+          <Route path="salud" element={<Salud />} />
+          <Route path="atenciones" element={<MisAtenciones />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
       </Routes>
@@ -93,11 +115,13 @@ function PorPerfil() {
         {/* El despacho ahora es una pestaña de Inteligencia artificial. */}
         <Route path="despacho" element={<Navigate to="/asistente?tab=despacho" replace />} />
         <Route path="historial" element={<HistorialPage />} />
+        <Route path="cuentas" element={<CuentasPage />} />
         {/* Asistente de despacho: se abre desde cada emergencia en curso (con sus datos). */}
         <Route path="asistente" element={<TiempoLlegadaPage />} />
         <Route path="llegada" element={<Navigate to="/asistente" replace />} />
         <Route path="operadores/validar/:emergenciaId" element={<OperatorValidationPage />} />
         <Route path=":module/nuevo" element={<ModuleFormPage />} />
+        <Route path=":module/:id/editar" element={<ModuleFormPage />} />
         <Route path=":module/:id" element={<RecordDetailPage />} />
         <Route path=":module" element={<ModulePage />} />
       </Route>

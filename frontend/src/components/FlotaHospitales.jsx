@@ -1,6 +1,8 @@
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ChevronRight, DownloadCloud, Fuel, Gauge, Hospital, MapPin, Siren, Truck, UserRound, X } from 'lucide-react'
+import { ChevronRight, DownloadCloud, Fuel, Gauge, Hospital, MapPin, Pencil, Plus, Siren, Trash2, Truck, UserRound, X } from 'lucide-react'
+import { api } from '../lib/api.js'
+import { useAuth } from '../lib/auth.jsx'
 import { ESTADOS, ESTADO_INFO, HOSPITAL_BASE, colorGasolina, importarFlotaReal, obtenerHospitales } from '../lib/flota.js'
 
 // Flota por hospital: una tarjeta por cada hospital registrado (app/genetico.py) con su
@@ -100,8 +102,8 @@ export default function FlotaHospitales({ recarga = 0, onCambio }) {
           ))}
         </ul>
         <button type="button" className="btn-ghost tall fh-importar" onClick={importar} disabled={importando}
-                title="Consulta la API vPIC de la NHTSA (marca, modelo y año reales) y completa la flota de cada hospital">
-          <DownloadCloud size={15} /> {importando ? 'Consultando la API…' : sinVehiculo ? `Datos reales (${sinVehiculo} sin vehículo)` : 'Completar flota con datos reales'}
+                title="Completa la marca, el modelo y el año de las ambulancias y agrega las que falten en cada hospital">
+          <DownloadCloud size={15} /> {importando ? 'Buscando vehículos…' : sinVehiculo ? `Completar vehículos (${sinVehiculo} sin datos)` : 'Completar vehículos'}
         </button>
       </div>
 
@@ -147,7 +149,7 @@ export default function FlotaHospitales({ recarga = 0, onCambio }) {
             </button>
             {hosp && i === finDeFila && (
               <DetalleHospital refDetalle={detalle} h={hosp} minimo={minimo} filtro={filtro} setFiltro={setFiltro}
-                               onCerrar={() => elegir(hosp.id)} />
+                               onCerrar={() => elegir(hosp.id)} onCambio={onCambio} setAviso={setAviso} />
             )}
             </Fragment>
           )
@@ -157,9 +159,26 @@ export default function FlotaHospitales({ recarga = 0, onCambio }) {
   )
 }
 
-function DetalleHospital({ h, minimo, filtro, setFiltro, onCerrar, refDetalle }) {
+function DetalleHospital({ h, minimo, filtro, setFiltro, onCerrar, refDetalle, onCambio, setAviso }) {
   const inst = institucion(h.nombre)
   const lista = h.ambulancias.filter((a) => filtro === 'Todas' || a.estado === filtro)
+  const { user } = useAuth()
+  const esAdmin = user?.role === 'Administrador'
+  const [borrando, setBorrando] = useState(null)
+
+  const eliminar = async (a) => {
+    if (!window.confirm(`¿Eliminar la ambulancia ${a.placa}? Se borra del sistema y no se puede deshacer.`)) return
+    setBorrando(a.id)
+    try {
+      const r = await api(`/ambulancias/${a.id}`, { method: 'DELETE' })
+      setAviso({ kind: 'ok', text: `✓ ${r.mensaje}` })
+      onCambio?.()
+    } catch (e) {
+      setAviso({ kind: 'warn', text: e.message })
+    } finally {
+      setBorrando(null)
+    }
+  }
   return (
     <section id="fh-detalle" ref={refDetalle} className="panel fh-detalle" aria-label={`Ambulancias de ${h.nombre}`}>
       <header className="fh-detalle-head">
@@ -169,6 +188,9 @@ function DetalleHospital({ h, minimo, filtro, setFiltro, onCerrar, refDetalle })
           <h2>{h.nombre}</h2>
           <p><MapPin size={13} aria-hidden="true" /> {h.municipio} · {h.ambulancias.length} ambulancia(s) · {h.listas} lista(s) para salir</p>
         </div>
+        <Link to={`/ambulancias/nuevo?hospital=${encodeURIComponent(h.nombre)}`} className="btn-primary compact fh-agregar">
+          <Plus size={15} /> Agregar ambulancia
+        </Link>
         <button type="button" className="fh-cerrar" onClick={onCerrar} aria-label="Cerrar detalle"><X size={18} /></button>
       </header>
 
@@ -191,7 +213,7 @@ function DetalleHospital({ h, minimo, filtro, setFiltro, onCerrar, refDetalle })
         <div className="fh-sin">
           <Truck size={26} aria-hidden="true" />
           <p>Este hospital todavía no tiene ambulancias registradas.</p>
-          <small>Agrégalas con «Nueva ambulancia» o con «Completar flota con datos reales».</small>
+          <small>Agrégalas con «Agregar ambulancia» o con «Completar vehículos».</small>
         </div>
       ) : (
         <ul className="fh-ambs">
@@ -221,6 +243,15 @@ function DetalleHospital({ h, minimo, filtro, setFiltro, onCerrar, refDetalle })
                   </span>
                   <span className="fh-abrir">Abrir ficha <ChevronRight size={13} aria-hidden="true" /></span>
                 </Link>
+                <div className="fh-amb-acciones">
+                  <Link to={`/ambulancias/${a.id}/editar`} className="btn-ghost"><Pencil size={14} /> Editar</Link>
+                  {esAdmin && (
+                    <button type="button" className="btn-ghost peligro" onClick={() => eliminar(a)} disabled={borrando === a.id}
+                            title={a.estado === 'Ocupada' ? 'Está atendiendo una emergencia' : undefined}>
+                      <Trash2 size={14} /> {borrando === a.id ? 'Eliminando…' : 'Eliminar'}
+                    </button>
+                  )}
+                </div>
               </li>
             )
           })}

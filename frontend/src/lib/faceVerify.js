@@ -12,7 +12,8 @@
 // '/models'.
 import * as faceapi from 'face-api.js'
 
-const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights'
+// Los modelos van incluidos en la página (frontend/public/models): no dependen de un CDN externo.
+const MODEL_URL = '/models'
 
 // Distancia euclidiana máxima entre dos descriptores para considerarlos la
 // misma persona. face-api.js recomienda ~0.6 como umbral general; usamos

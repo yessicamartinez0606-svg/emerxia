@@ -51,6 +51,11 @@ def update_row(name: str, row_id: int, changes: dict) -> dict | None:
     return db[name].find_one({"id": row_id}, {"_id": 0})
 
 
+def delete_row(name: str, row_id: int) -> bool:
+    """Borra un registro. Regresa False si no existía."""
+    return get_db()[name].delete_one({"id": row_id}).deleted_count > 0
+
+
 def source_name(name: str) -> str:
     """'base.colección', para mostrar dónde viven los datos."""
     return f"{get_db().name}.{name}"
@@ -105,49 +110,60 @@ def create_user(username: str, password: str, full_name: str, role: str = "Despa
     return {"username": username}
 
 
-def seed_admin() -> None:
-    """Crea el administrador inicial (desde .env) solo si aún no hay ningún usuario."""
-    if get_db()["users"].count_documents({}) == 0:
-        upsert_user(settings.admin_username, settings.admin_password, settings.admin_name, "Administrador")
+# ─────────────── cuentas de operadores y paramédicos ───────────────
+# Cada operador o paramédico tiene una cuenta en "users" ligada a su registro con
+# operador_id / paramedico_id. El registro guarda solo el nombre de usuario (para que la
+# central lo vea en su módulo); la contraseña vive cifrada en la cuenta.
+
+def cuenta_ligada(campo: str, registro_id: int) -> dict | None:
+    return get_db()["users"].find_one({campo: registro_id}, {"_id": 0})
 
 
-# ───────────────────────── datos de ejemplo (opcional) ─────────────────────────
-def seed_demo() -> None:
-    """Rellena las colecciones vacías con datos de ejemplo (SEED_DEMO_DATA=true)."""
+def usuario_disponible(username: str, campo: str | None = None, registro_id: int | None = None) -> bool:
+    """True si nadie usa ese usuario, o si lo usa la misma cuenta ligada a ese registro."""
+    otro = find_user(username)
+    return otro is None or (campo is not None and otro.get(campo) == registro_id)
+
+
+def guardar_credenciales(coleccion: str, campo: str, rol: str, registro_id: int, nombre: str,
+                         usuario: str | None = None, password: str | None = None) -> dict:
+    """Crea o actualiza la cuenta de un operador/paramédico. Lanza ValueError si el usuario
+    ya lo usa otra persona. Regresa {"usuario": ...}."""
     db = get_db()
-    samples = {
-        # Ambulancias repartidas en los hospitales de app/genetico.py. El conductor es un
-        # operador (más abajo), que es quien registra la gasolina de su ambulancia.
-        "ambulances": [
-            {"placa": "AMB-101", "tipo": "Avanzada", "hospital": "Hospital IMSS 220", "conductor": "Mariana Torres", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 85, "kilometraje": 48210},
-            {"placa": "AMB-102", "tipo": "Básica", "hospital": "Hospital IMSS 220", "conductor": "Ricardo Paredes", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 60, "kilometraje": 61540},
-            {"placa": "AMB-103", "tipo": "Avanzada", "hospital": "Hospital IMSS 220", "conductor": "Daniela Ibarra", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 92, "kilometraje": 23980},
-            {"placa": "AMB-104", "tipo": "Básica", "hospital": "Hospital IMSS 220", "conductor": "Jorge Salinas", "estado": "En reparación", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 40, "kilometraje": 90311},
-            {"placa": "CRT-201", "tipo": "Avanzada", "hospital": "Cruz Roja Toluca", "conductor": "Elena Cruz", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 70, "kilometraje": 35002},
-            {"placa": "CRT-202", "tipo": "Básica", "hospital": "Cruz Roja Toluca", "conductor": "Pablo Núñez", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 18, "kilometraje": 77120},
-            {"placa": "NSJ-301", "tipo": "Avanzada", "hospital": "Hospital General Nicolás San Juan", "conductor": "Marcos Herrera", "estado": "Libre", "tanque_litros": 80, "rendimiento_km_l": 6, "combustible_pct": 66, "kilometraje": 52300},
-            {"placa": "MET-401", "tipo": "Básica", "hospital": "Hospital IMSS 251", "conductor": "Lucía Gómez", "estado": "Libre", "tanque_litros": 70, "rendimiento_km_l": 7, "combustible_pct": 95, "kilometraje": 14880},
-        ],
-        "emergencies": [
-            {"paciente_nombre": "Juan Pérez", "direccion": "Av. Independencia 300, Centro, Toluca", "descripcion": "Choque de dos autos, varios lesionados", "prioridad": "Alta", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 5},
-            {"paciente_nombre": "Rosa Díaz", "direccion": "Av. Morelos 1200, Toluca", "descripcion": "Dolor torácico, adulto mayor", "prioridad": "Alta", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 1},
-            {"paciente_nombre": "Luis Romero", "direccion": "Av. Tecnológico 100, Metepec", "descripcion": "Caída con posible fractura", "prioridad": "Media", "estado": "Pendiente", "ambulancia": None, "ambulancias_requeridas": 1},
-        ],
-        "operators": [
-            {"nombre": "Mariana Torres", "experiencia": 8, "turno": "Matutino", "extension": "201", "estado": "En línea"},
-            {"nombre": "Ricardo Paredes", "experiencia": 3, "turno": "Vespertino", "extension": "202", "estado": "En línea"},
-            {"nombre": "Daniela Ibarra", "experiencia": 12, "turno": "Nocturno", "extension": "203", "estado": "En línea"},
-            {"nombre": "Jorge Salinas", "experiencia": 1, "turno": "Matutino", "extension": "204", "estado": "Desconectado"},
-            {"nombre": "Elena Cruz", "experiencia": 6, "turno": "Vespertino", "extension": "205", "estado": "En línea"},
-            {"nombre": "Pablo Núñez", "experiencia": 10, "turno": "Nocturno", "extension": "206", "estado": "En línea"},
-            {"nombre": "Marcos Herrera", "experiencia": 2, "turno": "Matutino", "extension": "207", "estado": "En línea"},
-            {"nombre": "Lucía Gómez", "experiencia": 5, "turno": "Vespertino", "extension": "208", "estado": "En línea"},
-        ],
-    }
-    for name, rows in samples.items():
-        if db[name].count_documents({}) == 0:
-            for row in rows:
-                insert_row(name, row)
+    users = db["users"]
+    cuenta = cuenta_ligada(campo, registro_id)
+    if usuario is not None:
+        usuario = usuario.strip().lower()
+        if not usuario_disponible(usuario, campo, registro_id):
+            raise ValueError(f'El usuario "{usuario}" ya lo tiene otra persona. Elige otro.')
+    if cuenta is None:
+        if not usuario or not password:
+            raise ValueError("Para crear su acceso escribe un usuario y una contraseña.")
+        create_user(usuario, password, nombre, rol)
+        users.update_one({"username": usuario}, {"$set": {campo: registro_id}})
+    else:
+        cambios: dict = {"full_name": nombre, "role": rol, "active": True}
+        if usuario and usuario != cuenta["username"]:
+            cambios["username"] = usuario
+            db["password_resets"].delete_many({"username": cuenta["username"]})
+        if password:
+            cambios["password_hash"] = hash_password(password)
+        users.update_one({"username": cuenta["username"]}, {"$set": cambios})
+        usuario = cambios.get("username", cuenta["username"])
+    db[coleccion].update_one({"id": registro_id}, {"$set": {"usuario": usuario}})
+    return {"usuario": usuario}
+
+
+def seed_admin() -> None:
+    """Crea el administrador inicial (ADMIN_USERNAME / ADMIN_PASSWORD) solo si aún no hay
+    ningún usuario. Es lo único que el sistema crea por su cuenta."""
+    if get_db()["users"].count_documents({}) > 0:
+        return
+    if len(settings.admin_password) < 8:
+        log.warning("La base no tiene usuarios y ADMIN_PASSWORD no está definida (o tiene menos de 8 "
+                    "caracteres): no se creó el administrador inicial.")
+        return
+    upsert_user(settings.admin_username, settings.admin_password, settings.admin_name, "Administrador")
 
 
 # ───────────────────────── recuperar contraseña ─────────────────────────

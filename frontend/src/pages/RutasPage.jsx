@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ChevronDown, Search, Siren, X } from 'lucide-react'
+import { Ambulance, ChevronDown, Search, Siren, X } from 'lucide-react'
 import MapaToluca from '../components/MapaToluca.jsx'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 import { useAuth } from '../lib/auth.jsx'
@@ -11,8 +11,9 @@ import {
 
 // Mapa de Toluca, Metepec, San Mateo Atenco y Lerma con el tráfico estimado de las avenidas y las rutas de la ambulancia desde
 // el Hospital IMSS 220. Al tocar el mapa (o buscar una dirección) se calcula la ruta con los
-// cinco algoritmos (tres de búsqueda ciega y dos heurísticos: greedy y A*) y se comparan; abajo se
-// ve la búsqueda paso a paso.
+// cinco algoritmos (tres de búsqueda ciega y dos heurísticos: greedy y A*). Arriba se muestra
+// solo la más rápida en lenguaje sencillo; la comparación y la búsqueda paso a paso quedan en
+// «Ver detalles técnicos».
 
 export default function RutasPage() {
   const { user } = useAuth()
@@ -203,37 +204,25 @@ export default function RutasPage() {
               </div>
               <p className="rutas-destino">{ruta?.destino?.esquina ?? punto.texto}</p>
 
-              {cargandoRuta && <p className="muted">Calculando con los cinco algoritmos…</p>}
+              {cargandoRuta && <p className="muted">Buscando la ruta más rápida…</p>}
               {errorRuta && <p className="form-error">{errorRuta}</p>}
 
               {ruta && (
                 <>
-                  <div className="rutas-algos" role="group" aria-label="Algoritmo">
-                    {ALGORITMOS.map((a) => {
-                      const r = porAlgoritmo[a.key]
-                      return (
-                        <button
-                          key={a.key}
-                          type="button"
-                          className={`rutas-algo${algoritmo === a.key ? ' on' : ''}`}
-                          aria-pressed={algoritmo === a.key}
-                          onClick={() => setAlgoritmo(a.key)}
-                          style={{ '--c': ALGORITMO_COLOR[a.key] }}
-                        >
-                          <span className="nombre">
-                            {a.label}
-                            {a.heuristico && <i className="tipo">heurística</i>}
-                            {r?.encontrado && r.minutos === porAlgoritmo[ruta.mas_rapido]?.minutos && <em>más rápida</em>}
-                          </span>
-                          <b>{r?.encontrado ? fmtMin(r.minutos) : 'sin ruta'}</b>
-                          <small>{r?.encontrado ? `${fmtKm(r.km)} · ${r.expandidos.toLocaleString('es-MX')} esquinas revisadas` : ''}</small>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  <label className="rutas-check">
-                    <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} /> Mostrar todas las rutas en el mapa
-                  </label>
+                  {elegido?.encontrado ? (
+                    <div className="ruta-eta">
+                      <Ambulance size={26} aria-hidden="true" />
+                      <div>
+                        <b>{fmtMin(elegido.minutos)}</b>
+                        <span>{fmtKm(elegido.km)} · {algoritmo === 'costo_uniforme' ? 'la ruta más rápida con el tráfico' : `otra forma de calcular (${ALGORITMOS.find((a) => a.key === algoritmo).label})`}</span>
+                      </div>
+                    </div>
+                  ) : <p className="ruta-error">No hay ruta por calles abiertas para este destino.</p>}
+                  {algoritmo !== 'costo_uniforme' && (
+                    <p className="ruta-otro-metodo">
+                      <button type="button" className="link" onClick={() => setAlgoritmo('costo_uniforme')}>Volver a la ruta más rápida</button>
+                    </p>
+                  )}
 
                   {elegido?.lluvia_en?.length > 0 && (
                     <p className="ruta-lluvia">Esta ruta pasa por zona con lluvia ({elegido.lluvia_en.join(', ')}): sus minutos ya incluyen que el tránsito va más lento.</p>
@@ -261,24 +250,64 @@ export default function RutasPage() {
         </aside>
       </div>
 
-      {ruta && <Explicacion ruta={ruta} algoritmo={algoritmo} setAlgoritmo={setAlgoritmo} />}
+      {ruta && (
+        <Explicacion ruta={ruta} algoritmo={algoritmo} setAlgoritmo={setAlgoritmo}
+                     comparar={algos(porAlgoritmo, ruta, algoritmo, setAlgoritmo, verTodas, setVerTodas)} />
+      )}
     </section>
   )
 }
 
-function Explicacion({ ruta, algoritmo, setAlgoritmo }) {
+// Comparación de los cinco algoritmos (va dentro de «Ver detalles técnicos»).
+function algos(porAlgoritmo, ruta, algoritmo, setAlgoritmo, verTodas, setVerTodas) {
+  return (
+    <>
+      <div className="rutas-algos" role="group" aria-label="Algoritmo">
+        {ALGORITMOS.map((a) => {
+          const r = porAlgoritmo[a.key]
+          return (
+            <button
+              key={a.key}
+              type="button"
+              className={`rutas-algo${algoritmo === a.key ? ' on' : ''}`}
+              aria-pressed={algoritmo === a.key}
+              onClick={() => setAlgoritmo(a.key)}
+              style={{ '--c': ALGORITMO_COLOR[a.key] }}
+            >
+              <span className="nombre">
+                {a.label}
+                {a.heuristico && <i className="tipo">heurística</i>}
+                {r?.encontrado && r.minutos === porAlgoritmo[ruta.mas_rapido]?.minutos && <em>más rápida</em>}
+              </span>
+              <b>{r?.encontrado ? fmtMin(r.minutos) : 'sin ruta'}</b>
+              <small>{r?.encontrado ? `${fmtKm(r.km)} · ${r.expandidos.toLocaleString('es-MX')} esquinas revisadas` : ''}</small>
+            </button>
+          )
+        })}
+      </div>
+      <label className="rutas-check">
+        <input type="checkbox" checked={verTodas} onChange={(e) => setVerTodas(e.target.checked)} /> Mostrar todas las rutas en el mapa
+      </label>
+
+    </>
+  )
+}
+
+function Explicacion({ ruta, algoritmo, setAlgoritmo, comparar }) {
   const info = ALGORITMOS.find((a) => a.key === algoritmo)
   const r = ruta.resultados.find((x) => x.algoritmo === algoritmo)
   return (
     <details className="panel rutas-detalle">
       <summary>
         <div>
-          <strong>¿Cómo se calculó la ruta?</strong>
-          <span>Búsqueda ciega y heurística sobre el espacio de estados de las calles reales</span>
+          <strong>Ver detalles técnicos</strong>
+          <span>Cómo se calculó la ruta: comparación de algoritmos de búsqueda ciega y heurística, paso a paso</span>
         </div>
         <ChevronDown size={18} className="chev" aria-hidden="true" />
       </summary>
       <div className="rutas-detalle-body">
+        <h3 className="rutas-h3">Los cinco algoritmos</h3>
+        {comparar}
         <dl className="kv rutas-kv">
           <dt>Estado</dt><dd>La esquina donde está la ambulancia ({ruta.esquinas.toLocaleString('es-MX')} esquinas en el mapa descargado)</dd>
           <dt>Estado inicial</dt><dd>{ruta.origen.esquina} (junto al Hospital IMSS 220)</dd>

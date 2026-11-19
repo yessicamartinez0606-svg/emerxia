@@ -7,6 +7,8 @@
     GET   /api/flota/historial                        historial (filtros: ambulancia, emergencia, tipo)
     POST  /api/flota/emergencias/{id}/asignar         plan de ambulancias (confirmar=true lo aplica)
     POST  /api/flota/emergencias/{id}/operador        operador validado por Face ID (sale en su ambulancia)
+    POST  /api/flota/emergencias/{id}/paramedicos     paramédico reconocido por Face ID (se necesitan 2)
+    DELETE /api/flota/emergencias/{id}/paramedicos/{pm}  quitarlo de la emergencia
     POST  /api/flota/emergencias/{id}/evento          salida, llegada, traslado o cierre
     GET   /api/flota/emergencias/{id}/reporte         reporte completo de la emergencia
 """
@@ -14,7 +16,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from .. import flota, vehiculos
 from ..repository import insert_row, list_rows, update_row
-from ..schemas import AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn, OperadorEmergenciaIn
+from ..schemas import (AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn, OperadorEmergenciaIn,
+                       ParamedicoEmergenciaIn)
 from ..security import current_username
 
 router = APIRouter(prefix="/api/flota", tags=["flota"], dependencies=[Depends(current_username)])
@@ -32,6 +35,9 @@ TIPOS_HISTORIAL = {
     "conductor": "Cambio de conductor",
     "hospital": "Cambio de hospital",
     "aviso": "Aviso",
+    "atención": "Atención del paramédico",
+    "baja": "Registro eliminado",
+    "edicion": "Datos editados",
 }
 
 
@@ -183,6 +189,21 @@ def cambiar_ambulancia(amb_id: int, body: AmbulanciaPatch, usuario: str = Depend
 
 @router.post("/ambulancias/{amb_id}/combustible", status_code=201)
 def cargar_combustible(amb_id: int, body: CargaCombustibleIn, usuario: str = Depends(current_username)):
+    """Carga desde la central. Si trae el rostro del conductor, el servidor lo compara con su
+    foto: si coincide queda verificada; si no, se rechaza."""
+    verificado = False
+    if body.descriptor is not None:
+        from .auth import coincide_con, registrar_verificacion
+        op = _por("operators", "nombre", body.operador)
+        ok, d, motivo = coincide_con(body.descriptor, op)
+        registrar_verificacion(body.operador, "salida", ok, d, usuario=usuario)
+        if not ok:
+            raise HTTPException(403, motivo)
+        verificado = True
+    return registrar_carga(amb_id, body, usuario, verificado)
+
+
+def registrar_carga(amb_id: int, body: CargaCombustibleIn, usuario: str, verificado: bool) -> dict:
     amb = _ambulancia(amb_id)
     try:
         carga = flota.aplicar_carga(amb, body.operador, body.litros, body.kilometraje)
@@ -199,14 +220,14 @@ def cargar_combustible(amb_id: int, body: CargaCombustibleIn, usuario: str = Dep
         "combustible_despues": carga["despues"],
         "estacion": body.estacion.strip(),
         "notas": body.notas.strip(),
-        "verificado_facial": body.verificado_facial,
+        "verificado_facial": verificado,
         "registrado_por": usuario,
     })
     update_row("ambulances", amb_id, carga["cambios"])
     costo = f" (${body.costo:,.2f})" if body.costo else ""
     registrar("combustible",
               f"{body.operador} cargó {body.litros:g} L a {placa}{costo}: {int(carga['antes'])} % → {int(carga['despues'])} %."
-              + (" Identidad verificada con Face ID." if body.verificado_facial else ""),
+              + (" Confirmado con su rostro." if verificado else ""),
               usuario, ambulancia=placa, operador=body.operador.strip(), hospital=flota.normalizar(amb)["hospital"])
     asignar_pendientes(usuario)        # con gasolina suficiente ya puede salir
     return ficha_ambulancia(amb_id)
@@ -399,15 +420,20 @@ def _ambulancia_de(operador: str | None) -> dict | None:
 
 @router.post("/emergencias/{em_id}/operador")
 def asignar_operador(em_id: int, body: OperadorEmergenciaIn, usuario: str = Depends(current_username)):
-    """El operador validado por Face ID queda en la emergencia y, si su ambulancia está
-    lista, sale en ella. Así le aparece en su perfil de Operador."""
+    """El servidor reconoce al operador por su rostro (lo compara con las fotos de todos) y lo
+    deja a cargo de la emergencia; si su ambulancia está lista, sale en ella. Así le aparece
+    en su perfil de Operador."""
+    from .auth import reconocer, registrar_verificacion
     em = _emergencia(em_id)
     if em.get("estado") == "Cerrada":
         raise HTTPException(409, "La emergencia ya está cerrada.")
-    op = _por("operators", "nombre", body.operador)
-    if not op:
-        raise HTTPException(422, f"No hay un operador llamado {body.operador}.")
+    op, d, motivo = reconocer(body.descriptor, list_rows("operators"))
     folio = em["folio"]
+    registrar_verificacion(op["nombre"] if op else "(no reconocido)",
+                           "salida" if em.get("estado") == "En curso" else "asignacion", op is not None, d, folio,
+                           tipo="operador", usuario=usuario)
+    if not op:
+        raise HTTPException(403, motivo)
     update_row("emergencies", em_id, {"operador": op["nombre"],
                                       "estado": "Asignada" if em.get("estado") == "Pendiente" else em.get("estado")})
     registrar("asignacion", f"{op['nombre']} queda a cargo de {folio} (Face ID).", usuario, operador=op["nombre"], emergencia=folio)
@@ -428,6 +454,67 @@ def asignar_operador(em_id: int, body: OperadorEmergenciaIn, usuario: str = Depe
     if requeridas > len(ya) + 1:
         update_row("emergencies", em_id, {"ambulancias_requeridas": requeridas})
     return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": f"{op['nombre']} sale con {amb['placa']}.", "listo": True}
+
+
+# ─────────────────────────── paramédicos de la emergencia ───────────────────────────
+
+PARAMEDICOS_POR_EMERGENCIA = 2
+
+
+def emergencia_de_paramedico(pm_id: int, abiertas: list[dict] | None = None) -> dict | None:
+    """La emergencia abierta a la que va ese paramédico (o None)."""
+    abiertas = abiertas if abiertas is not None else [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada"]
+    return next((e for e in abiertas if e.get("estado") != "Cerrada"
+                 and any(p.get("id") == pm_id for p in e.get("paramedicos") or [])), None)
+
+
+@router.post("/emergencias/{em_id}/paramedicos")
+def agregar_paramedico(em_id: int, body: ParamedicoEmergenciaIn, usuario: str = Depends(current_username)):
+    """Paramédico reconocido por su rostro en la central: va a esta emergencia, en la
+    ambulancia que la atiende. Se necesitan PARAMEDICOS_POR_EMERGENCIA."""
+    from .auth import reconocer, registrar_verificacion
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    # El servidor decide quién es: compara el rostro con las fotos de todos los paramédicos.
+    pm, d, motivo = reconocer(body.descriptor, list_rows("paramedics"))
+    registrar_verificacion(pm["nombre"] if pm else "(no reconocido)", "asignacion", pm is not None, d,
+                           em["folio"], tipo="paramedico", usuario=usuario)
+    if not pm:
+        raise HTTPException(403, motivo)
+    actuales = list(em.get("paramedicos") or [])
+    if any(p.get("id") == pm["id"] for p in actuales):
+        raise HTTPException(409, f"{pm['nombre']} ya va a esta emergencia.")
+    if len(actuales) >= PARAMEDICOS_POR_EMERGENCIA:
+        raise HTTPException(409, f"Esta emergencia ya tiene sus {PARAMEDICOS_POR_EMERGENCIA} paramédicos.")
+    if pm.get("estado") != "En servicio":
+        raise HTTPException(409, f"{pm['nombre']} está «{pm.get('estado')}»: solo pueden ir paramédicos en servicio.")
+    otra = emergencia_de_paramedico(pm["id"])
+    if otra:
+        raise HTTPException(409, f"{pm['nombre']} ya está atendiendo {otra['folio']}.")
+    folio = em["folio"]
+    actuales.append({"id": pm["id"], "nombre": pm["nombre"], "nivel": pm.get("nivel"),
+                     "verificado_en": flota.ahora(), "verificado_por": usuario})
+    update_row("emergencies", em_id, {"paramedicos": actuales})
+    placas = _placas(em)
+    registrar("asignacion", f"{pm['nombre']} ({pm.get('nivel')}) va a {folio}"
+              + (f" en {placas[0]}" if placas else "") + ". Confirmado con su rostro.",
+              usuario, ambulancia=placas[0] if placas else None, emergencia=folio)
+    return {**reporte(em_id), "reconocido": pm["nombre"]}
+
+
+@router.delete("/emergencias/{em_id}/paramedicos/{pm_id}")
+def quitar_paramedico(em_id: int, pm_id: int, usuario: str = Depends(current_username)):
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    actuales = list(em.get("paramedicos") or [])
+    quitado = next((p for p in actuales if p.get("id") == pm_id), None)
+    if not quitado:
+        raise HTTPException(404, "Ese paramédico no va a esta emergencia.")
+    update_row("emergencies", em_id, {"paramedicos": [p for p in actuales if p.get("id") != pm_id]})
+    registrar("aviso", f"{quitado['nombre']} ya no va a {em['folio']}.", usuario, emergencia=em["folio"])
+    return reporte(em_id)
 
 
 @router.post("/emergencias/{em_id}/evento")
@@ -504,5 +591,7 @@ def reporte(em_id: int):
         "linea_tiempo": sorted(_historial(emergencia=folio), key=lambda f: f["id"]),
         "verificaciones": [_sin_foto(v) for v in verificaciones],
         "requeridas": int(em.get("ambulancias_requeridas") or 1),
+        "paramedicos": em.get("paramedicos") or [],
+        "paramedicos_requeridos": PARAMEDICOS_POR_EMERGENCIA,
         "hospitales": flota.NOMBRES_HOSPITALES,
     }

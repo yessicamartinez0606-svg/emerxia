@@ -32,10 +32,11 @@ export function AuthProvider({ children }) {
     return aceptar(data)
   }, [aceptar])
 
-  // Operadores: entran solo con su rostro. `descriptor` son los 128 números que calcula
-  // face-api.js de la foto recién tomada; el servidor busca a qué operador corresponde.
+  // Operadores y paramédicos pueden entrar solo con su rostro. `descriptor` son los 128
+  // números que calcula face-api.js de la foto recién tomada; el servidor busca a quién
+  // corresponde (backend: POST /api/auth/rostro).
   const loginConRostro = useCallback(async (descriptor) => {
-    const data = await api('/auth/operador', { method: 'POST', body: { descriptor } })
+    const data = await api('/auth/rostro', { method: 'POST', body: { descriptor } })
     return aceptar(data)
   }, [aceptar])
 

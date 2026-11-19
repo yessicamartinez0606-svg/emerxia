@@ -33,8 +33,10 @@ class RegisterIn(BaseModel):
     full_name: str = Field(min_length=2)
     username: str = Field(min_length=3)
     password: str = Field(min_length=6)
-    # Los operadores no crean cuenta: entran solo con su rostro (ver app/routers/auth.py).
-    role: Literal["Administrador", "Despachador", "Supervisor", "Usuario"] = "Usuario"
+    # El registro público solo crea cuentas de Usuario (quien reporta emergencias). Las de la
+    # central las crea el Administrador en Cuentas; las de operadores y paramédicos, en sus
+    # módulos. (Antes aquí se podía elegir Administrador: cualquiera se volvía administrador.)
+    role: Literal["Usuario"] = "Usuario"
     telefono: str = ""
 
 
@@ -56,6 +58,8 @@ class ReporteUsuarioIn(BaseModel):
     paciente_edad: str = ""
     telefono: str = ""
     personas: int = Field(1, ge=1, le=50)
+    # Preguntas de sí/no (app/reportes.py): clave → True «Sí», False «No», None «No sé».
+    respuestas: dict[str, bool | None] = Field(default_factory=dict, max_length=30)
 
 
 class CargaOperadorIn(BaseModel):
@@ -164,6 +168,28 @@ class EmergencyPatch(BaseModel):
     estado: Literal["Pendiente", "Asignada", "En curso", "Cerrada"] | None = None
 
 
+USUARIO_RE = re.compile(r"^[a-z0-9._-]{3,40}$")
+
+
+def _valida_usuario(v: str) -> str:
+    v = v.strip().lower()
+    if not USUARIO_RE.match(v):
+        raise ValueError("El usuario debe tener de 3 a 40 caracteres: letras sin acento, números, punto, guion o guion bajo (sin espacios).")
+    return v
+
+
+class CredencialesIn(BaseModel):
+    """Usuario y contraseña con los que entra un operador o un paramédico. Al cambiarlos,
+    los dos son opcionales: se cambia solo lo que venga."""
+    usuario: str | None = None
+    password: str | None = Field(None, min_length=6)
+
+    @field_validator("usuario")
+    @classmethod
+    def _usuario_valido(cls, v: str | None) -> str | None:
+        return _valida_usuario(v) if v is not None else v
+
+
 class OperatorIn(BaseModel):
     nombres: str = Field(min_length=2)
     apellidos: str = Field(min_length=2)
@@ -181,6 +207,11 @@ class OperatorIn(BaseModel):
     # la ambulancia.
     foto: str = Field(min_length=1, description="Foto de referencia en base64 (data URL)")
 
+    # Acceso al sistema (además del rostro). La contraseña no se guarda en el registro del
+    # operador: se guarda cifrada en su cuenta (colección users).
+    usuario: str = Field(min_length=3)
+    password: str = Field(min_length=6)
+
     @field_validator("celular")
     @classmethod
     def _celular_valido(cls, v: str) -> str:
@@ -190,6 +221,56 @@ class OperatorIn(BaseModel):
     @classmethod
     def _correo_valido(cls, v: str) -> str:
         return _valida_correo(v)
+
+    _usuario = field_validator("usuario")(_valida_usuario)
+
+
+NIVELES_PARAMEDICO = ("TUM Básico", "TUM Intermedio", "TUM Avanzado", "Paramédico")
+
+
+class ParamedicIn(BaseModel):
+    """Paramédico (Técnico en Urgencias Médicas) que va en una ambulancia."""
+    nombres: str = Field(min_length=2)
+    apellidos: str = Field(min_length=2)
+    celular: str = Field(min_length=10, max_length=20)
+    correo: str = Field(min_length=5)
+    nivel: Literal["TUM Básico", "TUM Intermedio", "TUM Avanzado", "Paramédico"] = "TUM Básico"
+    cedula: str = ""                      # cédula o número de certificación
+    turno: Literal["Matutino", "Vespertino", "Nocturno"] = "Matutino"
+    estado: Literal["En servicio", "Fuera de turno", "Baja"] = "En servicio"
+    # La ambulancia NO se elige aquí: va en la de la emergencia a la que lo asigna la central
+    # (2 paramédicos por emergencia, confirmados con su rostro; ver routers/flota.py).
+    tipo_sangre: str = ""
+    contacto_emergencia: str = ""
+    # Foto de su rostro (data URL): con ella entra con Face ID, igual que el operador.
+    foto: str = Field(min_length=1, description="Foto de referencia en base64 (data URL)")
+    usuario: str = Field(min_length=3)
+    password: str = Field(min_length=6)
+
+    @field_validator("celular")
+    @classmethod
+    def _celular_valido(cls, v: str) -> str:
+        return _valida_celular(v)
+
+    @field_validator("correo")
+    @classmethod
+    def _correo_valido(cls, v: str) -> str:
+        return _valida_correo(v)
+
+    _usuario = field_validator("usuario")(_valida_usuario)
+
+
+class AtencionParamedicoIn(BaseModel):
+    """Lo que captura el paramédico de su paciente: signos vitales y la atención que le dio."""
+    saturacion_oxigeno: float | None = Field(None, ge=50, le=100)
+    frecuencia_cardiaca: float | None = Field(None, ge=20, le=250)
+    escala_glasgow: int | None = Field(None, ge=3, le=15)
+    presion_arterial: str = Field("", max_length=20)          # p. ej. "120/80"
+    temperatura: float | None = Field(None, ge=30, le=45)
+    glucosa: float | None = Field(None, ge=10, le=900)
+    observaciones: str = Field("", max_length=2000)            # atención brindada, medicamentos, etc.
+    _signos = field_validator("saturacion_oxigeno", "frecuencia_cardiaca", "escala_glasgow", "temperatura", "glucosa",
+                              mode="before")(_numero(None))
 
 
 class VerificacionIn(BaseModel):
@@ -217,7 +298,9 @@ class CargaCombustibleIn(BaseModel):
     kilometraje: float | None = Field(None, ge=0)
     estacion: str = ""
     notas: str = ""
-    verificado_facial: bool = False
+    # Rostro del conductor tomado en la central (128 números). El servidor lo compara con su
+    # foto y decide si la carga queda verificada; el navegador ya no lo decide.
+    descriptor: list[float] | None = Field(None, min_length=128, max_length=128)
 
 
 class AsignarIn(BaseModel):
@@ -227,9 +310,16 @@ class AsignarIn(BaseModel):
     confirmar: bool = False
 
 
+class ParamedicoEmergenciaIn(BaseModel):
+    """Rostro tomado en la central (128 números). El servidor busca a qué paramédico
+    corresponde y, si está disponible, lo manda a la emergencia."""
+    descriptor: list[float] = Field(min_length=128, max_length=128)
+
+
 class OperadorEmergenciaIn(BaseModel):
-    """Operador que atenderá la emergencia (validado por Face ID en la central)."""
-    operador: str = Field(min_length=2)
+    """Rostro del operador tomado en la central (128 números). El servidor busca a qué
+    operador corresponde y lo deja a cargo de la emergencia."""
+    descriptor: list[float] = Field(min_length=128, max_length=128)
 
 
 class EventoEmergenciaIn(BaseModel):

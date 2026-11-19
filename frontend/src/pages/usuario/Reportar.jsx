@@ -1,18 +1,21 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { CheckCircle2, Crosshair, MessageSquare, Phone, Search } from 'lucide-react'
+import { CheckCircle2, Crosshair, MessageSquare, Phone, Search, Users } from 'lucide-react'
 import MapaToluca from '../../components/MapaToluca.jsx'
 import { useAuth } from '../../lib/auth.jsx'
 import { buscarDireccion, enviarReporte, tiposEmergencia } from '../../lib/portal.js'
 
 // Reportar una emergencia: por mensaje (formulario) o por llamada (se registra la ubicación
 // y se marca a la central). El lugar se marca en el mapa, con el GPS o escribiendo la dirección.
+// Las preguntas de sí/no (backend: app/reportes.py) dependen del tipo y con ellas el servidor
+// calcula la prioridad. Si ya habían reportado la misma emergencia, el reporte se suma a esa.
 
 const TOLUCA = [[19.25, -99.72], [19.33, -99.58]]
 
 export default function Reportar() {
   const { user } = useAuth()
-  const [catalogo, setCatalogo] = useState({ tipos: [], telefono_central: '911' })
+  const [catalogo, setCatalogo] = useState({ tipos: [], generales: [], por_tipo: {}, telefono_central: '911' })
+  const [respuestas, setRespuestas] = useState({})   // clave → true «Sí» / false «No» (sin clave = «No sé»)
   const [canal, setCanal] = useState('mensaje')
   const [tipo, setTipo] = useState('')
   const [punto, setPunto] = useState(null)        // { lat, lng, texto }
@@ -57,6 +60,7 @@ export default function Reportar() {
     try {
       const r = await enviarReporte({
         canal, tipo, ...form, personas: Number(form.personas) || 1,
+        respuestas: Object.fromEntries(preguntas.filter((p) => p.clave in respuestas).map((p) => [p.clave, respuestas[p.clave]])),
         lat: punto?.lat ?? null, lng: punto?.lng ?? null,
         direccion: punto?.texto && punto.texto !== 'Mi ubicación' && punto.texto !== 'Punto marcado' ? punto.texto : direccion.trim(),
       })
@@ -68,12 +72,34 @@ export default function Reportar() {
     }
   }
 
+  const preguntas = tipo ? [...catalogo.generales, ...(catalogo.por_tipo[tipo] ?? [])] : []
+  const responder = (clave, valor) => setRespuestas((prev) => {
+    const sig = { ...prev }
+    if (valor === null) delete sig[clave]
+    else sig[clave] = valor
+    return sig
+  })
+  const elegirTipo = (t) => {
+    setTipo(t)
+    // Las generales se conservan; las del tipo anterior ya no aplican.
+    const generales = new Set(catalogo.generales.map((p) => p.clave))
+    setRespuestas((prev) => Object.fromEntries(Object.entries(prev).filter(([k]) => generales.has(k))))
+  }
+
   if (listo) {
     return (
       <section className="panel us-listo">
         <CheckCircle2 size={34} aria-hidden="true" />
-        <h1>Reporte enviado · {listo.folio}</h1>
-        <p>La central ya recibió tu emergencia en <strong>{listo.direccion}</strong>. Te avisaremos aquí cuando salga la ambulancia.</p>
+        <h1>{listo.duplicado ? 'Ya la habían reportado' : 'Reporte enviado'} · {listo.folio}</h1>
+        {listo.duplicado ? (
+          <p className="us-duplicado"><Users size={16} aria-hidden="true" /> {listo.mensaje}</p>
+        ) : (
+          <p>La central ya recibió tu emergencia en <strong>{listo.direccion}</strong>. Te avisaremos aquí cuando salga la ambulancia.</p>
+        )}
+        <p className="us-prioridad">
+          <span className={`badge b-${(listo.prioridad || '').toLowerCase()}`}>Prioridad {listo.prioridad}</span>
+          {listo.prioridad_motivos?.length > 0 && <span className="muted"> {listo.prioridad_motivos.join(' · ')}</span>}
+        </p>
         {canal === 'llamada' && (
           <a className="btn-primary us-llamar" href={`tel:${catalogo.telefono_central}`}>
             <Phone size={17} /> Llamar al {catalogo.telefono_central}
@@ -82,7 +108,7 @@ export default function Reportar() {
         <p className="muted">Si no se abre la llamada, marca al {catalogo.telefono_central} desde tu teléfono.</p>
         <div className="us-listo-acciones">
           <Link className="btn-ghost tall" to="/mis-reportes">Ver cómo va</Link>
-          <button type="button" className="btn-ghost tall" onClick={() => { setListo(null); setPunto(null); setTipo('') }}>Reportar otra</button>
+          <button type="button" className="btn-ghost tall" onClick={() => { setListo(null); setPunto(null); setTipo(''); setRespuestas({}) }}>Reportar otra</button>
         </div>
       </section>
     )
@@ -143,9 +169,31 @@ export default function Reportar() {
         <h2 className="us-titulo"><span>2</span> ¿Qué pasó?</h2>
         <div className="us-tipos" role="radiogroup" aria-label="Tipo de emergencia">
           {catalogo.tipos.map((t) => (
-            <button key={t} type="button" role="radio" aria-checked={tipo === t} className={`us-tipo${tipo === t ? ' on' : ''}`} onClick={() => setTipo(t)}>{t}</button>
+            <button key={t} type="button" role="radio" aria-checked={tipo === t} className={`us-tipo${tipo === t ? ' on' : ''}`} onClick={() => elegirTipo(t)}>{t}</button>
           ))}
         </div>
+        {preguntas.length > 0 && (
+          <div className="us-preguntas">
+            <p className="field-hint">Contesta lo que sepas con un toque: ayuda a mandar la ayuda correcta más rápido.</p>
+            {preguntas.map((p) => {
+              const r = respuestas[p.clave]
+              return (
+                <div key={p.clave} className="us-pregunta" role="radiogroup" aria-label={p.texto}>
+                  <span>{p.texto}</span>
+                  <div className="segmentado">
+                    {[['Sí', true], ['No', false], ['No sé', null]].map(([txt, v]) => {
+                      const on = v === null ? r === undefined : r === v
+                      return (
+                        <button key={txt} type="button" role="radio" aria-checked={on} className={on ? 'on' : ''}
+                                onClick={() => responder(p.clave, v)}>{txt}</button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
         <div className="us-campos">
           <div className="field">
             <label htmlFor="us-personas">Personas afectadas</label>

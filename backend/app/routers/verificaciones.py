@@ -1,9 +1,11 @@
-"""Bitácora de verificaciones por reconocimiento facial de operadores.
+"""Bitácora de verificaciones por reconocimiento facial.
 
-La comparación de rostros ocurre en el navegador (ver frontend/src/lib/faceVerify.js);
-este endpoint solo guarda un registro de auditoría de cada verificación exitosa:
-quién fue verificado, en qué momento del flujo (asignación a una emergencia o
-salida de la ambulancia) y con qué distancia facial.
+La decisión de si un rostro coincide la toma el servidor (routers/auth.py: reconocer y
+coincide_con), que también escribe aquí cada intento. El navegador solo calcula los 128
+números del rostro de la foto recién tomada.
+
+POST /api/verificaciones se conserva solo por compatibilidad (las pantallas ya no lo usan):
+lo que se registra por aquí queda marcado como "reportado por el navegador".
 """
 from datetime import datetime, timezone
 
@@ -21,6 +23,7 @@ def registrar_verificacion(body: VerificacionIn, usuario: str = Depends(current_
     doc = {
         **body.model_dump(),
         "verificado_por": usuario,
+        "reportado_por_navegador": True,
         "momento": datetime.now(timezone.utc),
     }
     get_db()["verificaciones"].insert_one(dict(doc))

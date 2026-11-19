@@ -54,7 +54,7 @@ function ModuleView({ mod }) {
           <p>{mod.description}</p>
         </div>
         <div className="head-actions">
-          <button className="btn-ghost tall" onClick={load} title="Volver a leer los datos de MongoDB">
+          <button className="btn-ghost tall" onClick={load} title="Volver a cargar la lista">
             <RefreshCw size={15} /> Actualizar
           </button>
           <button className="btn-primary compact" onClick={() => navigate(`/${mod.key}/nuevo`)}>
@@ -66,7 +66,7 @@ function ModuleView({ mod }) {
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
       {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} onCambio={load} />}
-      {mod.key === 'operadores' && <PrepararRostros key={recarga} visible />}
+      {(mod.key === 'operadores' || mod.key === 'paramedicos') && <PrepararRostros key={recarga} visible />}
 
       {mod.sinTabla && error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}
 
@@ -120,8 +120,8 @@ function ModuleView({ mod }) {
         {items && (
           <p className={`source-note ${source ? '' : 'warn'}`}>
             {source
-              ? `${items.length} registro(s) · leído de MongoDB: ${source}`
-              : '⚠ Este servidor no reporta MongoDB: probablemente es una versión antigua del backend.'}
+              ? `${items.length} registro(s)`
+              : '⚠ No se pudo confirmar que estos datos estén al día. Avisa a soporte técnico.'}
           </p>
         )}
       </div>}
