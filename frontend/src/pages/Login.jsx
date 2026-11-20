@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { Eye, EyeOff, Lock, User, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, Lock, User, ArrowRight, ScanFace } from 'lucide-react'
 import AuthAside from '../components/AuthAside.jsx'
+import EntrarConRostro from '../components/EntrarConRostro.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
 export default function Login() {
   const { login } = useAuth()
+  const [operador, setOperador] = useState(false)   // pantalla «Soy operador»
   const location = useLocation()
   const notice = location.state?.notice
   const [username, setUsername] = useState('')
@@ -33,6 +35,7 @@ export default function Login() {
         <AuthAside />
 
         <div className="login-form-wrap">
+          {operador ? <EntrarConRostro onVolver={() => setOperador(false)} /> : (
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Iniciar sesión</h1>
             <p className="lead">Ingresa tus credenciales para acceder al sistema</p>
@@ -77,11 +80,16 @@ export default function Login() {
             <button className="btn-primary" type="submit" disabled={busy || !username || !password}>
               {busy ? 'Ingresando…' : <>Iniciar sesión <ArrowRight size={16} /></>}
             </button>
+            <div className="login-separador"><span>¿Trabajas en una ambulancia?</span></div>
+            <button className="btn-ghost tall login-operador" type="button" onClick={() => setOperador(true)}>
+              <ScanFace size={17} /> Entrar con mi rostro
+            </button>
             <div className="login-links">
               <Link className="forgot" to="/recuperar">¿Olvidaste tu contraseña?</Link>
               <Link className="forgot" to="/registro">Crear una cuenta</Link>
             </div>
           </form>
+          )}
         </div>
 
       </section>

@@ -9,10 +9,6 @@ from .spark import get_spark
 # Esquemas como datos simples: así este módulo se puede importar aunque
 # pyspark no esté instalado (los tipos reales se construyen al usarlos).
 COLUMNS: dict[str, list[tuple[str, str]]] = {
-    "doctors": [
-        ("id", "int"), ("nombre", "str"), ("especialidad", "str"),
-        ("telefono", "str"), ("estado", "str"),
-    ],
     "ambulances": [
         ("id", "int"), ("placa", "str"), ("tipo", "str"),
         ("conductor", "str"), ("estado", "str"),
@@ -86,14 +82,6 @@ def count_by(name: str, column: str) -> dict[str, int]:
 def seed_if_empty() -> None:
     """Crea las tablas con datos de ejemplo la primera vez que arranca."""
     now = datetime.now(timezone.utc).isoformat(timespec="seconds")
-
-    if not _exists("doctors"):
-        _write("doctors", [
-            (1, "Dra. Laura Méndez", "Medicina de urgencias", "55 1234 5601", "Activo"),
-            (2, "Dr. Carlos Ortega", "Cardiología", "55 1234 5602", "Activo"),
-            (3, "Dra. Sofía Ramírez", "Traumatología", "55 1234 5603", "En guardia"),
-            (4, "Dr. Andrés Villalobos", "Pediatría", "55 1234 5604", "Descanso"),
-        ], "overwrite")
 
     if not _exists("ambulances"):
         _write("ambulances", [

@@ -4,14 +4,16 @@ import { Eye, EyeOff, Lock, User, UserPlus, ArrowRight } from 'lucide-react'
 import AuthAside from '../components/AuthAside.jsx'
 import { useAuth } from '../lib/auth.jsx'
 
-const ROLES = ['Despachador', 'Supervisor', 'Administrador']
+// Registro público: solo para quien reporta emergencias (rol Usuario). Las cuentas de la
+// central las crea el Administrador en «Cuentas», y las de operadores y paramédicos en sus
+// módulos. El servidor también lo exige (backend: routers/auth.py → register).
 
 export default function Register() {
   const { register } = useAuth()
   const navigate = useNavigate()
   const [fullName, setFullName] = useState('')
   const [username, setUsername] = useState('')
-  const [role, setRole] = useState(ROLES[0])
+  const [telefono, setTelefono] = useState('')
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [show, setShow] = useState(false)
@@ -31,7 +33,7 @@ export default function Register() {
     }
     setBusy(true)
     try {
-      await register({ fullName: fullName.trim(), username: username.trim(), password, role })
+      await register({ fullName: fullName.trim(), username: username.trim(), password, role: 'Usuario', telefono: telefono.trim() })
       navigate('/', { replace: true })
     } catch (err) {
       setError(err.message)
@@ -48,7 +50,7 @@ export default function Register() {
         <div className="login-form-wrap">
           <form className="login-form" onSubmit={onSubmit} noValidate>
             <h1>Crear una cuenta</h1>
-            <p className="lead">Regístrate para acceder al sistema de Emergexia</p>
+            <p className="lead">Crea tu cuenta para reportar emergencias y ver cómo va la ayuda</p>
 
             <label htmlFor="fullName"><User size={14} /> Nombre completo</label>
             <input
@@ -73,10 +75,9 @@ export default function Register() {
               required
             />
 
-            <label htmlFor="role"><UserPlus size={14} /> Rol</label>
-            <select id="role" className="input" value={role} onChange={(e) => setRole(e.target.value)}>
-              {ROLES.map((r) => <option key={r}>{r}</option>)}
-            </select>
+            <label htmlFor="telefono"><User size={14} /> Teléfono (para que te llamen)</label>
+            <input id="telefono" className="input" inputMode="tel" placeholder="10 dígitos" value={telefono} onChange={(e) => setTelefono(e.target.value)} />
+            <p className="field-hint"><UserPlus size={12} aria-hidden="true" /> ¿Trabajas en la central o en una ambulancia? No te registres aquí: el administrador te da tu acceso.</p>
 
             <label htmlFor="password"><Lock size={14} /> Contraseña</label>
             <div className="input-with-action">

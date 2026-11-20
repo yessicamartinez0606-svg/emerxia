@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight, ScanFace, ShieldCheck } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { slug } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
+import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
 
 // Ventana del operador: a la que se llega solos justo después de registrar una
 // emergencia (ver `afterSave` del módulo Emergencias en lib/modules.js). Aquí el
@@ -19,6 +20,7 @@ export default function OperatorValidationPage() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [validated, setValidated] = useState(null)   // operador ya validado en esta pantalla
+  const [asignacion, setAsignacion] = useState(null)  // { ambulancia, mensaje, listo }
   const autoOpened = useRef(false)
 
   useEffect(() => {
@@ -45,34 +47,16 @@ export default function OperatorValidationPage() {
     if (!emergency.operador && withPhoto > 0) setFaceOpen(true)
   }, [emergency, operators, withPhoto])
 
-  const onFaceSuccess = async (_photo, result) => {
-    const operator = result.candidate
-    setFaceOpen(false)
-    setSaving(true)
+  // El servidor reconoce al operador (compara su rostro con las fotos de todos), lo deja a
+  // cargo y registra la verificación. El navegador solo calcula los números del rostro.
+  const enviarRostro = async (descriptor) => {
     setSaveError('')
-    try {
-      const wasEnCurso = emergency.estado === 'En curso'
-      const changes = { operador: operator.nombre }
-      if (emergency.estado === 'Pendiente') changes.estado = 'Asignada'
-      const updated = await api(`/emergencias/${emergency.id}`, { method: 'PATCH', body: changes })
-      setEmergency(updated)
-      setValidated(operator)
-      // Bitácora de auditoría: no debe bloquear el flujo si falla.
-      api('/verificaciones', {
-        method: 'POST',
-        body: {
-          operador: operator.nombre,
-          contexto: wasEnCurso ? 'salida' : 'asignacion',
-          coincide: true,
-          distancia: result.distance,
-          emergencia_folio: emergency.folio,
-        },
-      }).catch(() => {})
-    } catch (err) {
-      setSaveError(`Se validó el rostro de ${operator.nombre}, pero no se pudo asignar a la emergencia: ${err.message}`)
-    } finally {
-      setSaving(false)
-    }
+    const r = await api(`/flota/emergencias/${emergency.id}/operador`, { method: 'POST', body: { descriptor } })
+    setAsignacion(r)
+    setValidated({ nombre: r.operador })
+    const lista = await api('/emergencias')
+    setEmergency(lista.items.find((e) => e.id === emergency.id) ?? emergency)
+    return { ...r, mensaje: `Es ${r.operador}. ${r.mensaje}` }
   }
 
   if (loadError) {
@@ -99,7 +83,6 @@ export default function OperatorValidationPage() {
     ['Paciente', emergency.paciente_nombre],
     ['Ubicación', emergency.direccion],
     ['Descripción', emergency.descripcion],
-    ['Doctor', emergency.doctor],
     ['Teléfono', emergency.paciente_telefono],
   ]
 
@@ -113,7 +96,7 @@ export default function OperatorValidationPage() {
         <div className="record-screen-title">
           <span className="record-screen-eyebrow">Operadores</span>
           <h1>Validación de operador</h1>
-          <p>Confirma con Face ID quién atiende la emergencia {emergency.folio}.</p>
+          <p>Confirma con su rostro quién atiende la emergencia {emergency.folio}.</p>
         </div>
       </header>
 
@@ -136,7 +119,7 @@ export default function OperatorValidationPage() {
       </div>
 
       <div className="panel form-section">
-        <h2 className="form-section-title">Face ID del operador</h2>
+        <h2 className="form-section-title">Confirmar al operador con su rostro</h2>
 
         {assigned ? (
           <div className="validation-done">
@@ -164,6 +147,12 @@ export default function OperatorValidationPage() {
         {operators && operators.length > 0 && withPhoto === 0 && (
           <p className="field-hint warn">Ningún operador tiene foto de referencia. Agrégala en el módulo de Operadores.</p>
         )}
+        {asignacion && (
+          <p className={`asignacion-resumen${asignacion.listo ? '' : ' apoyo'}`}>
+            {asignacion.mensaje}{' '}
+            {asignacion.listo ? 'Ya le aparece en su perfil de Operador.' : <Link to={`/emergencias/${emergency.id}`}>Elegir ambulancia</Link>}
+          </p>
+        )}
         {saveError && <p className="form-error validation-error">{saveError}</p>}
 
         <div className="validation-actions">
@@ -173,11 +162,11 @@ export default function OperatorValidationPage() {
             onClick={() => setFaceOpen(true)}
             disabled={saving || withPhoto === 0}
           >
-            <ScanFace size={16} /> {saving ? 'Asignando…' : assigned ? 'Validar de nuevo' : 'Validar con Face ID'}
+            <ScanFace size={16} /> {saving ? 'Asignando…' : assigned ? 'Validar de nuevo' : 'Confirmar con su rostro'}
           </button>
           {assigned ? (
             <>
-              <Link to={`/emergencias/${emergency.id}`} className="btn-ghost tall">Ver emergencia</Link>
+              <Link to={`/emergencias/${emergency.id}`} className="btn-ghost tall">Ver reporte y ambulancias</Link>
               <Link to="/emergencias" className="btn-ghost tall">Ir a emergencias <ArrowRight size={15} /></Link>
             </>
           ) : (
@@ -186,12 +175,14 @@ export default function OperatorValidationPage() {
         </div>
       </div>
 
+      <RutaAmbulancia emergencia={emergency} />
+
       <FaceCapture
         open={faceOpen}
-        mode="identify"
-        title={`Validar operador · ${emergency.folio}`}
-        candidates={candidates}
-        onSuccess={onFaceSuccess}
+        mode="servidor"
+        title={`Confirmar operador · ${emergency.folio}`}
+        enviar={enviarRostro}
+        onSuccess={() => setFaceOpen(false)}
         onCancel={() => setFaceOpen(false)}
       />
     </section>

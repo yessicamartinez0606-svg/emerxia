@@ -1,12 +1,18 @@
 import { Fragment, useEffect, useMemo, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowLeft, ArrowUpRight, CalendarClock, ScanFace } from 'lucide-react'
+import { Link, Navigate, useLocation, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowUpRight, CalendarClock, Pencil } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
+import RutaAmbulancia from '../components/RutaAmbulancia.jsx'
+import ControlAmbulancia from '../components/ControlAmbulancia.jsx'
+import ReporteEmergencia from '../components/ReporteEmergencia.jsx'
+import AccesoSistema from '../components/AccesoSistema.jsx'
+import EliminarRegistro from '../components/EliminarRegistro.jsx'
+import ParamedicosEmergencia from '../components/ParamedicosEmergencia.jsx'
 
 // Campo que se usa como título principal del perfil, por módulo.
-const TITLE_KEY = { doctores: 'nombre', ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre' }
+const TITLE_KEY = { ambulancias: 'placa', emergencias: 'folio', operadores: 'nombre', paramedicos: 'nombre' }
 const SUBTITLE_KEY = { emergencias: 'paciente_nombre' }
 
 function formatDate(value) {
@@ -24,7 +30,8 @@ function formatDate(value) {
 // "Datos generales". El campo de tipo foto no entra aquí: se usa en el avatar.
 function groupFields(fields) {
   const groups = []
-  fields.filter((f) => f.type !== 'photo').forEach((f) => {
+  // La contraseña (`hideInDetail`) nunca se muestra: se cambia en «Acceso al sistema».
+  fields.filter((f) => f.type !== 'photo' && !f.hideInDetail).forEach((f) => {
     const name = f.group ?? 'Datos generales'
     let bucket = groups.find((b) => b.name === name)
     if (!bucket) {
@@ -44,16 +51,28 @@ export default function RecordDetailPage() {
 }
 
 function DetailView({ mod, id }) {
+  // Aviso que deja el formulario al guardar (p. ej. qué ambulancias se asignaron solas).
+  const notice = useLocation().state?.notice
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [related, setRelated] = useState({})
+  const [recarga, setRecarga] = useState(0)
 
   useEffect(() => {
     setError('')
-    setItems(null)
     api(`/${mod.key}`)
       .then((d) => setItems(d.items ?? []))
       .catch((e) => setError(e.message))
+  }, [mod.key, recarga])
+
+  // La ficha de una emergencia se actualiza sola: así la central ve al momento lo que marcan
+  // el operador (salida, llegada…) y el paramédico (paciente, signos vitales).
+  useEffect(() => {
+    if (mod.key !== 'emergencias') return undefined
+    const t = setInterval(() => setRecarga((n) => n + 1), 20000)
+    const ya = () => setRecarga((n) => n + 1)
+    window.addEventListener('emergexia:emergencia', ya)
+    return () => { clearInterval(t); window.removeEventListener('emergexia:emergencia', ya) }
   }, [mod.key])
 
   // Campos como "operador" o "ambulancia" (en Emergencias) apuntan a otra
@@ -128,12 +147,11 @@ function DetailView({ mod, id }) {
           <h1>{(titleKey && item[titleKey]) || `${mod.singular} #${item.id}`}</h1>
           {subtitleKey && item[subtitleKey] && <p>{item[subtitleKey]}</p>}
         </div>
-        {mod.key === 'emergencias' && !item.operador && (
-          <Link to={`/operadores/validar/${item.id}`} className="btn-primary compact record-screen-cta">
-            <ScanFace size={16} /> Validar operador
-          </Link>
+        {mod.editar && (
+          <Link to={`/${mod.key}/${item.id}/editar`} className="btn-ghost tall record-editar"><Pencil size={15} /> Editar</Link>
         )}
       </header>
+      {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
       <div className="panel profile-hero">
         <div className="profile-avatar">
@@ -157,13 +175,21 @@ function DetailView({ mod, id }) {
         </div>
       </div>
 
+      {mod.key === 'ambulancias' && <ControlAmbulancia id={item.id} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.key === 'emergencias' && <ReporteEmergencia emergencia={item} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.key === 'emergencias' && <ParamedicosEmergencia emergencia={item} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.key === 'emergencias' && <RutaAmbulancia emergencia={item} />}
+      {mod.credenciales && <AccesoSistema mod={mod} item={item} onCambio={() => setRecarga((n) => n + 1)} />}
+      {mod.eliminar && <EliminarRegistro mod={mod} item={item} />}
+
       <div className={`profile-sections ${groups.length === 1 ? 'single' : ''}`}>
         {groups.map((g) => (
           <div className="panel form-section" key={g.name}>
             <h2 className="form-section-title">{g.name}</h2>
             <dl className="kv profile-kv">
               {g.fields.map((f) => {
-                const value = item[f.key]
+                // `format` convierte valores que no son texto (fechas, listas) a algo legible.
+                const value = f.format ? f.format(item[f.key], item) : item[f.key]
                 const col = mod.columns.find((c) => c.key === f.key)
                 const isBadge = col?.badge
                 const link = f.source ? resolveLink(f, value) : null

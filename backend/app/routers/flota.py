@@ -1,0 +1,606 @@
+"""Flota de ambulancias por hospital, gasolina, historial y reporte de emergencias (ver app/flota.py).
+
+    GET   /api/flota/hospitales                       ambulancias agrupadas por hospital
+    GET   /api/flota/ambulancias/{id}                 ficha: conductor, gasolina, cargas e historial
+    PATCH /api/flota/ambulancias/{id}                 cambiar estatus, hospital o conductor
+    POST  /api/flota/ambulancias/{id}/combustible     carga de gasolina (solo su conductor)
+    GET   /api/flota/historial                        historial (filtros: ambulancia, emergencia, tipo)
+    POST  /api/flota/emergencias/{id}/asignar         plan de ambulancias (confirmar=true lo aplica)
+    POST  /api/flota/emergencias/{id}/operador        operador validado por Face ID (sale en su ambulancia)
+    POST  /api/flota/emergencias/{id}/paramedicos     paramédico reconocido por Face ID (se necesitan 2)
+    DELETE /api/flota/emergencias/{id}/paramedicos/{pm}  quitarlo de la emergencia
+    POST  /api/flota/emergencias/{id}/evento          salida, llegada, traslado o cierre
+    GET   /api/flota/emergencias/{id}/reporte         reporte completo de la emergencia
+"""
+from fastapi import APIRouter, Depends, HTTPException, Query
+
+from .. import flota, vehiculos
+from ..repository import insert_row, list_rows, update_row
+from ..schemas import (AmbulanciaPatch, AsignarIn, CargaCombustibleIn, EventoEmergenciaIn, OperadorEmergenciaIn,
+                       ParamedicoEmergenciaIn)
+from ..security import current_username
+
+router = APIRouter(prefix="/api/flota", tags=["flota"], dependencies=[Depends(current_username)])
+
+TIPOS_HISTORIAL = {
+    "alta": "Nueva ambulancia",
+    "estado": "Cambio de estatus",
+    "asignacion": "Asignada a emergencia",
+    "salida": "Salida",
+    "llegada": "Llegada al lugar",
+    "traslado": "Traslado a hospital",
+    "liberacion": "Regresa libre",
+    "combustible": "Carga de gasolina",
+    "consumo": "Gasolina usada",
+    "conductor": "Cambio de conductor",
+    "hospital": "Cambio de hospital",
+    "aviso": "Aviso",
+    "atención": "Atención del paramédico",
+    "baja": "Registro eliminado",
+    "edicion": "Datos editados",
+}
+
+
+# ─────────────────────────── utilidades ───────────────────────────
+
+def registrar(tipo: str, detalle: str, usuario: str | None = None, **campos) -> dict:
+    """Agrega un renglón al historial."""
+    return insert_row("historial", {
+        "tipo": tipo,
+        "detalle": detalle,
+        "ambulancia": campos.get("ambulancia"),
+        "operador": campos.get("operador"),
+        "emergencia": campos.get("emergencia"),
+        "hospital": campos.get("hospital"),
+        "usuario": usuario,
+    })
+
+
+def _sin_foto(doc: dict | None) -> dict | None:
+    return {k: v for k, v in doc.items() if k != "foto"} if doc else None
+
+
+def _por(nombre: str, campo: str, valor) -> dict | None:
+    if valor in (None, ""):
+        return None
+    return next((r for r in list_rows(nombre) if str(r.get(campo, "")).strip().lower() == str(valor).strip().lower()), None)
+
+
+def _ambulancia(amb_id: int) -> dict:
+    amb = _por("ambulances", "id", amb_id)
+    if not amb:
+        raise HTTPException(404, "No existe esa ambulancia.")
+    return amb
+
+
+def _emergencia(em_id: int) -> dict:
+    em = _por("emergencies", "id", em_id)
+    if not em:
+        raise HTTPException(404, "No existe esa emergencia.")
+    return em
+
+
+def _placas(em: dict) -> list[str]:
+    if em.get("ambulancias"):
+        return list(em["ambulancias"])
+    return [p.strip() for p in (em.get("ambulancia") or "").split(",") if p.strip()]
+
+
+def _ubicacion(em: dict) -> dict | None:
+    """Coordenadas de la emergencia: las que marcó quien la reportó o, si no, las de su dirección."""
+    if em.get("lat") is not None and em.get("lng") is not None:
+        return {"lat": em["lat"], "lng": em["lng"]}
+    try:
+        from .. import red_vial
+        lugar = red_vial.geocodificar(em.get("direccion", ""))
+        return {"lat": lugar["lat"], "lng": lugar["lng"]}
+    except Exception:  # noqa: BLE001  sin internet o dirección incompleta: se ordena por el hospital base
+        return None
+
+
+def _historial(**filtros) -> list[dict]:
+    filas = list_rows("historial")
+    for campo, valor in filtros.items():
+        if valor:
+            filas = [f for f in filas if str(f.get(campo) or "").lower() == str(valor).lower()]
+    return sorted(filas, key=lambda f: f["id"], reverse=True)
+
+
+# ─────────────────────────── hospitales y ambulancias ───────────────────────────
+
+@router.get("/hospitales")
+def hospitales():
+    hs = flota.resumen_hospitales(list_rows("ambulances"))
+    total = sum(len(h["ambulancias"]) for h in hs)
+    return {
+        "hospitales": hs,
+        "estados": flota.ESTADOS,
+        "combustible_minimo": flota.COMBUSTIBLE_MINIMO,
+        "totales": {e: sum(h["conteo"][e] for h in hs) for e in flota.ESTADOS} | {"total": total},
+    }
+
+
+@router.get("/ambulancias/{amb_id}")
+def ficha_ambulancia(amb_id: int):
+    amb = flota.normalizar(_ambulancia(amb_id))
+    cargas = sorted((c for c in list_rows("cargas_combustible") if c.get("ambulancia") == amb["placa"]),
+                    key=lambda c: c["id"], reverse=True)
+    return {
+        "ambulancia": amb,
+        "conductor": _sin_foto(_por("operators", "nombre", amb["conductor"])),
+        "conductor_foto": (_por("operators", "nombre", amb["conductor"]) or {}).get("foto"),
+        "emergencia": _sin_foto(_por("emergencies", "folio", amb["emergencia_actual"])),
+        "cargas": cargas,
+        "litros_cargados": round(sum(c.get("litros", 0) for c in cargas), 1),
+        "gasto_total": round(sum(c.get("costo") or 0 for c in cargas), 2),
+        "historial": _historial(ambulancia=amb["placa"])[:100],
+        "hospitales": flota.NOMBRES_HOSPITALES,
+        "combustible_minimo": flota.COMBUSTIBLE_MINIMO,
+    }
+
+
+@router.patch("/ambulancias/{amb_id}")
+def cambiar_ambulancia(amb_id: int, body: AmbulanciaPatch, usuario: str = Depends(current_username)):
+    amb = flota.normalizar(_ambulancia(amb_id))
+    placa = amb["placa"]
+    cambios: dict = {}
+    motivo = f" Motivo: {body.motivo.strip()}." if body.motivo.strip() else ""
+
+    if body.estado and body.estado != amb["estado"]:
+        if amb["estado"] == "Ocupada":
+            raise HTTPException(409, f"{placa} está atendiendo {amb['emergencia_actual'] or 'una emergencia'}. "
+                                     "Ciérrala desde el reporte de la emergencia para liberar la ambulancia.")
+        cambios["estado"] = body.estado
+        registrar("estado", f"{placa}: {amb['estado']} → {body.estado}.{motivo}", usuario,
+                  ambulancia=placa, hospital=amb["hospital"], operador=amb["conductor"] or None)
+
+    if body.hospital and body.hospital != amb["hospital"]:
+        if body.hospital not in flota.NOMBRES_HOSPITALES:
+            raise HTTPException(422, "Elige uno de los hospitales de la lista.")
+        if amb["estado"] == "Ocupada":
+            raise HTTPException(409, f"{placa} está en una emergencia; cámbiala de hospital cuando regrese.")
+        cambios["hospital"] = body.hospital
+        registrar("hospital", f"{placa} pasa de {amb['hospital']} a {body.hospital}.{motivo}", usuario,
+                  ambulancia=placa, hospital=body.hospital)
+
+    if body.conductor is not None and body.conductor != amb["conductor"]:
+        if body.conductor:
+            if not _por("operators", "nombre", body.conductor):
+                raise HTTPException(422, f"No hay un operador llamado {body.conductor}.")
+            otra = next((a for a in list_rows("ambulances")
+                         if a["id"] != amb_id and (a.get("conductor") or "").lower() == body.conductor.lower()), None)
+            if otra:
+                raise HTTPException(409, f"{body.conductor} ya conduce {otra['placa']}. Quítalo de esa ambulancia primero.")
+        cambios["conductor"] = body.conductor
+        registrar("conductor", f"{placa}: conductor {amb['conductor'] or 'sin asignar'} → {body.conductor or 'sin asignar'}.",
+                  usuario, ambulancia=placa, operador=body.conductor or None, hospital=amb["hospital"])
+
+    for campo in ("tanque_litros", "rendimiento_km_l"):
+        valor = getattr(body, campo)
+        if valor is not None and valor != amb[campo]:
+            cambios[campo] = valor
+
+    if not cambios:
+        return ficha_ambulancia(amb_id)
+    update_row("ambulances", amb_id, cambios)
+    asignar_pendientes(usuario)        # si quedó libre, atiende a las emergencias en espera
+    return ficha_ambulancia(amb_id)
+
+
+@router.post("/ambulancias/{amb_id}/combustible", status_code=201)
+def cargar_combustible(amb_id: int, body: CargaCombustibleIn, usuario: str = Depends(current_username)):
+    """Carga desde la central. Si trae el rostro del conductor, el servidor lo compara con su
+    foto: si coincide queda verificada; si no, se rechaza."""
+    verificado = False
+    if body.descriptor is not None:
+        from .auth import coincide_con, registrar_verificacion
+        op = _por("operators", "nombre", body.operador)
+        ok, d, motivo = coincide_con(body.descriptor, op)
+        registrar_verificacion(body.operador, "salida", ok, d, usuario=usuario)
+        if not ok:
+            raise HTTPException(403, motivo)
+        verificado = True
+    return registrar_carga(amb_id, body, usuario, verificado)
+
+
+def registrar_carga(amb_id: int, body: CargaCombustibleIn, usuario: str, verificado: bool) -> dict:
+    amb = _ambulancia(amb_id)
+    try:
+        carga = flota.aplicar_carga(amb, body.operador, body.litros, body.kilometraje)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    placa = amb["placa"]
+    insert_row("cargas_combustible", {
+        "ambulancia": placa,
+        "operador": body.operador.strip(),
+        "litros": body.litros,
+        "costo": body.costo,
+        "kilometraje": body.kilometraje,
+        "combustible_antes": carga["antes"],
+        "combustible_despues": carga["despues"],
+        "estacion": body.estacion.strip(),
+        "notas": body.notas.strip(),
+        "verificado_facial": verificado,
+        "registrado_por": usuario,
+    })
+    update_row("ambulances", amb_id, carga["cambios"])
+    costo = f" (${body.costo:,.2f})" if body.costo else ""
+    registrar("combustible",
+              f"{body.operador} cargó {body.litros:g} L a {placa}{costo}: {int(carga['antes'])} % → {int(carga['despues'])} %."
+              + (" Confirmado con su rostro." if verificado else ""),
+              usuario, ambulancia=placa, operador=body.operador.strip(), hospital=flota.normalizar(amb)["hospital"])
+    asignar_pendientes(usuario)        # con gasolina suficiente ya puede salir
+    return ficha_ambulancia(amb_id)
+
+
+@router.get("/historial")
+def historial(ambulancia: str | None = None, emergencia: str | None = None, tipo: str | None = None,
+              operador: str | None = None, limite: int = Query(300, ge=1, le=2000)):
+    filas = _historial(ambulancia=ambulancia, emergencia=emergencia, tipo=tipo, operador=operador)
+    return {"total": len(filas), "items": filas[:limite], "tipos": TIPOS_HISTORIAL}
+
+
+# ─────────────────────────── emergencias ───────────────────────────
+
+@router.post("/emergencias/{em_id}/asignar")
+def asignar(em_id: int, body: AsignarIn, usuario: str = Depends(current_username)):
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    ya = _placas(em)
+    cantidad = body.cantidad or int(em.get("ambulancias_requeridas") or 1)
+    faltan = cantidad - len(ya)
+    destino = _ubicacion(em)
+    if faltan <= 0:
+        return {"plan": None, "asignadas": ya, "mensaje": f"Ya tiene las {len(ya)} ambulancia(s) que necesita."}
+
+    # Primero las que eligió el administrador; si la emergencia ya tiene operador asignado,
+    # también su ambulancia, para que salga en la que maneja.
+    preferidas = list(body.placas)
+    amb_op = _ambulancia_de(em.get("operador"))
+    if amb_op and amb_op["placa"] not in ya:
+        preferidas.append(amb_op["placa"])
+    plan = flota.planear(list_rows("ambulances"), faltan, destino, preferidas)
+    plan["ubicada"] = destino is not None
+    plan["manual"] = bool(body.placas)
+    if not body.confirmar:
+        return {"plan": plan, "asignadas": ya}
+    if not plan["elegidas"]:
+        raise HTTPException(409, "No hay ambulancias libres con conductor y gasolina suficiente en la zona.")
+
+    folio = em["folio"]
+    nuevas = [a["placa"] for a in plan["elegidas"]]
+    for a in plan["elegidas"]:
+        update_row("ambulances", a["id"], {"estado": "Ocupada", "emergencia_actual": folio})
+        registrar("asignacion", f"{a['placa']} ({a['hospital']}) asignada a {folio}. Conduce {a['conductor']}.",
+                  usuario, ambulancia=a["placa"], operador=a["conductor"], emergencia=folio, hospital=a["hospital"])
+    if plan["usa_otros_hospitales"] or plan["faltan"]:
+        registrar("aviso", plan["resumen"], usuario, emergencia=folio)
+    todas = ya + nuevas
+    update_row("emergencies", em_id, {
+        "ambulancias": todas,
+        "ambulancia": ", ".join(todas),
+        "ambulancias_requeridas": cantidad,
+        "hospital_salida": em.get("hospital_salida") or plan["elegidas"][0]["hospital"],
+        "estado": "Asignada" if em.get("estado") == "Pendiente" else em.get("estado"),
+        "asignada_en": em.get("asignada_en") or flota.ahora(),
+        # El operador de la emergencia es quien maneja la primera ambulancia (si no había uno).
+        "operador": em.get("operador") or plan["elegidas"][0]["conductor"],
+    })
+    return {"plan": plan, "asignadas": todas}
+
+
+# ─────────────────────── vehículos reales (API vPIC) ───────────────────────
+
+@router.get("/vehiculos/marcas")
+def marcas_vehiculo():
+    """Chasises de ambulancia que se consultan en la API vPIC, con su ficha técnica."""
+    return {"marcas": [{k: f[k] for k in ("marca", "base", "motor", "tanque_litros", "rendimiento_km_l", "tipo", "ficha")}
+                       for f in vehiculos.FICHAS], "anios": vehiculos.ANIOS}
+
+
+@router.get("/vehiculos/modelos")
+def modelos_vehiculo(marca: str, anio: int):
+    """Modelos reales de esa marca y año según la API vPIC (solo los que sirven de ambulancia)."""
+    if anio < 1996 or anio > 2030:
+        raise HTTPException(422, "Elige un año entre 1996 y 2030.")
+    try:
+        return vehiculos.modelos_ambulancia(marca, anio)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+
+
+def importar_flota_real(usuario: str | None = None) -> dict:
+    """Pone vehículos reales a las ambulancias que no tienen y crea las que faltan en cada
+    hospital (app/vehiculos.py). Las placas e historial de las que ya existen no cambian."""
+    plan = vehiculos.plan_flota(list_rows("ambulances"), list_rows("operators"))
+    for amb_id, cambios in plan["actualizar"]:
+        update_row("ambulances", amb_id, cambios)
+    creadas = [insert_row("ambulances", a) for a in plan["crear"]]
+    for a in creadas:
+        registrar("alta", f"{a['placa']} ({a['marca']} {a['modelo']} {a['anio']}) se agrega a {a['hospital']}."
+                  + (f" Conduce {a['conductor']}." if a.get("conductor") else ""),
+                  usuario, ambulancia=a["placa"], hospital=a["hospital"], operador=a.get("conductor") or None)
+    if plan["actualizar"] or creadas:
+        registrar("aviso", f"Flota con vehículos reales ({plan['fuente']}): {len(plan['actualizar'])} ambulancia(s) "
+                           f"con marca y modelo nuevos y {len(creadas)} ambulancia(s) nuevas.", usuario)
+        asignar_pendientes(usuario)
+    return {"fuente": plan["fuente"], "actualizadas": len(plan["actualizar"]), "creadas": [a["placa"] for a in creadas],
+            "mensaje": (f"Listo: {len(plan['actualizar'])} ambulancia(s) ya tienen marca y modelo reales y se agregaron "
+                        f"{len(creadas)} nuevas. Fuente: {plan['fuente']}.")
+                       if plan["actualizar"] or creadas else "Todas las ambulancias ya tienen vehículo real y cada hospital tiene las suyas."}
+
+
+@router.post("/ambulancias/importar-reales")
+def importar_reales(usuario: str = Depends(current_username)):
+    return importar_flota_real(usuario)
+
+
+# ─────────────────────── asignación automática ───────────────────────
+# Al registrar una emergencia (desde la central o desde el perfil de Usuario) las ambulancias
+# se asignan solas con flota.planear: primero las libres del IMSS 220 y, si no alcanzan, las
+# de los hospitales más cercanos. El operador de la emergencia es quien maneja la primera.
+# Si no hay ambulancias libres, la emergencia queda esperando y se completa sola en cuanto
+# se libera una (al cerrar otra emergencia, al cambiar el estatus o al cargar gasolina).
+
+PESO_PRIORIDAD = {"Alta": 0, "Media": 1, "Baja": 2}
+
+
+def _faltan(em: dict) -> int:
+    return int(em.get("ambulancias_requeridas") or 1) - len(_placas(em))
+
+
+def asignar_automatico(em_id: int, usuario: str | None = None) -> dict:
+    """Asigna las ambulancias que le faltan a la emergencia. Nunca lanza error: si no hay
+    ambulancias libres, lo deja anotado en el historial y regresa cuántas faltan."""
+    em = _emergencia(em_id)
+    folio = em["folio"]
+    if em.get("estado") == "Cerrada" or _faltan(em) <= 0:
+        return {"automatica": True, "asignadas": _placas(em), "faltan": 0, "operador": em.get("operador"),
+                "mensaje": f"{folio} ya tiene sus ambulancias."}
+    try:
+        r = asignar(em_id, AsignarIn(confirmar=True), usuario or "sistema")
+    except HTTPException as exc:
+        if exc.status_code != 409:
+            raise
+        n = _faltan(em)
+        if not em.get("sin_ambulancias_avisado"):
+            registrar("aviso", f"{folio}: no hay ambulancias libres en la zona. Se asignarán solas en cuanto se libere una.",
+                      usuario, emergencia=folio)
+            update_row("emergencies", em_id, {"sin_ambulancias_avisado": True})
+        return {"automatica": True, "asignadas": _placas(em), "faltan": n, "operador": em.get("operador"),
+                "mensaje": f"No hay ambulancias libres: {folio} queda en espera y se asignará sola en cuanto se libere una."}
+    plan = r["plan"]
+    em = _emergencia(em_id)
+    if plan["faltan"]:
+        update_row("emergencies", em_id, {"sin_ambulancias_avisado": True})
+    return {"automatica": True, "asignadas": r["asignadas"], "faltan": plan["faltan"], "operador": em.get("operador"),
+            "usa_otros_hospitales": plan["usa_otros_hospitales"],
+            "mensaje": plan["resumen"] + (f" A cargo: {em['operador']}." if em.get("operador") else "")}
+
+
+def _orden_espera(em: dict) -> tuple:
+    """Primero prioridad Alta; entre iguales, las críticas según el triaje (si hay signos
+    vitales) y luego la más antigua."""
+    critica = 0
+    try:
+        from .. import triaje
+        if triaje.tiene_signos(em):
+            critica = -triaje.clasificar(triaje.signos_de(em))["probabilidad"]
+    except Exception:  # noqa: BLE001  (sin scikit-learn o signos fuera de rango)
+        pass
+    return (PESO_PRIORIDAD.get(em.get("prioridad"), 1), critica, str(em.get("created_at") or ""), em.get("id", 0))
+
+
+def asignar_pendientes(usuario: str | None = None) -> list[dict]:
+    """Completa las emergencias abiertas que se quedaron sin todas sus ambulancias."""
+    esperando = [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada" and _faltan(e) > 0]
+    hechas = []
+    for em in sorted(esperando, key=_orden_espera):
+        antes = len(_placas(em))
+        r = asignar_automatico(em["id"], usuario)
+        if len(r["asignadas"]) > antes:
+            hechas.append({"folio": em["folio"], **r})
+        if r["faltan"]:
+            break          # ya no hay más ambulancias libres: las demás siguen esperando
+    return hechas
+
+
+@router.post("/emergencias/{em_id}/asignar-automatico")
+def reintentar_asignacion(em_id: int, usuario: str = Depends(current_username)):
+    """Vuelve a buscar ambulancias para la emergencia (por si se liberó alguna)."""
+    return {**asignar_automatico(em_id, usuario), "reporte": reporte(em_id)}
+
+
+def _ambulancia_de(operador: str | None) -> dict | None:
+    if not operador:
+        return None
+    return next((a for a in list_rows("ambulances") if (a.get("conductor") or "").strip().lower() == operador.strip().lower()), None)
+
+
+@router.post("/emergencias/{em_id}/operador")
+def asignar_operador(em_id: int, body: OperadorEmergenciaIn, usuario: str = Depends(current_username)):
+    """El servidor reconoce al operador por su rostro (lo compara con las fotos de todos) y lo
+    deja a cargo de la emergencia; si su ambulancia está lista, sale en ella. Así le aparece
+    en su perfil de Operador."""
+    from .auth import reconocer, registrar_verificacion
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    op, d, motivo = reconocer(body.descriptor, list_rows("operators"))
+    folio = em["folio"]
+    registrar_verificacion(op["nombre"] if op else "(no reconocido)",
+                           "salida" if em.get("estado") == "En curso" else "asignacion", op is not None, d, folio,
+                           tipo="operador", usuario=usuario)
+    if not op:
+        raise HTTPException(403, motivo)
+    update_row("emergencies", em_id, {"operador": op["nombre"],
+                                      "estado": "Asignada" if em.get("estado") == "Pendiente" else em.get("estado")})
+    registrar("asignacion", f"{op['nombre']} queda a cargo de {folio} (Face ID).", usuario, operador=op["nombre"], emergencia=folio)
+
+    amb = _ambulancia_de(op["nombre"])
+    ya = _placas(em)
+    if not amb:
+        mensaje = f"{op['nombre']} no maneja ninguna ambulancia. Asígnale una en Ambulancias o elige una para la emergencia."
+        return {"operador": op["nombre"], "ambulancia": None, "mensaje": mensaje, "listo": False}
+    if amb["placa"] in ya:
+        return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": f"{op['nombre']} sale con {amb['placa']}.", "listo": True}
+    motivo = flota.motivo_no_disponible(amb)
+    if motivo:
+        mensaje = f"{amb['placa']}, la ambulancia de {op['nombre']}, no puede salir ({motivo}). Elige otra para la emergencia."
+        return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": mensaje, "listo": False}
+    requeridas = max(int(em.get("ambulancias_requeridas") or 1), len(ya) + 1)
+    asignar(em_id, AsignarIn(cantidad=len(ya) + 1, placas=[amb["placa"]], confirmar=True), usuario)
+    if requeridas > len(ya) + 1:
+        update_row("emergencies", em_id, {"ambulancias_requeridas": requeridas})
+    return {"operador": op["nombre"], "ambulancia": amb["placa"], "mensaje": f"{op['nombre']} sale con {amb['placa']}.", "listo": True}
+
+
+# ─────────────────────────── paramédicos de la emergencia ───────────────────────────
+
+PARAMEDICOS_POR_EMERGENCIA = 2
+
+
+def paramedicos_de(em: dict | None) -> list[dict]:
+    """Paramédicos de la emergencia como [{id, nombre, nivel, ...}]. Versiones anteriores los
+    guardaban solo con el nombre (["Maria fyguhio"]): se aceptan igual, sin id."""
+    lista = (em or {}).get("paramedicos") or []
+    if not isinstance(lista, list):
+        return []
+    return [p if isinstance(p, dict) else {"id": None, "nombre": str(p)} for p in lista if p]
+
+
+def emergencia_de_paramedico(pm_id: int, abiertas: list[dict] | None = None) -> dict | None:
+    """La emergencia abierta a la que va ese paramédico (o None)."""
+    abiertas = abiertas if abiertas is not None else [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada"]
+    return next((e for e in abiertas if e.get("estado") != "Cerrada"
+                 and any(p.get("id") == pm_id for p in paramedicos_de(e))), None)
+
+
+@router.post("/emergencias/{em_id}/paramedicos")
+def agregar_paramedico(em_id: int, body: ParamedicoEmergenciaIn, usuario: str = Depends(current_username)):
+    """Paramédico reconocido por su rostro en la central: va a esta emergencia, en la
+    ambulancia que la atiende. Se necesitan PARAMEDICOS_POR_EMERGENCIA."""
+    from .auth import reconocer, registrar_verificacion
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    # El servidor decide quién es: compara el rostro con las fotos de todos los paramédicos.
+    pm, d, motivo = reconocer(body.descriptor, list_rows("paramedics"))
+    registrar_verificacion(pm["nombre"] if pm else "(no reconocido)", "asignacion", pm is not None, d,
+                           em["folio"], tipo="paramedico", usuario=usuario)
+    if not pm:
+        raise HTTPException(403, motivo)
+    actuales = paramedicos_de(em)
+    if any(p.get("id") == pm["id"] for p in actuales):
+        raise HTTPException(409, f"{pm['nombre']} ya va a esta emergencia.")
+    if len(actuales) >= PARAMEDICOS_POR_EMERGENCIA:
+        raise HTTPException(409, f"Esta emergencia ya tiene sus {PARAMEDICOS_POR_EMERGENCIA} paramédicos.")
+    if pm.get("estado") != "En servicio":
+        raise HTTPException(409, f"{pm['nombre']} está «{pm.get('estado')}»: solo pueden ir paramédicos en servicio.")
+    otra = emergencia_de_paramedico(pm["id"])
+    if otra:
+        raise HTTPException(409, f"{pm['nombre']} ya está atendiendo {otra['folio']}.")
+    folio = em["folio"]
+    actuales.append({"id": pm["id"], "nombre": pm["nombre"], "nivel": pm.get("nivel"),
+                     "verificado_en": flota.ahora(), "verificado_por": usuario})
+    update_row("emergencies", em_id, {"paramedicos": actuales})
+    placas = _placas(em)
+    registrar("asignacion", f"{pm['nombre']} ({pm.get('nivel')}) va a {folio}"
+              + (f" en {placas[0]}" if placas else "") + ". Confirmado con su rostro.",
+              usuario, ambulancia=placas[0] if placas else None, emergencia=folio)
+    return {**reporte(em_id), "reconocido": pm["nombre"]}
+
+
+@router.delete("/emergencias/{em_id}/paramedicos/{pm_id}")
+def quitar_paramedico(em_id: int, pm_id: int, usuario: str = Depends(current_username)):
+    em = _emergencia(em_id)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    actuales = paramedicos_de(em)
+    quitado = next((p for p in actuales if p.get("id") == pm_id), None)
+    if not quitado:
+        raise HTTPException(404, "Ese paramédico no va a esta emergencia.")
+    update_row("emergencies", em_id, {"paramedicos": [p for p in actuales if p.get("id") != pm_id]})
+    registrar("aviso", f"{quitado['nombre']} ya no va a {em['folio']}.", usuario, emergencia=em["folio"])
+    return reporte(em_id)
+
+
+@router.post("/emergencias/{em_id}/evento")
+def evento(em_id: int, body: EventoEmergenciaIn, usuario: str = Depends(current_username)):
+    em = _emergencia(em_id)
+    folio = em["folio"]
+    placas = _placas(em)
+    if em.get("estado") == "Cerrada":
+        raise HTTPException(409, "La emergencia ya está cerrada.")
+    if not placas:
+        raise HTTPException(409, "Primero asigna las ambulancias.")
+    nota = body.observaciones.strip()
+    ambs = [a for a in list_rows("ambulances") if a.get("placa") in placas]
+    cambios: dict = {}
+
+    if body.tipo == "salida":
+        cambios = {"estado": "En curso", "hora_salida": flota.ahora()}
+        for a in ambs:
+            registrar("salida", f"{a['placa']} sale de {flota.normalizar(a)['hospital']} rumbo a {folio}." + (f" {nota}" if nota else ""),
+                      usuario, ambulancia=a["placa"], operador=a.get("conductor"), emergencia=folio)
+    elif body.tipo == "llegada":
+        cambios = {"hora_llegada": flota.ahora()}
+        registrar("llegada", f"Las ambulancias llegan al lugar ({em.get('direccion', '')})." + (f" {nota}" if nota else ""),
+                  usuario, emergencia=folio)
+    elif body.tipo == "traslado":
+        if body.hospital_destino and body.hospital_destino not in flota.NOMBRES_HOSPITALES:
+            raise HTTPException(422, "Elige uno de los hospitales de la lista.")
+        destino = body.hospital_destino or flota.HOSPITAL_BASE
+        cambios = {"hora_traslado": flota.ahora(), "hospital_destino": destino}
+        registrar("traslado", f"Paciente trasladado a {destino}." + (f" {nota}" if nota else ""),
+                  usuario, emergencia=folio, hospital=destino)
+    else:  # cierre
+        km = body.km_recorridos or 0
+        total_litros = 0.0
+        for a in ambs:
+            c = flota.consumo_por_km(a, km)
+            total_litros += c["litros"]
+            update_row("ambulances", a["id"], {**c["cambios"], "estado": "Libre", "emergencia_actual": None})
+            registrar("consumo", f"{a['placa']} recorrió {km:g} km y gastó {c['litros']:g} L: {int(c['antes'])} % → {int(c['despues'])} %.",
+                      usuario, ambulancia=a["placa"], operador=a.get("conductor"), emergencia=folio)
+            registrar("liberacion", f"{a['placa']} termina {folio} y queda libre.", usuario,
+                      ambulancia=a["placa"], operador=a.get("conductor"), emergencia=folio, hospital=flota.normalizar(a)["hospital"])
+            if c["despues"] < flota.COMBUSTIBLE_MINIMO:
+                registrar("aviso", f"{a['placa']} quedó con {int(c['despues'])} % de gasolina: debe cargar antes de su siguiente salida.",
+                          usuario, ambulancia=a["placa"], operador=a.get("conductor"))
+        cambios = {"estado": "Cerrada", "hora_cierre": flota.ahora(), "km_recorridos": km,
+                   "litros_consumidos": round(total_litros, 1)}
+    if nota:
+        cambios["observaciones"] = ((em.get("observaciones") or "") + ("\n" if em.get("observaciones") else "") + nota).strip()
+    update_row("emergencies", em_id, cambios)
+    if body.tipo == "cierre":
+        asignar_pendientes(usuario)    # las ambulancias liberadas van a las emergencias en espera
+    return reporte(em_id)
+
+
+@router.get("/emergencias/{em_id}/reporte")
+def reporte(em_id: int):
+    em = _emergencia(em_id)
+    folio = em["folio"]
+    placas = _placas(em)
+    ambulancias = []
+    for p in placas:
+        a = _por("ambulances", "placa", p)
+        if not a:
+            continue
+        a = flota.normalizar(a)
+        ambulancias.append({**a, "conductor_info": _sin_foto(_por("operators", "nombre", a["conductor"]))})
+    verificaciones = [v for v in list_rows("verificaciones") if v.get("emergencia_folio") == folio]
+    return {
+        "emergencia": em,
+        "ambulancias": ambulancias,
+        "operador": _sin_foto(_por("operators", "nombre", em.get("operador"))),
+        "hospital_salida": em.get("hospital_salida"),
+        "linea_tiempo": sorted(_historial(emergencia=folio), key=lambda f: f["id"]),
+        "verificaciones": [_sin_foto(v) for v in verificaciones],
+        "requeridas": int(em.get("ambulancias_requeridas") or 1),
+        "paramedicos": paramedicos_de(em),
+        "paramedicos_requeridos": PARAMEDICOS_POR_EMERGENCIA,
+        "hospitales": flota.NOMBRES_HOSPITALES,
+    }

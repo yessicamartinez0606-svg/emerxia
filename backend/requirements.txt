@@ -5,10 +5,10 @@ PyJWT==2.10.1
 python-dotenv==1.0.1
 pydantic==2.10.4
 pymongo==4.10.1
-
-# Machine Learning (triage: app/ml/ y entrenar_ml.py)
-scikit-learn>=1.5
-pandas>=2.2
+# Modelos de IA (app/eta.py, app/triaje.py, app/segmentacion.py…) y triage de app/ml/
 numpy>=1.26
-matplotlib>=3.8
+pandas>=2.2
+scikit-learn>=1.5
 joblib>=1.4
+# Solo para correr las prácticas sueltas de backend/ia/ y entrenar_ml.py (sus gráficas)
+matplotlib>=3.8

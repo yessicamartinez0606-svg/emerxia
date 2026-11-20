@@ -21,22 +21,34 @@ export function AuthProvider({ children }) {
       .finally(() => setLoading(false))
   }, [logout])
 
+  const aceptar = useCallback((data) => {
+    setToken(data.token)
+    setUser(data.user)
+    return data.user
+  }, [])
+
   const login = useCallback(async (username, password) => {
     const data = await api('/auth/login', { method: 'POST', body: { username, password } })
-    setToken(data.token)
-    setUser(data.user)
-  }, [])
+    return aceptar(data)
+  }, [aceptar])
 
-  const register = useCallback(async ({ fullName, username, password, role }) => {
+  // Operadores y paramédicos pueden entrar solo con su rostro. `descriptor` son los 128
+  // números que calcula face-api.js de la foto recién tomada; el servidor busca a quién
+  // corresponde (backend: POST /api/auth/rostro).
+  const loginConRostro = useCallback(async (descriptor) => {
+    const data = await api('/auth/rostro', { method: 'POST', body: { descriptor } })
+    return aceptar(data)
+  }, [aceptar])
+
+  const register = useCallback(async ({ fullName, username, password, role, telefono }) => {
     const data = await api('/auth/register', {
       method: 'POST',
-      body: { full_name: fullName, username, password, role },
+      body: { full_name: fullName, username, password, role, telefono: telefono ?? '' },
     })
-    setToken(data.token)
-    setUser(data.user)
-  }, [])
+    return aceptar(data)
+  }, [aceptar])
 
-  const value = useMemo(() => ({ user, loading, login, register, logout }), [user, loading, login, register, logout])
+  const value = useMemo(() => ({ user, loading, login, loginConRostro, register, logout }), [user, loading, login, loginConRostro, register, logout])
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
 

@@ -1,36 +1,28 @@
-import { CheckCircle2, X } from 'lucide-react'
+import { CheckCircle2, Zap } from 'lucide-react'
 import { evaluarFormulario } from '../lib/logica.js'
 
-// neutro: una proposición en falso no es un error (p. ej. una emergencia que no es Alta)
-const Fila = ({ ok, formula, texto, neutro }) => (
-  <li className={`field-hint ${ok ? 'ok' : neutro ? '' : 'warn'}`} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-    {ok ? <CheckCircle2 size={14} /> : <X size={14} />}
-    <strong>{formula}</strong> {texto}
+const Fila = ({ texto }) => (
+  <li className="field-hint ok" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+    <CheckCircle2 size={14} /> {texto}
   </li>
 )
 
-// Muestra, con la lógica proposicional de la emergencia, qué falta para poder asignarla.
-// El operador (q, r) no se evalúa aquí: se valida al guardar, en la ventana de Face ID.
-export default function PanelLogica({ prioridad, doctor, doctorVerificado, ambulancia }) {
-  const r = evaluarFormulario({ prioridad, doctor, doctorVerificado, ambulancia })
-
+// Explica cómo se asignará la emergencia al guardarla. Ya no se eligen ambulancias ni
+// operador a mano: el sistema los asigna solos (backend: routers/flota.py).
+// La regla M = u ∧ (p → v) vive en lib/logica.js y en backend/app/logica.py.
+export default function PanelLogica({ prioridad, requeridas }) {
+  const { p } = evaluarFormulario({ prioridad })
+  const n = Math.max(1, Number(requeridas) || 1)
   return (
     <div className="panel form-section">
-      <h2 className="form-section-title">Lógica de asignación</h2>
+      <h2 className="form-section-title titulo-icono"><Zap size={15} aria-hidden="true" /> Asignación automática</h2>
       <ul style={{ listStyle: 'none', padding: 0, margin: '8px 0', display: 'grid', gap: 4 }}>
-        <Fila ok={r.p} neutro formula="p" texto="La emergencia es de prioridad Alta" />
-        <Fila ok={r.s} formula="s" texto="El doctor está disponible (Activo o En guardia)" />
-        <Fila ok={r.t} formula="t" texto="El rostro del doctor fue verificado" />
-        <Fila ok={r.u} formula="u" texto="La ambulancia está Disponible" />
-        <Fila ok={r.v} neutro formula="v" texto="La ambulancia es Avanzada" />
-        <Fila ok={r.doctorHabilitado} formula="D = s ∧ t" texto="Doctor habilitado" />
-        <Fila ok={r.ambulanciaAdecuada} formula="M = u ∧ (p → v)" texto="Ambulancia adecuada" />
+        <Fila texto={`Al guardar se asigna${n > 1 ? `n ${n} ambulancias libres` : ' una ambulancia libre'}, con conductor y gasolina suficiente.`} />
+        <Fila texto="Salen primero del Hospital IMSS 220; si no alcanzan, de los hospitales más cercanos." />
+        <Fila texto={p ? 'Prioridad Alta: se eligen primero ambulancias Avanzadas.' : 'Se eligen primero las Avanzadas y con más gasolina.'} />
+        <Fila texto="El operador a cargo es quien maneja la primera ambulancia, y la ve al instante en su app." />
+        <Fila texto="Si no hay ambulancias libres, queda en espera y se asigna sola en cuanto se libere una." />
       </ul>
-      {r.motivos.length > 0 && (
-        <ul className="field-hint warn" style={{ margin: 0, paddingLeft: 18 }}>
-          {r.motivos.map((m) => <li key={m}>{m}</li>)}
-        </ul>
-      )}
     </div>
   )
 }

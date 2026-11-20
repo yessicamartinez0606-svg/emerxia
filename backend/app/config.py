@@ -33,7 +33,9 @@ class Settings:
     mongo_uri: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
     mongo_db: str = os.getenv("MONGO_DB") or _db_from_uri(os.getenv("MONGO_URI", "")) or "emergexia"
     mongo_timeout_ms: int = int(os.getenv("MONGO_TIMEOUT_MS", "8000"))
-    seed_demo_data: bool = _bool(os.getenv("SEED_DEMO_DATA", "false"))
+    # La primera vez, completar la flota con vehículos reales (API vPIC). Apagado por defecto:
+    # los datos los captura la central.
+    importar_flota_al_iniciar: bool = _bool(os.getenv("IMPORTAR_FLOTA_AL_INICIAR", "false"))
 
     # Carpeta de trabajo de Spark (opcional)
     data_dir: str = os.getenv("DATA_DIR", str(BASE_DIR / "data"))
@@ -42,8 +44,13 @@ class Settings:
     jwt_secret: str = os.getenv("JWT_SECRET", "dev-secret-cambiar")
     jwt_expire_minutes: int = int(os.getenv("JWT_EXPIRE_MINUTES", "480"))
     admin_username: str = os.getenv("ADMIN_USERNAME", "admin")
-    admin_password: str = os.getenv("ADMIN_PASSWORD", "admin123")
+    # Sin valor por defecto: si la base está vacía y no se define, no se crea ningún
+    # administrador (antes era "admin123", una contraseña que cualquiera podría adivinar).
+    admin_password: str = os.getenv("ADMIN_PASSWORD", "")
     admin_name: str = os.getenv("ADMIN_NAME", "Yessica López")
+
+    # Carpeta con las pantallas ya construidas (npm run build). En Docker/Render: /app/static.
+    frontend_dir: str = os.getenv("FRONTEND_DIR", str(BASE_DIR / "static"))
 
     cors_origins: list[str] = [
         o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",") if o.strip()

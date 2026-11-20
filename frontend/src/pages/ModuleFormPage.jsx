@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Camera, CheckCircle2, X } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
@@ -7,13 +7,14 @@ import { emptyForm, useSourcedOptions } from '../lib/moduleHelpers.js'
 import FaceCapture from '../components/FaceCapture.jsx'
 import PanelLogica from '../components/PanelLogica.jsx'
 import PanelTriageML from '../components/PanelTriageML.jsx'
+import ModeloVehiculo from '../components/ModeloVehiculo.jsx'
 
-const OLD_BACKEND =
-  'El servidor no confirmó que guardó en MongoDB: seguramente hay una versión ANTIGUA del backend corriendo en el puerto 8000. ' +
-  'Ciérrala (python diagnostico.py te dice cuál) y vuelve a iniciar el backend.'
+// Para quien usa el sistema no se mencionan detalles técnicos. (Causa probable: hay una
+// versión antigua del backend en el puerto 8000; `python diagnostico.py` dice cuál.)
+const OLD_BACKEND = 'No se pudo confirmar que se guardó. Avisa a soporte técnico antes de volver a intentarlo.'
 
 // Etiqueta legible del módulo dueño de una colección referenciada por `source`
-// (p. ej. "doctores" → "Doctores"), para armar mensajes genéricos sin
+// (p. ej. "operadores" → "Operadores"), para armar mensajes genéricos sin
 // hardcodear qué módulos existen.
 const sourceLabel = (src) => findModule(src)?.label ?? src
 
@@ -33,18 +34,37 @@ function groupFields(fields) {
   return groups
 }
 
+// Sirve para agregar (/:module/nuevo) y para editar (/:module/:id/editar, solo los módulos con
+// `editar: true`, p. ej. Ambulancias). Al editar se llena con los datos guardados y se manda
+// con PUT; el servidor aplica las mismas reglas que al registrar.
 export default function ModuleFormPage() {
-  const { module: key } = useParams()
+  const { module: key, id } = useParams()
   const mod = findModule(key)
-  if (!mod || mod.custom) return <Navigate to="/" replace />
-  return <FormView key={key} mod={mod} />
+  if (!mod || mod.custom || (id && !mod.editar)) return <Navigate to="/" replace />
+  return <FormView key={`${key}-${id ?? 'nuevo'}`} mod={mod} editId={id} />
 }
 
-function FormView({ mod }) {
+function FormView({ mod, editId }) {
   const navigate = useNavigate()
-  const [form, setForm] = useState(() => emptyForm(mod.fields))
-  const [saving, setSaving] = useState(false)
+  const [params] = useSearchParams()
+  const [form, setForm] = useState(() => {
+    const f = emptyForm(mod.fields)
+    // p. ej. «Agregar ambulancia» desde un hospital: /ambulancias/nuevo?hospital=...
+    mod.fields.forEach((x) => { if (params.get(x.key)) f[x.key] = params.get(x.key) })
+    return f
+  })
   const [formError, setFormError] = useState('')
+  const [original, setOriginal] = useState(editId ? null : {})
+  useEffect(() => {
+    if (!editId) return
+    api(`/${mod.key}`).then((d) => {
+      const item = (d.items ?? []).find((r) => String(r.id) === String(editId))
+      if (!item) { setFormError('No se encontró este registro. Puede que lo hayan eliminado.'); return }
+      setOriginal(item)
+      setForm(Object.fromEntries(mod.fields.map((x) => [x.key, item[x.key] == null ? '' : String(item[x.key])])))
+    }).catch((e) => setFormError(e.message))
+  }, [editId, mod])
+  const [saving, setSaving] = useState(false)
   // Campos con `hideInForm` (p. ej. el operador de una emergencia) no se piden aquí:
   // se llenan en otro paso. useMemo mantiene la misma referencia entre renders, porque
   // useSourcedOptions vuelve a leer las listas cada vez que cambia el arreglo recibido.
@@ -52,7 +72,7 @@ function FormView({ mod }) {
   const { options: sourcedOptions, loading: sourcedLoading } = useSourcedOptions(formFields)
 
   // Verificación por reconocimiento facial: modal de cámara abierto y, por
-  // cada campo que la requiere (operador, doctor…), qué valor quedó
+  // cada campo que la requiere (p. ej. operador), qué valor quedó
   // verificado en este formulario (se reinicia si cambia la selección).
   const [faceModal, setFaceModal] = useState(null)
   const [verifiedFields, setVerifiedFields] = useState({})
@@ -115,23 +135,26 @@ function FormView({ mod }) {
     setSaving(true)
     try {
       const body = { ...form }
+      if (typeof body.usuario === 'string') body.usuario = body.usuario.trim().toLowerCase()
       if (body.ambulancia === '') body.ambulancia = null
       if (body.operador === '') body.operador = null
-      if (body.doctor === '') body.doctor = null
-      const saved = await api(`/${mod.key}`, { method: 'POST', body })
+      const saved = await api(editId ? `/${mod.key}/${editId}` : `/${mod.key}`, { method: editId ? 'PUT' : 'POST', body })
       if (!saved.saved_in) {
         setFormError(OLD_BACKEND)
         setSaving(false)
         return
       }
-      const done = mod.nuevo === 'Nueva' ? 'guardada' : 'guardado'
+      const done = editId ? (mod.nuevo === 'Nueva' ? 'actualizada' : 'actualizado') : (mod.nuevo === 'Nueva' ? 'guardada' : 'guardado')
       const name = mod.singular.charAt(0).toUpperCase() + mod.singular.slice(1)
       // Si el módulo define `afterSave`, ese paso va justo después de guardar
-      // (Emergencias → ventana del operador para validar su Face ID); si no, se
+      // (Emergencias → su reporte, con las ambulancias ya asignadas); si no, se
       // regresa a la lista con el aviso de guardado.
-      navigate(mod.afterSave ? mod.afterSave(saved) : `/${mod.key}`, {
-        state: { notice: { kind: 'ok', text: `✓ ${name} ${done} en MongoDB (${saved.saved_in}), id ${saved.id}.` } },
-      })
+      const asig = saved.asignacion
+      const notice = asig
+        ? { kind: asig.faltan ? 'warn' : 'ok', text: `✓ ${name} ${saved.folio || ''} ${done}. ${asig.mensaje}` }
+        : { kind: 'ok', text: `✓ ${name} ${saved.nombre ?? saved.placa ?? ''} ${done}.`.replace(/\s+\./, '.') }
+      if (editId && saved.cambios?.length === 0) notice.text = 'No cambiaste ningún dato.'
+      navigate(editId ? `/${mod.key}/${editId}` : mod.afterSave ? mod.afterSave(saved) : `/${mod.key}`, { state: { notice } })
     } catch (err) {
       setFormError(err.message)
       setSaving(false)
@@ -176,7 +199,7 @@ function FormView({ mod }) {
         <span className="record-screen-icon"><Icon size={22} strokeWidth={1.8} /></span>
         <div className="record-screen-title">
           <span className="record-screen-eyebrow">{mod.label}</span>
-          <h1>{mod.nuevo} {mod.singular}</h1>
+          <h1>{editId ? `Editar ${mod.singular}${original?.placa ? ` ${original.placa}` : ''}` : `${mod.nuevo} ${mod.singular}`}</h1>
           <p>{mod.description}</p>
         </div>
       </header>
@@ -200,6 +223,13 @@ function FormView({ mod }) {
                           <Camera size={15} /> {form[f.key] ? 'Repetir foto' : 'Tomar foto'}
                         </button>
                       </div>
+                    ) : f.type === 'modeloApi' ? (
+                      <ModeloVehiculo id={f.key} marca={form.marca} anio={form.anio} value={form[f.key]}
+                        onElegir={(m) => m && setForm((prev) => ({
+                          ...prev, modelo: m.modelo, model_id: m.model_id, motor: m.motor, tipo: m.tipo_sugerido,
+                          tanque_litros: String(m.tanque_litros), rendimiento_km_l: String(m.rendimiento_km_l),
+                          fuente_vehiculo: m.model_id ? 'API vPIC · NHTSA' : 'Respaldo sin conexión',
+                        }))} />
                     ) : f.type === 'date' ? (
                       <input id={f.key} type="date" className="input" value={form[f.key]} required={f.required}
                              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
@@ -219,9 +249,10 @@ function FormView({ mod }) {
                       </select>
                     ) : (
                       <input id={f.key} className="input" type={f.type || 'text'} value={form[f.key]} required={f.required}
+                             autoComplete={f.type === 'password' ? 'new-password' : f.key === 'usuario' ? 'off' : undefined}
                              onChange={(e) => setForm({ ...form, [f.key]: e.target.value })} />
                     )}
-                    {f.pattern && <p className="field-hint">{f.type === 'tel' ? 'Solo números, 10 dígitos.' : 'Debe verse como un correo real.'}</p>}
+                    {f.pattern && (f.type === 'tel' || f.type === 'email') && <p className="field-hint">{f.type === 'tel' ? 'Solo números, 10 dígitos.' : 'Debe verse como un correo real.'}</p>}
                     {f.source && list && list.length === 0 && (
                       <p className="field-hint">
                         No hay {sourceLabel(f.source).toLowerCase()} registrados todavía —
@@ -234,7 +265,7 @@ function FormView({ mod }) {
                     {f.requireFaceVerification && form[f.key] && verifiedFields[f.key] === form[f.key] && (
                       <p className="field-hint ok"><CheckCircle2 size={13} /> Identidad verificada por reconocimiento facial.</p>
                     )}
-                    {f.type === 'photo' && f.hint && (
+                    {f.hint && (
                       <p className="field-hint">{f.hint}</p>
                     )}
                   </div>
@@ -252,20 +283,15 @@ function FormView({ mod }) {
         )}
 
         {mod.key === 'emergencias' && (
-          <PanelLogica
-            prioridad={form.prioridad}
-            doctor={sourcedOptions.doctor?.find((o) => o.value === form.doctor)?.raw}
-            doctorVerificado={!!form.doctor && verifiedFields.doctor === form.doctor}
-            ambulancia={sourcedOptions.ambulancia?.find((o) => o.value === form.ambulancia)?.raw}
-          />
+          <PanelLogica prioridad={form.prioridad} requeridas={form.ambulancias_requeridas} />
         )}
 
         <div className="record-form-actions">
           {formError && <p className="form-error wide">{formError}</p>}
           <div className="record-form-actions-row">
-            <Link to={`/${mod.key}`} className="btn-ghost tall"><X size={15} /> Cancelar</Link>
-            <button className="btn-primary compact" disabled={saving}>
-              {saving ? 'Guardando…' : `Guardar ${mod.singular}`}
+            <Link to={editId ? `/${mod.key}/${editId}` : `/${mod.key}`} className="btn-ghost tall"><X size={15} /> Cancelar</Link>
+            <button className="btn-primary compact" disabled={saving || original === null}>
+              {saving ? 'Guardando…' : editId ? 'Guardar cambios' : `Guardar ${mod.singular}`}
             </button>
           </div>
         </div>

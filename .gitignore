@@ -10,3 +10,4 @@ backend/metastore_db/
 derby.log
 .DS_Store
 backend/ml_resultados/*.joblib
+.env.local

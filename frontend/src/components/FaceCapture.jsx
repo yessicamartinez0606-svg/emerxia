@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Camera, CheckCircle2, AlertTriangle, RefreshCw, X } from 'lucide-react'
-import { compareFaces, detectFace, identifyFace } from '../lib/faceVerify.js'
+import { compareFaces, descriptorDeFoto, detectFace, identifyFace } from '../lib/faceVerify.js'
 
 const REASON_MESSAGE = {
   'no-face-reference': 'No se detectó un rostro en la foto registrada. Vuelve a tomarla en el módulo de Operadores.',
   'no-face-capture': 'No se detectó un rostro claro en la foto. Acércate a la cámara, busca buena luz e inténtalo de nuevo.',
-  'no-candidates': 'Ningún operador tiene una foto de referencia con rostro detectable. Registra o repite la foto en el módulo de Operadores.',
-  models: 'No se pudieron cargar los modelos de reconocimiento facial. Revisa tu conexión a internet e inténtalo de nuevo.',
+  'no-candidates': 'Nadie de la lista tiene una foto donde se vea bien su cara. Vuelve a tomar su foto en su ficha.',
+  models: 'No se pudo preparar la cámara para reconocer rostros. Revisa tu conexión a internet e inténtalo de nuevo.',
 }
 
 /**
@@ -18,8 +18,13 @@ const REASON_MESSAGE = {
  *   Sirve cuando no se sabe de antemano quién es (p. ej. el operador que se presenta a validar
  *   una emergencia). Al confirmar, `onSuccess(foto, resultado)` recibe el candidato reconocido
  *   en `resultado.candidate`.
+ * mode="servidor": toma una foto, calcula los 128 números del rostro y se los manda a
+ *   `enviar(descriptor)`; el SERVIDOR decide quién es (o si coincide). `enviar` regresa
+ *   { mensaje, ... } o lanza un error con el motivo. Es el modo que usa la central.
+ * mode="descriptor": solo toma la foto y calcula el rostro; `onSuccess(foto, { descriptor })`.
+ *   El servidor lo compara después (p. ej. al registrar una carga de gasolina).
  */
-export default function FaceCapture({ open, title, mode = 'verify', reference, candidates, onSuccess, onCancel }) {
+export default function FaceCapture({ open, title, mode = 'verify', reference, candidates, onSuccess, onCancel, textoConfirmar, enviar }) {
   const videoRef = useRef(null)
   const streamRef = useRef(null)
   const [captured, setCaptured] = useState(null)
@@ -88,6 +93,38 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, c
       return
     }
 
+    if (mode === 'servidor' || mode === 'descriptor') {
+      setStatus('checking')
+      setMessage('Revisando el rostro…')
+      descriptorDeFoto(dataUrl).then(async (descriptor) => {
+        if (!descriptor) {
+          setStatus('fail')
+          setMessage(REASON_MESSAGE['no-face-capture'])
+          return
+        }
+        if (mode === 'descriptor') {
+          setResult({ descriptor })
+          setStatus('ok')
+          setMessage('Rostro listo. Se confirma al guardar.')
+          return
+        }
+        setMessage('Comparando con las fotos registradas…')
+        try {
+          const r = await enviar(descriptor)
+          setResult(r)
+          setStatus('ok')
+          setMessage(r?.mensaje ?? 'Listo: identidad confirmada.')
+        } catch (e) {
+          setStatus('fail')
+          setMessage(e.message)
+        }
+      }).catch(() => {
+        setStatus('error')
+        setMessage(REASON_MESSAGE.models)
+      })
+      return
+    }
+
     if (mode === 'identify') {
       setStatus('checking')
       setMessage('Buscando coincidencia entre los operadores registrados…')
@@ -118,6 +155,7 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, c
         return
       }
       if (result.match) {
+        setResult(result)
         setStatus('ok')
         setMessage('Identidad verificada: coincide con la foto registrada.')
       } else {
@@ -170,7 +208,7 @@ export default function FaceCapture({ open, title, mode = 'verify', reference, c
           )}
           {captured && status === 'ok' && (
             <button type="button" className="btn-primary compact" onClick={confirm}>
-              {mode === 'register' ? 'Usar esta foto' : 'Confirmar'}
+              {textoConfirmar ?? (mode === 'register' ? 'Usar esta foto' : mode === 'servidor' ? 'Listo' : 'Confirmar')}
             </button>
           )}
           <button type="button" className="btn-ghost compact" onClick={onCancel}>Cancelar</button>

@@ -30,8 +30,11 @@ def _entrenar_y_guardar() -> dict:
     final = entrenar_final(nombre, d)
     paquete = {"modelo": final["modelo"], "algoritmo": nombre,
                "metricas_prueba": final["metricas_prueba"], "variables": VARIABLES}
-    CARPETA.mkdir(exist_ok=True)
-    joblib.dump(paquete, ARCHIVO_MODELO)
+    try:
+        CARPETA.mkdir(exist_ok=True)
+        joblib.dump(paquete, ARCHIVO_MODELO)
+    except OSError:   # p. ej. en Render/Docker la carpeta es de solo lectura: el modelo queda en memoria
+        pass
     return paquete
 
 

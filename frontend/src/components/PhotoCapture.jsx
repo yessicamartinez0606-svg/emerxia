@@ -20,7 +20,7 @@ function toCompressedDataUrl(source, sw, sh) {
  * Fotografía de perfil: cámara en vivo (con vista previa) o subir un archivo.
  * Cualquiera de las dos rutas se comprime a un JPEG pequeño, y ANTES de aceptarla se corre
  * detección facial (face-api.js): si no hay una cara real y clara en la imagen, se rechaza.
- * Esto es lo que exige el registro: no se puede dar de alta a un doctor/operador sin una cara
+ * Esto es lo que exige el registro: no se puede dar de alta a un operador sin una cara
  * verificable, porque esa misma foto es la que luego se usa para el Face ID al despachar
  * ambulancias.
  *

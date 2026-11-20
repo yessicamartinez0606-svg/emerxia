@@ -4,6 +4,8 @@ import { Plus, RefreshCw } from 'lucide-react'
 import { api } from '../lib/api.js'
 import { findModule } from '../lib/modules.js'
 import { getPhoto, slug } from '../lib/moduleHelpers.js'
+import FlotaHospitales from '../components/FlotaHospitales.jsx'
+import PrepararRostros from '../components/PrepararRostros.jsx'
 
 export default function ModulePage() {
   const { module: key } = useParams()
@@ -19,6 +21,7 @@ function ModuleView({ mod }) {
   const [source, setSource] = useState(null)
   const [notice, setNotice] = useState(location.state?.notice ?? null)
   const [error, setError] = useState('')
+  const [recarga, setRecarga] = useState(0)
 
   // El aviso de "guardado con éxito" llega desde la pantalla del formulario a
   // través del estado de navegación; se limpia del historial para que no
@@ -32,6 +35,7 @@ function ModuleView({ mod }) {
 
   const load = useCallback(() => {
     setError('')
+    setRecarga((n) => n + 1)
     api(`/${mod.key}`)
       .then((d) => { setItems(d.items); setSource(d.source ?? null) })
       .catch((e) => setError(e.message))
@@ -50,7 +54,7 @@ function ModuleView({ mod }) {
           <p>{mod.description}</p>
         </div>
         <div className="head-actions">
-          <button className="btn-ghost tall" onClick={load} title="Volver a leer los datos de MongoDB">
+          <button className="btn-ghost tall" onClick={load} title="Volver a cargar la lista">
             <RefreshCw size={15} /> Actualizar
           </button>
           <button className="btn-primary compact" onClick={() => navigate(`/${mod.key}/nuevo`)}>
@@ -61,7 +65,12 @@ function ModuleView({ mod }) {
 
       {notice && <p className={`notice ${notice.kind}`} role="status">{notice.text}</p>}
 
-      <div className="panel table-wrap">
+      {mod.key === 'ambulancias' && <FlotaHospitales recarga={recarga} onCambio={load} />}
+      {(mod.key === 'operadores' || mod.key === 'paramedicos') && <PrepararRostros key={recarga} visible />}
+
+      {mod.sinTabla && error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}
+
+      {!mod.sinTabla && <div className="panel table-wrap">
         {error && <p className="form-error">{error} <button className="link" onClick={load}>Reintentar</button></p>}
         {!error && items === null && <p className="muted pad">Cargando datos…</p>}
         {!error && items?.length === 0 && (
@@ -111,11 +120,11 @@ function ModuleView({ mod }) {
         {items && (
           <p className={`source-note ${source ? '' : 'warn'}`}>
             {source
-              ? `${items.length} registro(s) · leído de MongoDB: ${source}`
-              : '⚠ Este servidor no reporta MongoDB: probablemente es una versión antigua del backend.'}
+              ? `${items.length} registro(s)`
+              : '⚠ No se pudo confirmar que estos datos estén al día. Avisa a soporte técnico.'}
           </p>
         )}
-      </div>
+      </div>}
     </section>
   )
 }

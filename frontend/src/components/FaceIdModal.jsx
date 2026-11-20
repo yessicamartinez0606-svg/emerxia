@@ -14,7 +14,7 @@ import { dataUrlToImage, faceDistance, getFaceDescriptor, isSamePerson, MATCH_TH
 export default function FaceIdModal({ operador, onVerified, onCancel }) {
   const [refDescriptor, setRefDescriptor] = useState(null)
   const [status, setStatus] = useState('loading')  // loading | ready | camera | comparing | match | nomatch | error
-  const [message, setMessage] = useState('Cargando modelos de reconocimiento facial…')
+  const [message, setMessage] = useState('Preparando la cámara…')
   const [distance, setDistance] = useState(null)
   const videoRef = useRef(null)
   const streamRef = useRef(null)

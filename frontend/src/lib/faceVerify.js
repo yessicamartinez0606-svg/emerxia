@@ -12,7 +12,8 @@
 // '/models'.
 import * as faceapi from 'face-api.js'
 
-const MODEL_URL = 'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights'
+// Los modelos van incluidos en la página (frontend/public/models): no dependen de un CDN externo.
+const MODEL_URL = '/models'
 
 // Distancia euclidiana máxima entre dos descriptores para considerarlos la
 // misma persona. face-api.js recomienda ~0.6 como umbral general; usamos
@@ -53,6 +54,15 @@ async function descriptorFromDataUrl(dataUrl) {
     .withFaceLandmarks()
     .withFaceDescriptor()
   return detection ? detection.descriptor : null
+}
+
+/**
+ * Descriptor facial de una foto (128 números) para guardarlo en el servidor o mandarlo al
+ * entrar como operador. Regresa null si no se ve un rostro.
+ */
+export async function descriptorDeFoto(dataUrl) {
+  const d = await descriptorFromDataUrl(dataUrl)
+  return d ? Array.from(d, (x) => Math.round(x * 1e6) / 1e6) : null
 }
 
 /**
