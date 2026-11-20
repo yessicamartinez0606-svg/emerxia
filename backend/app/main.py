@@ -30,6 +30,11 @@ def _preparar_modelos():
         except Exception:  # noqa: BLE001
             pass
     try:
+        segmentacion.mapa_pca()        # práctica 09
+        segmentacion.confiabilidad()   # práctica 08 (~15 s: repite K-Means con varias semillas)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         import sklearn  # noqa: F401
         optimizacion.iniciar()     # práctica 06: ~1 minuto en segundo plano (o al instante si ya se guardó)
     except ImportError:

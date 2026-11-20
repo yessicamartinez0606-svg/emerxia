@@ -46,6 +46,8 @@ export const iniciarOptimizacion = () => api('/ia/optimizacion/iniciar', { metho
 export const modeloSegmentacion = () => api('/ia/segmentacion/modelo')
 export const estimarSegmentacion = (datos) => api('/ia/segmentacion/estimar', { method: 'POST', body: datos })
 export const segmentacionEmergencia = (id, km) => api(`/ia/segmentacion/emergencias/${id}${km ? `?km=${km}` : ''}`)
+export const confiabilidadSegmentacion = () => api('/ia/segmentacion/confiabilidad')
+export const pcaSegmentacion = () => api('/ia/segmentacion/pca')
 
 export const COLOR_PERFIL = { 'Respuesta rápida': '#1a7a41', 'Respuesta intermedia': '#c98a12', 'Requiere apoyo': '#c8202f' }
 export const NOMBRE_ALGORITMO = { 'Decision Tree': 'Árbol de decisión', 'Random Forest': 'Bosque aleatorio', KNN: 'KNN' }

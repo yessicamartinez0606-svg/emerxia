@@ -6,13 +6,15 @@ import {
 import { api } from '../lib/api.js'
 import ClimaZonas from '../components/ClimaZonas.jsx'
 import {
-  COLOR_PERFIL, aTiempoEmergencia, estimarATiempo, estimarLlegada, estimarSegmentacion, estimarTriaje, llegadaEmergencia,
+  COLOR_PERFIL, aTiempoEmergencia, confiabilidadSegmentacion, pcaSegmentacion, estimarATiempo, estimarLlegada, estimarSegmentacion, estimarTriaje, llegadaEmergencia,
   modeloATiempo, modeloLlegada, modeloSegmentacion, modeloTriaje, pct, segmentacionEmergencia, triajeEmergencia, verOptimizacion,
 } from '../lib/clima.js'
 import ATiempoPanel from './ia/ATiempoPanel.jsx'
 import DespachoPage from './DespachoPage.jsx'
 import LlegadaPanel from './ia/LlegadaPanel.jsx'
+import ConfiabilidadPanel from './ia/ConfiabilidadPanel.jsx'
 import OptimizacionPanel from './ia/OptimizacionPanel.jsx'
+import PcaPanel, { MapaPCA } from './ia/PcaPanel.jsx'
 import SegmentacionPanel from './ia/SegmentacionPanel.jsx'
 import TriajePanel from './ia/TriajePanel.jsx'
 
@@ -39,8 +41,8 @@ const HERRAMIENTAS = [
   },
   {
     key: 'perfiles', icono: Shapes, titulo: 'Tipo de servicio', pregunta: '¿Qué tan complicado será este servicio?',
-    explicacion: 'Agrupa los servicios en tres tipos según la distancia, el tráfico, el tiempo y las ambulancias libres, y sugiere qué hacer con cada uno. Nadie le dijo cuáles eran los grupos: los descubrió sola comparando servicios parecidos.',
-    donde: ['Reporte de cada emergencia («Tipo de servicio»)', 'App del operador'],
+    explicacion: 'Agrupa los servicios en tres tipos según la distancia, el tráfico, el tiempo y las ambulancias libres, y sugiere qué hacer con cada uno. Nadie le dijo cuáles eran los grupos: los descubrió sola comparando servicios parecidos. También avisa cuando un servicio es poco común y lo dibuja en un mapa junto a todos los demás.',
+    donde: ['Reporte de cada emergencia («Tipo de servicio» y el aviso de «poco común»)', 'App del operador', 'Aquí, en el «Mapa de servicios»'],
   },
   {
     key: 'despacho', icono: Hospital, titulo: 'Hospital de salida', pregunta: '¿De qué hospital conviene mandar la ambulancia?',
@@ -427,6 +429,8 @@ function Triaje({ ctx }) {
 
 function Perfiles({ ctx }) {
   const [ev, error] = useCargar(modeloSegmentacion)
+  const [conf] = useCargar(confiabilidadSegmentacion)
+  const [mapa] = useCargar(pcaSegmentacion)
   const [f, setF] = useState({ distancia_km: 12.5, nivel_trafico: 7.5, tiempo_respuesta_min: 25, ambulancias_libres: 1 })
   const [r, setR] = useState(null)
   useEffect(() => {
@@ -478,16 +482,37 @@ function Perfiles({ ctx }) {
             <button className="btn-primary compact">Ver tipo</button>
           </form>
           {msg && <p className="form-error">{msg}</p>}
-          {r && <Resultado tono={r.nivel === 0 ? 'bien' : r.nivel === 1 ? 'medio' : 'mal'} titulo={r.perfil} detalle={r.estrategia} />}
+          {r && <Resultado tono={r.nivel === 0 ? 'bien' : r.nivel === 1 ? 'medio' : 'mal'} titulo={r.perfil}
+                           detalle={r.poco_comun ? `${r.estrategia} Ojo: es un servicio poco común, no se parece mucho a los demás de este tipo. Revísalo con más cuidado.` : r.estrategia} />}
         </Prueba>
         <div className="iah-lado">
+          {conf
+            ? <Confianza grande={`${Math.round(conf.estabilidad.ari_promedio * 100)} %`}
+                         texto={`de coincidencia al repetir el análisis ${conf.estabilidad.semillas.length} veces con distinto arranque: los servicios caen siempre en el mismo tipo.`}
+                         nota={`${conf.atipicos.total} de ${conf.servicios} servicios (${conf.atipicos.porcentaje} %) son poco comunes: quedan lejos del centro de su tipo. No es un error, solo conviene revisarlos con más cuidado.`} />
+            : <section className="panel muted">Revisando qué tan confiables son los tipos…</section>}
           <section className="panel">
             <h3 className="iah-h3">¿Cómo encontró los tipos?</h3>
             <p className="iah-desc">Comparó {ev?.servicios ?? 500} servicios anteriores y juntó los que se parecían en distancia, tráfico, tiempo y ambulancias libres. Probó con 2, 3, 4 y más grupos; con <b>3</b> los grupos quedaron bien separados y cada uno tiene una acción clara.</p>
           </section>
         </div>
       </div>
-      <Tecnico><SegmentacionPanel sinSimulador /></Tecnico>
+      {mapa && (
+        <section className="panel">
+          <h3 className="iah-h3">Mapa de servicios</h3>
+          <p className="iah-desc">
+            Cada punto es un servicio anterior. Los 4 datos (distancia, tráfico, tiempo y ambulancias libres) se resumieron en un solo dibujo
+            que conserva el {Math.round(mapa.conservada_2d * 100)} % de la información. Más a la derecha, más difícil es el servicio.
+            {r?.pc1 != null && ' El círculo negro es el servicio que estás revisando.'}
+          </p>
+          <MapaPCA p={mapa} marca={r?.pc1 != null ? { pc1: r.pc1, pc2: r.pc2, texto: ctx?.perfil && r === ctx.perfil ? (ctx.em?.folio ?? 'Este servicio') : 'Este servicio' } : null} />
+        </section>
+      )}
+      <Tecnico>
+        <SegmentacionPanel sinSimulador />
+        <ConfiabilidadPanel />
+        <PcaPanel />
+      </Tecnico>
     </>
   )
 }

@@ -25,6 +25,12 @@
     GET  /api/ia/segmentacion/modelo         codo, silhouette, perfiles y puntos
     POST /api/ia/segmentacion/estimar        datos escritos a mano
     GET  /api/ia/segmentacion/emergencias/{id}
+
+    Práctica 08 (app/segmentacion.py): ¿qué tan confiables son los tipos de servicio?
+    GET  /api/ia/segmentacion/confiabilidad  inicializaciones, escaladores, estabilidad (ARI) y poco comunes
+
+    Práctica 09 (app/segmentacion.py): mapa de servicios con PCA
+    GET  /api/ia/segmentacion/pca            varianza, cargas, componentes, reconstrucción y puntos
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
@@ -289,6 +295,16 @@ class ServicioIn(BaseModel):
 @router.get("/api/ia/segmentacion/modelo", dependencies=[Depends(solo_personal)])
 def segmentacion_modelo():
     return _modelo(segmentacion.evaluacion)
+
+
+@router.get("/api/ia/segmentacion/confiabilidad", dependencies=[Depends(solo_personal)])
+def segmentacion_confiabilidad():
+    return _modelo(segmentacion.confiabilidad)
+
+
+@router.get("/api/ia/segmentacion/pca", dependencies=[Depends(solo_personal)])
+def segmentacion_pca():
+    return _modelo(segmentacion.mapa_pca)
 
 
 @router.post("/api/ia/segmentacion/estimar", dependencies=[Depends(solo_personal)])

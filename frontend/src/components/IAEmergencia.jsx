@@ -76,6 +76,7 @@ export function TriajeEmergencia({ emergenciaId }) {
 }
 
 // Práctica 07 aplicada a la emergencia: ¿a qué perfil de servicio se parece? (K-Means)
+// Práctica 08: si queda más lejos del centro de su tipo que el 95 % de los servicios, es «poco común».
 export function PerfilServicio({ emergenciaId }) {
   const [r, error] = useDato(segmentacionEmergencia, emergenciaId)
   if (error) return <section className="panel ia-em"><h2 className="form-section-title">Tipo de servicio</h2><p className="muted">{error}</p></section>
@@ -92,6 +93,9 @@ export function PerfilServicio({ emergenciaId }) {
         </div>
       </div>
       <p className="ia-em-aviso suave">{r.estrategia}</p>
+      {r.poco_comun && (
+        <p className="ia-em-aviso">Servicio poco común: no se parece mucho a los demás de este tipo. Revísalo con más cuidado.</p>
+      )}
       <ul className="llegada-factores">
         <li>{r.datos.distancia_km} km</li>
         <li>Tráfico {r.datos.nivel_trafico}/10</li>
