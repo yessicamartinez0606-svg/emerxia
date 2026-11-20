@@ -261,7 +261,13 @@ class ParamedicIn(BaseModel):
 
 
 class AtencionParamedicoIn(BaseModel):
-    """Lo que captura el paramédico de su paciente: signos vitales y la atención que le dio."""
+    """Lo que captura el paramédico de su paciente: sus datos (ya en el lugar sabe su nombre,
+    edad…), signos vitales y la atención que le dio. Todo se guarda en la emergencia, así que
+    la central lo ve en la ficha. Lo que no venga (None / vacío) no se cambia."""
+    paciente_nombre: str | None = Field(None, max_length=120)
+    paciente_edad: str | None = Field(None, max_length=10)
+    paciente_sexo: Literal["Masculino", "Femenino", "Otro"] | None = None
+    paciente_telefono: str | None = Field(None, max_length=20)
     saturacion_oxigeno: float | None = Field(None, ge=50, le=100)
     frecuencia_cardiaca: float | None = Field(None, ge=20, le=250)
     escala_glasgow: int | None = Field(None, ge=3, le=15)
@@ -271,6 +277,11 @@ class AtencionParamedicoIn(BaseModel):
     observaciones: str = Field("", max_length=2000)            # atención brindada, medicamentos, etc.
     _signos = field_validator("saturacion_oxigeno", "frecuencia_cardiaca", "escala_glasgow", "temperatura", "glucosa",
                               mode="before")(_numero(None))
+
+    @field_validator("paciente_telefono")
+    @classmethod
+    def _tel(cls, v: str | None) -> str | None:
+        return _valida_celular(v) if v and v.strip() else v
 
 
 class VerificacionIn(BaseModel):

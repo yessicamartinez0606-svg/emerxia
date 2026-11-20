@@ -83,9 +83,20 @@ function Gravedad({ r }) {
   )
 }
 
+// Datos del paciente que el paramédico puede corregir en el lugar (la central los ve en la ficha).
+const PACIENTE = [
+  { k: 'paciente_nombre', label: 'Nombre del paciente' },
+  { k: 'paciente_edad', label: 'Edad', props: { inputMode: 'numeric' } },
+  { k: 'paciente_telefono', label: 'Teléfono de contacto (10 dígitos)', props: { inputMode: 'tel' } },
+]
+const sinNombre = (n) => !n || n.startsWith('Sin nombre')
+
 function FormAtencion({ em, onCambio }) {
   const [f, setF] = useState(() => Object.fromEntries([...SIGNOS.map((s) => [s.k, vacio(em[s.k]) ? '' : String(em[s.k])]),
-    ['observaciones', em.observaciones_paramedico ?? '']]))
+    ['observaciones', em.observaciones_paramedico ?? ''],
+    ['paciente_nombre', sinNombre(em.paciente_nombre) ? '' : em.paciente_nombre],
+    ['paciente_edad', em.paciente_edad ?? ''], ['paciente_sexo', em.paciente_sexo ?? 'Otro'],
+    ['paciente_telefono', em.paciente_telefono ?? '']]))
   const [guardando, setGuardando] = useState(false)
   const [error, setError] = useState('')
   const [aviso, setAviso] = useState('')
@@ -97,14 +108,19 @@ function FormAtencion({ em, onCambio }) {
       setError('Escribe la presión como alta/baja, por ejemplo 120/80.')
       return
     }
-    if (!Object.values(f).some((v) => String(v).trim())) {
-      setError('Anota al menos un signo vital o escribe la atención que diste.')
+    if (f.paciente_telefono.trim() && !/^\d{10}$/.test(f.paciente_telefono.replace(/[\s()-]/g, ''))) {
+      setError('El teléfono debe tener 10 dígitos.')
       return
     }
     setGuardando(true)
     setError('')
     try {
-      onCambio(await atencionParamedico({ ...f, presion_arterial: f.presion_arterial.trim() }))
+      onCambio(await atencionParamedico({
+        ...f, presion_arterial: f.presion_arterial.trim(),
+        // Vacío = no se cambia (el servidor solo guarda los datos del paciente que cambiaron).
+        paciente_nombre: f.paciente_nombre.trim() || null, paciente_edad: f.paciente_edad.trim() || null,
+        paciente_telefono: f.paciente_telefono.trim() || null,
+      }))
       setAviso('Guardado. La central ya lo ve en la emergencia.')
     } catch (err) {
       setError(err.message)
@@ -115,8 +131,23 @@ function FormAtencion({ em, onCambio }) {
 
   return (
     <section className="panel">
-      <h2 className="form-section-title titulo-icono"><HeartPulse size={15} /> Signos vitales y atención</h2>
+      <h2 className="form-section-title titulo-icono"><HeartPulse size={15} /> Paciente, signos vitales y atención</h2>
       <form className="op-accion" onSubmit={guardar} noValidate>
+        <p className="field-hint op-obs">Datos del paciente: corrígelos si ya sabes su nombre, edad o teléfono. La central los ve al momento.</p>
+        {PACIENTE.map((p) => (
+          <div className="field" key={p.k}>
+            <label htmlFor={`pm-${p.k}`}>{p.label}</label>
+            <input id={`pm-${p.k}`} className="input" value={f[p.k]} onChange={cambia(p.k)}
+                   placeholder={p.k === 'paciente_nombre' && sinNombre(em.paciente_nombre) ? 'Todavía sin nombre' : ''} {...(p.props ?? {})} />
+          </div>
+        ))}
+        <div className="field">
+          <label htmlFor="pm-paciente_sexo">Sexo</label>
+          <select id="pm-paciente_sexo" className="input" value={f.paciente_sexo} onChange={cambia('paciente_sexo')}>
+            {['Masculino', 'Femenino', 'Otro'].map((x) => <option key={x}>{x}</option>)}
+          </select>
+        </div>
+        <p className="field-hint op-obs">Signos vitales:</p>
         {SIGNOS.map((s) => {
           const v = f[s.k]
           const fuera = String(v).trim() && !s.ok(s.texto ? v : Number(v))

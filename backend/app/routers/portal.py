@@ -135,6 +135,8 @@ def operador_evento(body: EventoEmergenciaIn, user: dict = Depends(solo_operador
 
 CAMPOS_ATENCION = ("saturacion_oxigeno", "frecuencia_cardiaca", "escala_glasgow", "presion_arterial",
                    "temperatura", "glucosa")
+CAMPOS_PACIENTE = {"paciente_nombre": "nombre", "paciente_edad": "edad", "paciente_sexo": "sexo",
+                   "paciente_telefono": "teléfono"}
 
 
 def _mi_paramedico(user: dict) -> dict:
@@ -217,19 +219,27 @@ def paramedico_atencion(body: AtencionParamedicoIn, user: dict = Depends(solo_pa
         raise HTTPException(409, "No estás en ninguna emergencia en este momento. La central te asigna al salir.")
     datos = body.model_dump()
     cambios = {k: datos[k] for k in CAMPOS_ATENCION if datos[k] not in (None, "")}
+    # Datos del paciente: solo los que cambiaron de verdad.
+    paciente = {k: datos[k].strip() for k in CAMPOS_PACIENTE
+                if datos[k] is not None and datos[k].strip() and datos[k].strip() != (em.get(k) or "")}
     obs = datos["observaciones"].strip()
-    if not cambios and not obs:
-        raise HTTPException(422, "Anota al menos un signo vital o escribe la atención que le diste.")
+    if not cambios and not obs and not paciente:
+        raise HTTPException(422, "Anota al menos un dato del paciente, un signo vital o la atención que le diste.")
     momento = flota.ahora()
     # Cada captura queda en la lista (para ver cómo evoluciona el paciente); los campos sueltos
     # guardan la última, que es la que ve la central y usa el triaje.
     captura = {**cambios, "observaciones": obs, "paramedico": pm["nombre"], "momento": momento}
+    if paciente and not cambios and not obs:
+        captura = None          # solo corrigió datos del paciente: no es una toma de signos
     if obs:
         cambios["observaciones_paramedico"] = obs
-    cambios.update(atendio_paramedico=pm["nombre"], atencion_registrada=momento,
-                   atenciones_paramedico=[*(em.get("atenciones_paramedico") or []), captura])
+    if captura:
+        cambios.update(atendio_paramedico=pm["nombre"], atencion_registrada=momento,
+                       atenciones_paramedico=[*(em.get("atenciones_paramedico") or []), captura])
+    cambios.update(paciente)
     update_row("emergencies", em["id"], cambios)
-    resumen = ", ".join(f"{k.replace('_', ' ')} {v}" for k, v in cambios.items() if k in CAMPOS_ATENCION)
+    resumen = ", ".join([f"{k.replace('_', ' ')} {v}" for k, v in cambios.items() if k in CAMPOS_ATENCION]
+                        + [f"{CAMPOS_PACIENTE[k]} del paciente: {v}" for k, v in paciente.items()])
     placas = flota_api._placas(em)
     flota_api.registrar("atención", f"{pm['nombre']} registró la atención del paciente de {em['folio']}"
                         + (f": {resumen}." if resumen else "."), user["username"],

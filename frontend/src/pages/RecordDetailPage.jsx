@@ -65,6 +65,16 @@ function DetailView({ mod, id }) {
       .catch((e) => setError(e.message))
   }, [mod.key, recarga])
 
+  // La ficha de una emergencia se actualiza sola: así la central ve al momento lo que marcan
+  // el operador (salida, llegada…) y el paramédico (paciente, signos vitales).
+  useEffect(() => {
+    if (mod.key !== 'emergencias') return undefined
+    const t = setInterval(() => setRecarga((n) => n + 1), 20000)
+    const ya = () => setRecarga((n) => n + 1)
+    window.addEventListener('emergexia:emergencia', ya)
+    return () => { clearInterval(t); window.removeEventListener('emergexia:emergencia', ya) }
+  }, [mod.key])
+
   // Campos como "operador" o "ambulancia" (en Emergencias) apuntan a otra
   // colección: se carga esa lista para poder enlazar al perfil real.
   const linkedSources = useMemo(
@@ -178,7 +188,8 @@ function DetailView({ mod, id }) {
             <h2 className="form-section-title">{g.name}</h2>
             <dl className="kv profile-kv">
               {g.fields.map((f) => {
-                const value = item[f.key]
+                // `format` convierte valores que no son texto (fechas, listas) a algo legible.
+                const value = f.format ? f.format(item[f.key], item) : item[f.key]
                 const col = mod.columns.find((c) => c.key === f.key)
                 const isBadge = col?.badge
                 const link = f.source ? resolveLink(f, value) : null

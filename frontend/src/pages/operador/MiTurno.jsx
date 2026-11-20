@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Ambulance, Check, Fuel, MapPin, Phone, ScanFace, Siren, UserRound, Wrench } from 'lucide-react'
+import { Ambulance, Check, Fuel, MapPin, Phone, ScanFace, Siren, Stethoscope, UserRound, Wrench } from 'lucide-react'
 import RutaAmbulancia from '../../components/RutaAmbulancia.jsx'
 import ClimaZonas from '../../components/ClimaZonas.jsx'
 import LlegadaEstimada from '../../components/LlegadaEstimada.jsx'
@@ -116,6 +116,7 @@ function EmergenciaAsignada({ rep, onCambio }) {
           <div><dt><UserRound size={13} /> Paciente</dt><dd>{em.paciente_nombre}{em.paciente_edad ? `, ${em.paciente_edad} años` : ''}</dd></div>
           {em.paciente_telefono && <div><dt><Phone size={13} /> Teléfono</dt><dd><a href={`tel:${em.paciente_telefono}`}>{em.paciente_telefono}</a></dd></div>}
           <div><dt><Ambulance size={13} /> Van</dt><dd>{sinAmbulancia ? 'Todavía sin ambulancia' : rep.ambulancias.map((a) => `${a.placa} (${a.conductor || 'sin conductor'})`).join(', ')}</dd></div>
+          <div><dt><Stethoscope size={13} /> Paramédicos</dt><dd>{rep.paramedicos?.length ? rep.paramedicos.map((p) => `${p.nombre}${p.nivel ? ` (${p.nivel})` : ''}`).join(', ') : `Falta que la central confirme ${rep.paramedicos_requeridos ?? 2}`}</dd></div>
           {em.canal && <div><dt>Reportada por</dt><dd>{em.canal === 'llamada' ? 'Llamada' : 'Mensaje'}{em.reportante ? ` de ${em.reportante}` : ''}</dd></div>}
         </dl>
 

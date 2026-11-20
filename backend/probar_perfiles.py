@@ -430,6 +430,22 @@ def main() -> int:
             "Cada captura queda en la lista, para ver cómo evoluciona el paciente")
     revisar(any(h["tipo"] == "atención" and h["emergencia"] == em2["folio"] for h in db["historial"].docs),
             "La atención queda en el historial")
+    p = portal.paramedico_atencion(AtencionParamedicoIn(paciente_nombre="Luis Romero Díaz", paciente_edad="58",
+                                                        paciente_sexo="Masculino", paciente_telefono="7225556677"), sofia)
+    e = next(x for x in repository.list_rows("emergencies") if x["id"] == em2["id"])
+    revisar(e["paciente_nombre"] == "Luis Romero Díaz" and e["paciente_edad"] == "58" and e["paciente_telefono"] == "7225556677"
+            and len(e["atenciones_paramedico"]) == 2,
+            "La paramédica corrige los datos del paciente: la central los ve en la emergencia (sin contar como toma de signos)")
+    revisar(any("nombre del paciente: Luis Romero Díaz" in h["detalle"] for h in db["historial"].docs),
+            "El cambio de datos del paciente queda en el historial")
+    cod, _ = error(portal.paramedico_atencion, AtencionParamedicoIn(paciente_nombre="Luis Romero Díaz"), sofia)
+    revisar(cod == 422, "Si no cambió nada, avisa en lugar de guardar")
+    try:
+        AtencionParamedicoIn(paciente_telefono="123")
+        tel_ok = True
+    except ValueError:
+        tel_ok = False
+    revisar(not tel_ok, "Un teléfono que no tiene 10 dígitos se rechaza")
     rep = flota_api.quitar_paramedico(em2["id"], pm2["id"], "admin")
     revisar([x["nombre"] for x in rep["paramedicos"]] == ["Sofía Ruiz"] and portal.portal_paramedico(ivan)["emergencia"] is None,
             "La central puede quitar a uno; a él ya no le aparece")

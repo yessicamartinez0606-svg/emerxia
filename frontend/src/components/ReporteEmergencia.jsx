@@ -31,7 +31,8 @@ export default function ReporteEmergencia({ emergencia, onCambio }) {
   const [error, setError] = useState('')
 
   const cargar = () => reporteEmergencia(emergencia.id).then((r) => { setRep(r); setError('') }).catch((e) => setError(e.message))
-  useEffect(() => { cargar() }, [emergencia.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  // Se vuelve a pedir cuando la emergencia cambia (la ficha se recarga sola cada 20 s).
+  useEffect(() => { cargar() }, [emergencia.id, emergencia.updated_at, emergencia.estado]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const actualizar = (r) => { if (r) setRep(r); else cargar(); onCambio?.() }
 
@@ -228,7 +229,7 @@ function Documento({ rep }) {
           <div className="rd-bloque">
             <h3>Personal</h3>
             <dl>
-              <dt>Operador a cargo</dt><dd>{rep.operador ? `${rep.operador.nombre}${rep.operador.celular ? ` · ${rep.operador.celular}` : ''}` : em.operador || 'Sin asignar'}</dd>
+              <dt>Conductor (operador)</dt><dd>{rep.operador ? `${rep.operador.nombre}${rep.operador.celular ? ` · ${rep.operador.celular}` : ''}` : em.operador || 'Sin asignar'}</dd>
               <dt>Identidad confirmada</dt><dd>{rep.verificaciones.length ? `Sí, con su rostro (${rep.verificaciones.filter((v) => v.coincide).length} vez/veces)` : 'Todavía no'}</dd>
             </dl>
           </div>
@@ -247,7 +248,7 @@ function Documento({ rep }) {
           <ReporteDelUsuario em={em} />
         )}
 
-        <h3 className="rd-sub">Ambulancias y conductores</h3>
+        <h3 className="rd-sub">Ambulancias y conductores (operadores)</h3>
         {rep.ambulancias.length === 0 ? (
           <p className="muted">Todavía no hay ambulancias asignadas.</p>
         ) : (

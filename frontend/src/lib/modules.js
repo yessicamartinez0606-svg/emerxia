@@ -1,5 +1,11 @@
 import { Ambulance, CircleDot, Headset, History, Hospital, HeartPulse, KeyRound, Route, Settings, Siren, Stethoscope, TrafficCone, UserRound, House } from 'lucide-react'
-import { ANIOS_VEHICULO, HOSPITALES, MARCAS_VEHICULO } from './flota.js'
+import { ANIOS_VEHICULO, HOSPITALES, MARCAS_VEHICULO, fmtFecha } from './flota.js'
+
+// Para mostrar en la ficha campos que no son texto simple (`format` en un campo).
+const fecha = (v) => (v ? fmtFecha(v) : '')
+const listaParamedicos = (v) => (Array.isArray(v) && v.length
+  ? v.map((p) => (typeof p === 'string' ? p : `${p.nombre}${p.nivel ? ` (${p.nivel})` : ''}`)).join(', ')
+  : '')
 
 export const HOME = { path: '/', label: 'Inicio', navIcon: House }
 
@@ -92,7 +98,7 @@ export const MODULES = [
       // mensaje / llamada si la reportó una persona desde su perfil de Usuario.
       { key: 'canal', label: 'Reportada por' },
       { key: 'prioridad', label: 'Prioridad', badge: true },
-      { key: 'operador', label: 'Operador' },
+      { key: 'operador', label: 'Conductor' },
       { key: 'ambulancia', label: 'Ambulancia' },
       { key: 'estado', label: 'Estado', badge: true },
     ],
@@ -128,8 +134,9 @@ export const MODULES = [
       // Asignación: no se elige en el formulario. Al guardar, el sistema asigna solo las
       // ambulancias libres más cercanas y el operador es quien maneja la primera.
       {
+        // El conductor de la ambulancia ES el operador (lo dice la ficha de cada ambulancia).
         key: 'operador',
-        label: 'Operador que atiende',
+        label: 'Conductor (operador)',
         group: 'Asignación',
         source: 'operadores',
         optionValue: (r) => r.nombre,
@@ -152,6 +159,18 @@ export const MODULES = [
         // Se asignan solas al guardar (pueden ser varias, de varios hospitales).
         hideInForm: true,
       },
+      // Los 2 paramédicos que confirma la central con su rostro (ParamedicosEmergencia).
+      { key: 'paramedicos', label: 'Paramédicos', group: 'Asignación', hideInForm: true, format: listaParamedicos },
+
+      // Lo que marca el operador desde su perfil (Mi turno): aparece aquí al momento.
+      { key: 'hora_salida', label: 'Salió del hospital', group: 'Seguimiento del operador', hideInForm: true, format: fecha },
+      { key: 'hora_llegada', label: 'Llegó al lugar', group: 'Seguimiento del operador', hideInForm: true, format: fecha },
+      { key: 'hora_traslado', label: 'Traslado al hospital', group: 'Seguimiento del operador', hideInForm: true, format: fecha },
+      { key: 'hospital_destino', label: 'Hospital destino', group: 'Seguimiento del operador', hideInForm: true },
+      { key: 'hora_cierre', label: 'Emergencia cerrada', group: 'Seguimiento del operador', hideInForm: true, format: fecha },
+      { key: 'km_recorridos', label: 'Km recorridos', group: 'Seguimiento del operador', hideInForm: true,
+        format: (v) => (v == null || v === '' ? '' : `${v} km`) },
+      { key: 'observaciones', label: 'Notas del operador', group: 'Seguimiento del operador', hideInForm: true },
     ],
   },
   {

@@ -18,7 +18,7 @@ export default function ParamedicosEmergencia({ emergencia, onCambio }) {
   const cargar = () => Promise.all([api(`/flota/emergencias/${emergencia.id}/reporte`), api('/paramedicos')])
     .then(([r, p]) => { setRep(r); setTodos(p.items ?? []) })
     .catch((e) => setError(e.message))
-  useEffect(() => { cargar() }, [emergencia.id]) // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { cargar() }, [emergencia.id, emergencia.updated_at]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Pueden ir: en servicio, con foto y que no estén ya en otra emergencia.
   const disponibles = useMemo(
