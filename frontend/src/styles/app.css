@@ -1604,3 +1604,68 @@ body { background: var(--bg); color: var(--ink); }
 .cuentas-rol { min-width: 150px; height: 32px; padding: 4px 8px; }
 .cuentas-acciones { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
 .cuentas-acciones .btn-ghost { font-size: 12.5px; padding: 5px 9px; }
+
+/* ═══════════════════════ Espaciado uniforme de las cards ═══════════════════════
+   Va al final para ganar sobre los valores sueltos de arriba. Una sola regla para todos los
+   perfiles (central, operador, paramédico y usuario):
+   · entre una card y otra siempre hay --espacio (ni más ni menos);
+   · dentro de cada card, --relleno;
+   · si el contenedor ya separa sus cards (gap), la card no suma su propio margen (antes se
+     sumaban los dos y quedaban 32 px entre cards). */
+:root {
+  --espacio: 12px;        /* entre cards */
+  --relleno: 16px;        /* dentro de cada card */
+}
+@media (max-width: 640px) { :root { --espacio: 10px; --relleno: 14px; } }
+
+/* Card base: relleno parejo y margen solo debajo (para cuando va suelta, sin contenedor). */
+.panel { padding: var(--relleno); margin-bottom: var(--espacio); }
+.panel:last-child { margin-bottom: 0; }
+.panel.table-wrap { padding: 0; }            /* las tablas llegan al borde de la card */
+.panel.table-wrap > .form-error { margin: var(--relleno); }
+
+/* Contenedores que acomodan cards: todos separan con el mismo espacio. */
+:is(.record-screen, .record-form, .profile-sections, .settings-grid, .control-amb, .control-amb-top,
+    .reporte, .flota, .fh, .ia-grid, .ia-em-grid, .iah, .iah-lado, .iah-grid, .iah-perfiles,
+    .inicio, .inicio-grid, .inicio-lado, .portal-main, .op-turno, .us-reportar, .us-mis, .us-lista,
+    .asistente-em, .rutas-lado, .rutas-grid, .ruta-amb-grid, .detalles-cuerpo, .module-view, .rutas,
+    .op-gasolina) {
+  gap: var(--espacio);
+}
+/* …y sus cards (y avisos) no agregan margen propio. */
+:is(.record-screen, .record-form, .profile-sections, .settings-grid, .control-amb, .control-amb-top,
+    .reporte, .flota, .fh, .ia-grid, .ia-em-grid, .iah, .iah-lado, .iah-grid, .iah-perfiles,
+    .inicio, .inicio-grid, .inicio-lado, .portal-main, .op-turno, .us-reportar, .us-mis, .us-lista,
+    .asistente-em, .rutas-lado, .rutas-grid, .ruta-amb-grid, .detalles-cuerpo, .module-view, .rutas,
+    .op-gasolina)
+  > :is(.panel, .notice, .form-error, .rostros-aviso, .view-head, .flota, .control-amb, .reporte, .fh,
+        .historial-filtros, .ia-tabs, .ia-intro, .despacho-intro) {
+  margin: 0;
+}
+/* La lista de módulos se vuelve columna con el mismo espacio (antes dependía de márgenes). */
+.module-view, .rutas { display: flex; flex-direction: column; }
+.rutas-lado, .inicio-lado { display: flex; flex-direction: column; }
+
+/* En las rejillas, cada card mide lo que su contenido: no se estiran y quedan huecas. */
+:is(.profile-sections, .settings-grid, .ia-grid, .ia-em-grid, .iah-perfiles, .control-amb-top,
+    .us-lista, .inicio-grid) { align-items: start; }
+
+/* Rejillas de cards pequeñas: mismo espacio y que llenen la fila en lugar de dejar huecos. */
+.fh-grid, .iah-herramientas, .clima-zonas, .rd-grid, .us-canales { gap: var(--espacio); }
+.fh-ambs, .asignacion-hospitales { gap: var(--espacio); }
+
+/* Encabezados de pantalla: el mismo espacio debajo en todas (dentro de los contenedores de
+   arriba lo pone el gap; sueltos, su margen). */
+.view-head { margin-bottom: var(--espacio); }
+.record-screen-head { margin: 0; }
+
+/* Las fichas y formularios aprovechan pantallas grandes (antes se quedaban en 920 px). */
+.record-screen { width: min(1120px, 100%); gap: var(--espacio); padding-bottom: var(--espacio); }
+
+/* Márgenes de página iguales en central y portales, y menos aire arriba/abajo. */
+.central-page { padding-top: 18px; padding-bottom: 28px; }
+.portal-main { padding-block: 18px 28px; }
+
+/* Dentro de una card: título y contenido sin espacios de más. */
+.panel > .form-section-title:first-child, .panel > .panel-title:first-child, .panel > .panel-title-row:first-child { margin-top: 0; }
+.panel > :last-child { margin-bottom: 0; }

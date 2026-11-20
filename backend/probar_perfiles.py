@@ -352,6 +352,13 @@ def main() -> int:
     revisar(pm["nombre"] == "Sofía Ruiz" and pm["usuario"] == "sofia.ruiz" and "password" not in db["paramedics"].docs[0],
             "La central registra a la paramédica con su usuario (sin guardar la contraseña en el registro)")
     revisar("ambulancia" not in ParamedicIn.model_fields, "Al registrarla ya no se elige ambulancia")
+    # Una emergencia de una versión anterior guardaba a los paramédicos solo con su nombre.
+    vieja = repository.insert_row("emergencies", {"paciente_nombre": "Vieja", "direccion": "Centro", "descripcion": "x",
+                                                  "prioridad": "Media", "estado": "En curso", "paramedicos": ["Maria fyguhio"]})
+    lista = endpoint("paramedicos", "list_items")()["items"]
+    revisar(len(lista) == 3 and flota_api.reporte(vieja["id"])["paramedicos"] == [{"id": None, "nombre": "Maria fyguhio"}],
+            "Los paramédicos guardados con el formato anterior (solo el nombre) no rompen la lista ni el reporte")
+    db["emergencies"].update_one({"id": vieja["id"]}, {"$set": {"estado": "Cerrada"}})
     r = auth.login(LoginIn(username="sofia.ruiz", password="tum12345"))
     revisar(r["user"]["role"] == "Paramédico" and r["user"]["paramedico"]["nivel"] == "TUM Avanzado",
             "La paramédica entra con su usuario y contraseña")

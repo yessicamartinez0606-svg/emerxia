@@ -189,13 +189,13 @@ def portal_paramedico(user: dict = Depends(solo_paramedico)):
     if em:
         por_id = {p["id"]: p for p in list_rows("paramedics")}
         companeros = [{"nombre": p["nombre"], "nivel": p.get("nivel"), "celular": por_id.get(p["id"], {}).get("celular")}
-                      for p in em.get("paramedicos") or [] if p.get("id") != pm["id"]]
+                      for p in flota_api.paramedicos_de(em) if p.get("id") != pm["id"]]
     conductor = None
     if amb and amb.get("conductor"):
         op = next((o for o in list_rows("operators") if (o.get("nombre") or "").lower() == amb["conductor"].lower()), None)
         conductor = {"nombre": amb["conductor"], "celular": (op or {}).get("celular"), "extension": (op or {}).get("extension")}
     cerradas = [e for e in list_rows("emergencies") if e.get("estado") == "Cerrada"
-                and any(p.get("id") == pm["id"] for p in e.get("paramedicos") or [])]
+                and any(p.get("id") == pm["id"] for p in flota_api.paramedicos_de(e))]
     return {
         "paramedico": {k: v for k, v in pm.items() if k not in ("foto", "rostro", "rostro_de")},
         "foto": pm.get("foto"),

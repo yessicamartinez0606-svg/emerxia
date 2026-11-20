@@ -29,8 +29,8 @@ function sonar() {
 }
 
 // Lee el flujo text/event-stream con fetch (así puede llevar el token en el encabezado).
-async function escuchar(señal, onEvento) {
-  const res = await fetch('/api/eventos/emergencias', {
+async function escuchar(señal, desde, onEvento) {
+  const res = await fetch(`/api/eventos/emergencias${desde != null ? `?desde=${desde}` : ''}`, {
     headers: { Authorization: `Bearer ${getToken()}` }, signal: señal,
   })
   if (!res.ok || !res.body) throw new Error(`avisos: ${res.status}`)
@@ -56,23 +56,37 @@ export default function AlertasEmergencias() {
   const [avisos, setAvisos] = useState([])
   const [conectado, setConectado] = useState(false)
   const intentos = useRef(0)
+  // Último id de emergencia visto: al reconectar se piden las que llegaron en el hueco.
+  const ultimoId = useRef(null)
 
   useEffect(() => {
     let vivo = true
     let control = new AbortController()
     const alEvento = (ev) => {
-      if (ev.evento === 'listo') { setConectado(true); intentos.current = 0; return }
+      if (ev.evento === 'listo') {
+        setConectado(true)
+        intentos.current = 0
+        if (ultimoId.current == null) ultimoId.current = ev.ultimo_id ?? 0
+        return
+      }
       if (ev.evento !== 'nueva' && ev.evento !== 'otro_reporte') return
+      if (ev.evento === 'nueva') ultimoId.current = Math.max(ultimoId.current ?? 0, ev.id ?? 0)
       sonar()
       window.dispatchEvent(new CustomEvent('emergexia:emergencia', { detail: ev }))
       setAvisos((prev) => [{ ...ev, clave: `${ev.folio}-${ev.num_reportes}-${Date.now()}` }, ...prev].slice(0, MAX_AVISOS))
     }
     const conectar = async () => {
       while (vivo) {
+        let normal = false
+        const inicio = Date.now()
         try {
-          await escuchar(control.signal, alEvento)
+          // El servidor cierra cada conexión a los ~25 s; se reconecta al instante. Si se cerró
+          // muy rápido (p. ej. falla la base), se espera antes de reintentar.
+          await escuchar(control.signal, ultimoId.current, alEvento)
+          normal = Date.now() - inicio > 5000
         } catch { /* se cayó la conexión: se reintenta abajo */ }
         if (!vivo) break
+        if (normal) { control = new AbortController(); continue }
         setConectado(false)
         // Reintento con espera creciente (2 s, 4 s, … hasta 30 s).
         const espera = Math.min(30000, 2000 * 2 ** intentos.current)

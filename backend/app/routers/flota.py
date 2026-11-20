@@ -461,11 +461,20 @@ def asignar_operador(em_id: int, body: OperadorEmergenciaIn, usuario: str = Depe
 PARAMEDICOS_POR_EMERGENCIA = 2
 
 
+def paramedicos_de(em: dict | None) -> list[dict]:
+    """Paramédicos de la emergencia como [{id, nombre, nivel, ...}]. Versiones anteriores los
+    guardaban solo con el nombre (["Maria fyguhio"]): se aceptan igual, sin id."""
+    lista = (em or {}).get("paramedicos") or []
+    if not isinstance(lista, list):
+        return []
+    return [p if isinstance(p, dict) else {"id": None, "nombre": str(p)} for p in lista if p]
+
+
 def emergencia_de_paramedico(pm_id: int, abiertas: list[dict] | None = None) -> dict | None:
     """La emergencia abierta a la que va ese paramédico (o None)."""
     abiertas = abiertas if abiertas is not None else [e for e in list_rows("emergencies") if e.get("estado") != "Cerrada"]
     return next((e for e in abiertas if e.get("estado") != "Cerrada"
-                 and any(p.get("id") == pm_id for p in e.get("paramedicos") or [])), None)
+                 and any(p.get("id") == pm_id for p in paramedicos_de(e))), None)
 
 
 @router.post("/emergencias/{em_id}/paramedicos")
@@ -482,7 +491,7 @@ def agregar_paramedico(em_id: int, body: ParamedicoEmergenciaIn, usuario: str = 
                            em["folio"], tipo="paramedico", usuario=usuario)
     if not pm:
         raise HTTPException(403, motivo)
-    actuales = list(em.get("paramedicos") or [])
+    actuales = paramedicos_de(em)
     if any(p.get("id") == pm["id"] for p in actuales):
         raise HTTPException(409, f"{pm['nombre']} ya va a esta emergencia.")
     if len(actuales) >= PARAMEDICOS_POR_EMERGENCIA:
@@ -508,7 +517,7 @@ def quitar_paramedico(em_id: int, pm_id: int, usuario: str = Depends(current_use
     em = _emergencia(em_id)
     if em.get("estado") == "Cerrada":
         raise HTTPException(409, "La emergencia ya está cerrada.")
-    actuales = list(em.get("paramedicos") or [])
+    actuales = paramedicos_de(em)
     quitado = next((p for p in actuales if p.get("id") == pm_id), None)
     if not quitado:
         raise HTTPException(404, "Ese paramédico no va a esta emergencia.")
@@ -591,7 +600,7 @@ def reporte(em_id: int):
         "linea_tiempo": sorted(_historial(emergencia=folio), key=lambda f: f["id"]),
         "verificaciones": [_sin_foto(v) for v in verificaciones],
         "requeridas": int(em.get("ambulancias_requeridas") or 1),
-        "paramedicos": em.get("paramedicos") or [],
+        "paramedicos": paramedicos_de(em),
         "paramedicos_requeridos": PARAMEDICOS_POR_EMERGENCIA,
         "hospitales": flota.NOMBRES_HOSPITALES,
     }

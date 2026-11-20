@@ -46,7 +46,10 @@ export default function PrepararRostros({ visible = false }) {
     <div className={`rostros-aviso${avance.sinRostro.length ? ' warn' : ''}`} role="status">
       <ScanFace size={16} aria-hidden="true" />
       {terminado
-        ? <span>Listo: {avance.listos} persona(s) ya pueden entrar con su rostro.{avance.sinRostro.length ? ` No se ve bien la cara en la foto de ${avance.sinRostro.join(', ')}: vuelve a tomarla para que pueda entrar.` : ''}</span>
+        ? <span>
+            {avance.listos > 0 && `Listo: ${avance.listos} persona(s) más ya pueden entrar con su rostro. `}
+            {avance.sinRostro.length > 0 && `No se ve bien la cara en la foto de ${avance.sinRostro.join(', ')}: vuelve a tomarla en su ficha para que pueda entrar con su rostro.`}
+          </span>
         : <span>Preparando la entrada con rostro de {avance.total} persona(s)… ({avance.listos} listas)</span>}
     </div>
   )

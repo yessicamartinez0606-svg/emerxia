@@ -40,4 +40,4 @@ USER emergexia
 EXPOSE 8000
 # Render indica el puerto en $PORT. Un solo proceso: los avisos al instante y los modelos de IA
 # viven en memoria.
-CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*'"]
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000} --proxy-headers --forwarded-allow-ips='*' --timeout-graceful-shutdown 5"]

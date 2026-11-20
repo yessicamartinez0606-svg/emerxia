@@ -1,6 +1,12 @@
 """Avisos al instante para la central cuando un usuario reporta una emergencia.
 
-    GET /api/eventos/emergencias      flujo de eventos (Server-Sent Events, text/event-stream)
+    GET /api/eventos/emergencias?desde=ID   flujo de eventos (Server-Sent Events, text/event-stream)
+
+Cada conexión dura como máximo DURACION_MAX segundos y luego se cierra sola; la pantalla se
+vuelve a conectar al instante pidiendo «desde» el último id que vio, y el servidor le manda
+primero las emergencias nuevas que hubo en ese hueco. Así ningún aviso se pierde y el
+servidor nunca se queda esperando una conexión eterna al reiniciarse (uvicorn --reload o un
+redespliegue en Render esperan a que se cierren todas las conexiones).
 
 Cómo se entera: con los «change streams» de MongoDB. El servidor se queda escuchando la
 colección emergencies y, en cuanto se guarda una emergencia reportada por un usuario (o
@@ -13,7 +19,7 @@ segundos. Lo que llega a la pantalla es igual en los dos casos; el primer evento
 dice qué modo se usa.
 
 Eventos (cada uno es una línea «data: {json}»):
-    {"evento": "listo", "modo": "change_stream" | "consulta"}
+    {"evento": "listo", "modo": "change_stream" | "consulta", "ultimo_id": N}
     {"evento": "nueva", ...emergencia}          un usuario reportó una emergencia nueva
     {"evento": "otro_reporte", ...emergencia}   otra persona reportó la misma (app/reportes.py)
 """
@@ -33,6 +39,7 @@ log = logging.getLogger("emergexia")
 router = APIRouter(prefix="/api/eventos", tags=["eventos"])
 
 SEGUNDOS_CONSULTA = 3
+DURACION_MAX = 25             # segundos por conexión (luego la pantalla se reconecta sola)
 SEGUNDOS_LATIDO = 15          # comentario «: latido» para que proxys y navegador no corten
 
 # Solo interesan las emergencias que reportan los usuarios: las nuevas y cuando otra persona
@@ -66,10 +73,10 @@ def _sse(datos: dict) -> str:
     return f"data: {json.dumps(datos, default=str, ensure_ascii=False)}\n\n"
 
 
-async def _con_change_stream(request: Request, stream):
+async def _con_change_stream(request: Request, stream, fin: float):
     ultimo = time.monotonic()
     try:
-        while not await request.is_disconnected():
+        while time.monotonic() < fin and not await request.is_disconnected():
             change = await asyncio.to_thread(stream.try_next)   # espera hasta 1 s
             ev = evento_de_cambio(change) if change else None
             if ev:
@@ -91,11 +98,11 @@ def _foto_de_reportes(col) -> tuple[int, dict[int, int]]:
     return (ultimo or {}).get("id", 0), abiertas
 
 
-async def _con_consultas(request: Request, col):
+async def _con_consultas(request: Request, col, fin: float, ultimo_id: int):
     """Plan B sin change streams: revisa la colección cada pocos segundos."""
-    ultimo_id, reportes = await asyncio.to_thread(_foto_de_reportes, col)
+    _, reportes = await asyncio.to_thread(_foto_de_reportes, col)
     latido = time.monotonic()
-    while not await request.is_disconnected():
+    while time.monotonic() < fin and not await request.is_disconnected():
         await asyncio.sleep(SEGUNDOS_CONSULTA)
         nuevas = await asyncio.to_thread(lambda: list(col.find({"id": {"$gt": ultimo_id}}, {"_id": 0}).sort("id", 1)))
         for em in nuevas:
@@ -116,8 +123,10 @@ async def _con_consultas(request: Request, col):
 
 
 @router.get("/emergencias", dependencies=[Depends(solo_personal)])
-async def eventos_emergencias(request: Request):
+async def eventos_emergencias(request: Request, desde: int | None = None):
     col = get_db()["emergencies"]
+    fin = time.monotonic() + DURACION_MAX
+    ultimo_id = (await asyncio.to_thread(_foto_de_reportes, col))[0]
     try:
         stream = await asyncio.to_thread(col.watch, PIPELINE, full_document="updateLookup", max_await_time_ms=1000)
         modo = "change_stream"
@@ -126,17 +135,27 @@ async def eventos_emergencias(request: Request):
         stream, modo = None, "consulta"
 
     async def flujo():
-        yield _sse({"evento": "listo", "modo": modo})
+        yield _sse({"evento": "listo", "modo": modo, "ultimo_id": ultimo_id})
         try:
+            # Lo que llegó mientras la pantalla se reconectaba (solo si dice desde dónde).
+            if desde is not None and desde < ultimo_id:
+                hueco = await asyncio.to_thread(lambda: list(col.find(
+                    {"id": {"$gt": desde, "$lte": ultimo_id}, "reportado_por": {"$exists": True}}, {"_id": 0}).sort("id", 1)))
+                for em in hueco[-10:]:
+                    yield _sse(resumen(em, "nueva"))
             if stream is not None:
-                async for x in _con_change_stream(request, stream):
+                async for x in _con_change_stream(request, stream, fin):
                     yield x
             else:
-                async for x in _con_consultas(request, col):
+                async for x in _con_consultas(request, col, fin, ultimo_id):
                     yield x
+            yield _sse({"evento": "reconectar"})
         except PyMongoError as exc:
             log.warning("Se cortó el flujo de avisos: %s", exc)
             yield _sse({"evento": "error", "mensaje": "Se perdió la conexión con los avisos. Reconectando…"})
+        finally:
+            if stream is not None:
+                stream.close()
 
     return StreamingResponse(flujo(), media_type="text/event-stream",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
