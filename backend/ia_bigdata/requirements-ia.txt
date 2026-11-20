@@ -1,0 +1,11 @@
+# Dependencias de las practicas p20-p27 (backend/ia_bigdata)
+# PyTorch se instala aparte (ver README): version CPU o CUDA.
+numpy
+pandas
+scikit-learn
+matplotlib
+joblib
+pyspark
+pymongo
+python-dotenv
+certifi

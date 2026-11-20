@@ -1,0 +1,6 @@
+# Resultados generados al ejecutar las practicas (CSV, Parquet, modelos de varios MB)
+resultados_emergexia/
+spark-warehouse/
+metastore_db/
+derby.log
+.env
