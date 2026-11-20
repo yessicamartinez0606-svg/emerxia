@@ -1669,3 +1669,11 @@ body { background: var(--bg); color: var(--ink); }
 /* Dentro de una card: título y contenido sin espacios de más. */
 .panel > .form-section-title:first-child, .panel > .panel-title:first-child, .panel > .panel-title-row:first-child { margin-top: 0; }
 .panel > :last-child { margin-bottom: 0; }
+
+/* Fichas (Paciente, Emergencia, Signos vitales, Asignación…): en COLUMNAS, no en filas.
+   En filas, la segunda fila esperaba a que terminara la card más alta de la primera y dejaba
+   un hueco grande debajo de las cortas. En columnas cada card va justo debajo de la anterior,
+   siempre a --espacio. */
+.profile-sections { display: block; columns: 3 300px; column-gap: var(--espacio); margin-bottom: calc(-1 * var(--espacio)); }
+.profile-sections > .panel { break-inside: avoid; margin: 0 0 var(--espacio); width: 100%; display: inline-block; vertical-align: top; }
+.profile-sections.single { columns: 1; }
