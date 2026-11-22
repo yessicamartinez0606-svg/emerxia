@@ -1,4 +1,4 @@
-# Dependencias de las practicas p10-p15 (backend/ia_sistema_inteligente)
+# Dependencias de las practicas p10-p19 (backend/ia_sistema_inteligente)
 numpy
 pandas
 scikit-learn
@@ -7,3 +7,5 @@ joblib
 pymongo
 python-dotenv
 certifi
+streamlit
+plotly

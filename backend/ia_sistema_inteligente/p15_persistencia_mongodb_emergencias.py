@@ -220,8 +220,9 @@ def consultar_historial(coleccion):
     print("\nULTIMOS 5 ANALISIS DE EMERGEXIA")
     print("-" * 55)
 
+    # Solo documentos de Emergexia (la coleccion puede compartirse con otros sistemas).
     registros = coleccion.find(
-        {},
+        {"sistema": "Emergexia"},
         {"_id": 0, "id_analisis": 1, "fecha_registro": 1, "datos_paciente": 1,
          "clasificacion": 1, "perfil_riesgo": 1, "prioridad": 1}
     ).sort("fecha_registro", -1).limit(5)
@@ -237,8 +238,8 @@ def consultar_historial(coleccion):
         print("Prioridad:", r.get("prioridad"))
 
     # Consulta extra: cuantas emergencias criticas hay guardadas.
-    total = coleccion.count_documents({})
-    criticas = coleccion.count_documents({"clasificacion.critica": True})
+    total = coleccion.count_documents({"sistema": "Emergexia"})
+    criticas = coleccion.count_documents({"sistema": "Emergexia", "clasificacion.critica": True})
     print(f"\nTotal de analisis guardados: {total} | Criticas: {criticas}")
 
 

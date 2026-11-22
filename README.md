@@ -14,7 +14,7 @@ emergexia/
 │   ├── probar_guardado.py  ← guarda y lee un dato de prueba en tu MongoDB
 │   ├── entrenar_ml.py      ← entrena el modelo de triage (ver "Machine Learning")
 │   ├── ia/                     ← prácticas 04–09 de IA adaptadas a Emergexia
-│   ├── ia_sistema_inteligente/ ← prácticas 10–15: sistema inteligente de emergencias
+│   ├── ia_sistema_inteligente/ ← prácticas 10–19: sistema inteligente de emergencias
 │   ├── ia_bigdata/             ← prácticas 20–27: Big Data (Spark) y Deep Learning
 │   └── app/
 │       ├── mongo.py        ← conexión a MongoDB
@@ -233,5 +233,5 @@ Son scripts independientes de la API, con datos sintéticos. `ia_sistema_intelig
 | Carpeta | Prácticas | Contenido |
 |---|---|---|
 | `backend/ia/` | 04–09 | Clasificación, comparación de algoritmos, hiperparámetros, K-Means y PCA de servicios de ambulancia |
-| `backend/ia_sistema_inteligente/` | 10–15 | Sistema inteligente: clasifica emergencias críticas (Random Forest), perfiles de riesgo (K-Means), PCA, motor de recomendaciones y guardado en MongoDB |
+| `backend/ia_sistema_inteligente/` | 10–19 | Sistema inteligente: clasifica emergencias críticas (Random Forest), perfiles de riesgo (K-Means), PCA, motor de recomendaciones, MongoDB, estadísticas, dashboard y apps de evaluación y registro con Streamlit |
 | `backend/ia_bigdata/` | 20–27 | 50,000 registros con Spark, persistencia masiva en Atlas, CNN 1D y predicción de tiempos de respuesta |

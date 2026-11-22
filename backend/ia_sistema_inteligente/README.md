@@ -1,6 +1,6 @@
-# Emergexia · Sistema inteligente de emergencias (Prácticas 10 a 15)
+# Emergexia · Sistema inteligente de emergencias (Prácticas 10 a 19)
 
-Adaptación a Emergexia de las prácticas p10–p15 de Fundamentos de IA
+Adaptación a Emergexia de las prácticas p10–p19 de Fundamentos de IA
 (originalmente con el caso SmartAcademy). En lugar de **estudiantes y su
 aprobación**, se analizan **emergencias y su prioridad** para apoyar al
 Administrador al asignar ambulancias desde el Hospital IMSS 220 (Toluca).
@@ -12,6 +12,7 @@ Administrador al asignar ambulancias desde el Hospital IMSS 220 (Toluca).
 | Perfiles académicos (K-Means) | Perfiles de riesgo: bajo, moderado, medio-alto y alto |
 | Recomendaciones académicas | Prioridad (1, 2 o 3), equipo de la ambulancia, gasolina y apoyo de otros hospitales |
 | Colección de reportes de estudiantes | Colección `analisis_emergencias_ia` en MongoDB |
+| Expediente del estudiante y materias (p19) | Expediente del paciente y tomas de signos vitales |
 
 > Los datos son **sintéticos** (semilla 42). No representan pacientes reales y
 > las recomendaciones no sustituyen la valoración del personal médico.
@@ -26,6 +27,10 @@ Administrador al asignar ambulancias desde el Hospital IMSS 220 (Toluca).
 | `p13_pca_emergencias.py` | 4 | Reduce las 4 variables a PC1 y PC2 | `modelo_pca_emergexia.joblib` |
 | `p14_motor_recomendaciones_emergencias.py` | 5 | Captura una emergencia, usa los 3 modelos y aplica reglas | `reporte_emergencia.csv` |
 | `p15_persistencia_mongodb_emergencias.py` | 6 | Guarda el reporte en MongoDB y muestra el historial | Documento en Atlas |
+| `p16_analisis_estadistico_emergencias.py` | 7 | Consultas con `find()` y `aggregate()`: críticas, perfiles, prioridades | 5 reportes CSV |
+| `p17_dashboard_emergencias.py` | 8 | Dashboard web (Streamlit + Plotly) con filtros | Página en el navegador |
+| `p18_evaluacion_emergencias.py` | 9 | App web: evalúa una emergencia, la guarda e historial por folio | Documento en Atlas |
+| `p19_registro_atencion_emergencias.py` | 11 | Expediente del paciente, atención y tomas de signos vitales + IA | 3 colecciones en Atlas |
 
 ## Instalación
 
@@ -46,19 +51,32 @@ python p12_kmeans_emergencias.py
 python p13_pca_emergencias.py
 python p14_motor_recomendaciones_emergencias.py   # pide los datos por teclado
 python p15_persistencia_mongodb_emergencias.py
+python p16_analisis_estadistico_emergencias.py
+streamlit run p17_dashboard_emergencias.py          # dashboard
+streamlit run p18_evaluacion_emergencias.py         # evaluar emergencias
+streamlit run p19_registro_atencion_emergencias.py  # registro integral
 ```
 
-Cada script necesita lo que generaron los anteriores.
+Cada script necesita lo que generaron los anteriores. p17, p18 y p19 son páginas web: se abren
+con `streamlit run` (no con `python`) en <http://localhost:8501>. p18 y p19 reutilizan las
+funciones de p14 y los modelos de p11–p13; no entrenan nada nuevo.
 
-## Conexión a MongoDB (solo p15)
+## Conexión a MongoDB (p15 a p19)
 
-p15 usa **el mismo `backend/.env` de la API**: `MONGO_URI` y `MONGO_DB`.
+Todas usan **el mismo `backend/.env` de la API**: `MONGO_URI` y `MONGO_DB`.
 También acepta `MONGO_USER`, `MONGO_PASSWORD` y `MONGO_CLUSTER` (formato de las prácticas).
 Si existe un `.env` dentro de esta carpeta, ese tiene prioridad.
 
-Los análisis se guardan en la colección **`analisis_emergencias_ia`** (se puede
-cambiar con `MONGO_COLLECTION_IA`), separada de las emergencias reales del sistema.
-Cada ejecución agrega un documento nuevo al historial.
+Colecciones (separadas de las colecciones reales del sistema):
+
+| Colección | La llenan | La leen | Contenido |
+|---|---|---|---|
+| `analisis_emergencias_ia` (`MONGO_COLLECTION_IA`) | p15, p18, p19 | p16, p17 | Un análisis de IA por documento (datos, clasificación, perfil, PCA, prioridad, recomendaciones) |
+| `pacientes_ia` | p19 | p19 | Expediente permanente de cada paciente (uno por `id_paciente`) |
+| `atenciones_ia` | p19 | p19 | Cada atención: servicio (ambulancia, operador) y tomas de signos vitales |
+
+Todas las consultas filtran `"sistema": "Emergexia"`, así que la colección de análisis
+se puede compartir con otras prácticas sin mezclar resultados.
 
 ## Reglas del motor (p14)
 
@@ -73,7 +91,7 @@ Cada ejecución agrega un documento nuevo al historial.
 
 ## Resultados
 
-Todo se guarda en `resultados_sistema_inteligente/` (no se sube a GitHub):
+Los archivos de p10–p16 se guardan en `resultados_sistema_inteligente/` (no se sube a GitHub):
 
 ```
 resultados_sistema_inteligente/
@@ -83,6 +101,7 @@ resultados_sistema_inteligente/
 ├── emergencias_segmentadas.csv    Perfil de cada emergencia      (p12)
 ├── emergencias_pca.csv            PC1 y PC2 de cada emergencia   (p13)
 ├── reporte_emergencia.csv         Último análisis del motor      (p14)
+├── analisis_*.csv, estadisticas_*.csv  Reportes de las consultas (p16)
 ├── *.png                          Gráficas de codo, Silhouette, segmentación y PCA
 └── modelos/                       Los tres modelos .joblib
 ```
