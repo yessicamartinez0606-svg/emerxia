@@ -100,6 +100,12 @@ Las de las prácticas de IA las llenan los scripts de `backend/ia_sistema_inteli
 `folio_emergencia` de los análisis apunta al `folio` de `emergencies`, y `hospital_base` usa
 los mismos nombres de hospital que el sistema.
 
+**Datos de prueba:** `python datos_prueba.py --password "UnaContraseña"` (desde `backend/`) agrega
+16 cuentas (Supervisor, Despachadores, Usuarios, Operadores y Paramédicos), 6 ambulancias, 20
+emergencias con su historial y 3 cargas de gasolina, usando las mismas funciones que la API. Todas las
+cuentas de prueba usan esa contraseña; no se guarda en el código. Lo que crea lleva `datos_prueba: true`
+y no toca lo que ya existe.
+
 **Revisar que todo cuadre:** `python coherencia_bd.py` (desde `backend/`) revisa la base sin
 cambiar nada: colecciones e índices, contadores de `id`, estatus y hospitales de las ambulancias,
 ambulancias «Ocupada» con la emergencia ya cerrada, referencias rotas y los datos de las prácticas.

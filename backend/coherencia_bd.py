@@ -148,7 +148,7 @@ def revisar_referencias(db) -> None:
             if em.get(campo) and em[campo] not in NOMBRES_HOSPITALES:
                 problemas += 1
                 hallazgo(f"Emergencia {em.get('folio')}: {campo} «{em[campo]}» no existe en el sistema")
-        asignadas = set(em.get("ambulancias") or []) | ({em["ambulancia"]} if em.get("ambulancia") else set())
+        asignadas = set(em.get("ambulancias") or []) | {p.strip() for p in (em.get("ambulancia") or "").split(",") if p.strip()}
         for placa in sorted(p for p in asignadas if isinstance(p, str) and p not in placas):
             problemas += 1
             hallazgo(f"Emergencia {em.get('folio')}: la ambulancia {placa} ya no existe")
