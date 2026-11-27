@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import {
-  Activity, AlarmClock, ArrowLeft, ChevronDown, Hospital, Info, MapPin, Shapes, ShieldCheck, Sparkles, Timer,
+  Activity, AlarmClock, ArrowLeft, ChevronDown, Database, Hospital, Info, MapPin, Shapes, ShieldCheck, Sparkles, Timer,
 } from 'lucide-react'
 import { api } from '../lib/api.js'
 import ClimaZonas from '../components/ClimaZonas.jsx'
@@ -10,6 +10,7 @@ import {
   modeloATiempo, modeloLlegada, modeloSegmentacion, modeloTriaje, pct, segmentacionEmergencia, triajeEmergencia, verOptimizacion,
 } from '../lib/clima.js'
 import ATiempoPanel from './ia/ATiempoPanel.jsx'
+import BigDataPanel from './ia/BigDataPanel.jsx'
 import DespachoPage from './DespachoPage.jsx'
 import LlegadaPanel from './ia/LlegadaPanel.jsx'
 import ConfiabilidadPanel from './ia/ConfiabilidadPanel.jsx'
@@ -48,6 +49,11 @@ const HERRAMIENTAS = [
     key: 'despacho', icono: Hospital, titulo: 'Hospital de salida', pregunta: '¿De qué hospital conviene mandar la ambulancia?',
     explicacion: 'Marca un accidente en el mapa y el sistema prueba muchas combinaciones de hospitales (de dónde sale y a cuál regresa la ambulancia) hasta encontrar la ruta más corta, como si fuera evolucionando las mejores opciones.',
     donde: ['Aquí mismo, con la ubicación de la emergencia'],
+  },
+  {
+    key: 'bigdata', icono: Database, titulo: 'Big Data y predicción', pregunta: '¿Qué ambulancias llegarán tarde el próximo mes?',
+    explicacion: 'Analiza 50,000 servicios de 10,000 ambulancias con Spark y una red neuronal (CNN). Con los tiempos de los últimos dos meses predice el del siguiente y marca ALERTA en las ambulancias que probablemente pasarán de 15 minutos, para revisarlas o pedir apoyo antes. Son las prácticas 20 a 27.',
+    donde: ['Aquí, con las alertas por hospital y tipo de emergencia'],
   },
 ]
 
@@ -118,6 +124,7 @@ export default function TiempoLlegadaPage() {
       {tab === 'a-tiempo' && <ATiempo ctx={ctx} />}
       {tab === 'triaje' && <Triaje ctx={ctx} />}
       {tab === 'perfiles' && <Perfiles ctx={ctx} />}
+      {tab === 'bigdata' && <BigDataPanel Tecnico={Tecnico} />}
       {tab === 'despacho' && (emergenciaId && !ctx
         ? <div className="panel muted">Cargando la ubicación de la emergencia…</div>
         : <DespachoPage incrustado key={ctx?.em?.id ?? 'libre'}

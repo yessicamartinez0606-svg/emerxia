@@ -234,4 +234,4 @@ Son scripts independientes de la API, con datos sintéticos. `ia_sistema_intelig
 |---|---|---|
 | `backend/ia/` | 04–09 | Clasificación, comparación de algoritmos, hiperparámetros, K-Means y PCA de servicios de ambulancia |
 | `backend/ia_sistema_inteligente/` | 10–19 | Sistema inteligente: clasifica emergencias críticas (Random Forest), perfiles de riesgo (K-Means), PCA, motor de recomendaciones, MongoDB, estadísticas, dashboard y apps de evaluación y registro con Streamlit |
-| `backend/ia_bigdata/` | 20–27 | 50,000 registros con Spark, persistencia masiva en Atlas, CNN 1D y predicción de tiempos de respuesta |
+| `backend/ia_bigdata/` | 20–27 | 50,000 registros con Spark, persistencia masiva en Atlas, CNN 1D y predicción de tiempos de respuesta. Se ven en **Asistente de despacho → Big Data y predicción** (`exportar_resumen_sistema.py` + `GET /api/ia/bigdata`) |

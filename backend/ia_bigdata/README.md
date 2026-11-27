@@ -83,6 +83,20 @@ resultados_emergexia/
 └── prediccion_cnn/    Modelo de regresión, curvas, predicciones con ALERTA (p26, p27)
 ```
 
+## Verlas dentro del sistema
+
+Los resultados aparecen en **Asistente de despacho → Big Data y predicción** (solo personal de la
+central). Después de correr las prácticas:
+
+```bash
+python exportar_resumen_sistema.py
+```
+
+Ese script junta lo que haya en `resultados_emergexia/` en un archivo pequeño,
+`backend/app/datos_ia/bigdata_resumen.json`, que la API sirve en `GET /api/ia/bigdata`.
+**Ese archivo sí se sube a GitHub**, así el panel funciona también en Render (donde no hay Spark
+ni PyTorch). Las prácticas que no se hayan corrido aparecen como «Pendiente».
+
 ## Interpretación
 
 - **p24 y p25** obtienen métricas cercanas a 100 % porque la tendencia se calcula con los

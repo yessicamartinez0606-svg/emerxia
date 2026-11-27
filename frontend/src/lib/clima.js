@@ -49,5 +49,8 @@ export const segmentacionEmergencia = (id, km) => api(`/ia/segmentacion/emergenc
 export const confiabilidadSegmentacion = () => api('/ia/segmentacion/confiabilidad')
 export const pcaSegmentacion = () => api('/ia/segmentacion/pca')
 
+// Prácticas 20 a 27: Big Data con Spark y CNN (resultados exportados desde backend/ia_bigdata)
+export const verBigData = () => api('/ia/bigdata')
+
 export const COLOR_PERFIL = { 'Respuesta rápida': '#1a7a41', 'Respuesta intermedia': '#c98a12', 'Requiere apoyo': '#c8202f' }
 export const NOMBRE_ALGORITMO = { 'Decision Tree': 'Árbol de decisión', 'Random Forest': 'Bosque aleatorio', KNN: 'KNN' }
