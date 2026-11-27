@@ -1,5 +1,5 @@
 {
- "generado": "2026-11-27T19:16:00+00:00",
+ "generado": "2026-11-27T22:13:42+00:00",
  "meta_minutos": 15,
  "practicas": [
   {
@@ -48,44 +48,76 @@
   "ambulancias": 10000,
   "por_hospital": [
    {
-    "nombre": "IMSS HGR 220",
-    "registros": 10120,
-    "ambulancias": 2024,
+    "nombre": "Cruz Roja Lerma",
+    "registros": 3735,
+    "ambulancias": 747,
+    "tiempo_promedio": 17.73,
+    "disponibilidad": 74.7,
+    "cumple_meta": 0.3971
+   },
+   {
+    "nombre": "Hospital Municipal Lerma",
+    "registros": 3675,
+    "ambulancias": 735,
+    "tiempo_promedio": 17.82,
+    "disponibilidad": 74.4,
+    "cumple_meta": 0.3761
+   },
+   {
+    "nombre": "Hospital IMSS 251",
+    "registros": 7010,
+    "ambulancias": 1402,
     "tiempo_promedio": 17.91,
     "disponibilidad": 74.4,
-    "cumple_meta": 0.3816
-   },
-   {
-    "nombre": "Centro Medico ISSEMyM",
-    "registros": 10440,
-    "ambulancias": 2088,
-    "tiempo_promedio": 17.98,
-    "disponibilidad": 74.3,
-    "cumple_meta": 0.3775
-   },
-   {
-    "nombre": "Hospital Materno Perinatal Monica Pretelini",
-    "registros": 10035,
-    "ambulancias": 2007,
-    "tiempo_promedio": 17.98,
-    "disponibilidad": 74.3,
-    "cumple_meta": 0.374
+    "cumple_meta": 0.385
    },
    {
     "nombre": "Cruz Roja Toluca",
-    "registros": 9705,
-    "ambulancias": 1941,
-    "tiempo_promedio": 18.09,
-    "disponibilidad": 74.2,
-    "cumple_meta": 0.3733
+    "registros": 7215,
+    "ambulancias": 1443,
+    "tiempo_promedio": 17.96,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.3752
    },
    {
-    "nombre": "Hospital General Nicolas San Juan",
-    "registros": 9700,
-    "ambulancias": 1940,
-    "tiempo_promedio": 18.18,
-    "disponibilidad": 74.1,
-    "cumple_meta": 0.3669
+    "nombre": "Hospital General Nicolás San Juan",
+    "registros": 6940,
+    "ambulancias": 1388,
+    "tiempo_promedio": 18.0,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.3803
+   },
+   {
+    "nombre": "Hospital IMSS 220",
+    "registros": 10525,
+    "ambulancias": 2105,
+    "tiempo_promedio": 18.13,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.3675
+   },
+   {
+    "nombre": "Cruz Roja San Mateo Atenco",
+    "registros": 3500,
+    "ambulancias": 700,
+    "tiempo_promedio": 18.14,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.374
+   },
+   {
+    "nombre": "Hospital General ISSSTE",
+    "registros": 3655,
+    "ambulancias": 731,
+    "tiempo_promedio": 18.2,
+    "disponibilidad": 74.0,
+    "cumple_meta": 0.3527
+   },
+   {
+    "nombre": "Cruz Roja Metepec",
+    "registros": 3745,
+    "ambulancias": 749,
+    "tiempo_promedio": 18.32,
+    "disponibilidad": 74.0,
+    "cumple_meta": 0.3557
    }
   ],
   "por_tipo": [
@@ -93,49 +125,49 @@
     "nombre": "Cardiovascular",
     "registros": 10000,
     "ambulancias": 10000,
-    "tiempo_promedio": 16.64,
+    "tiempo_promedio": 16.61,
     "disponibilidad": 74.3,
-    "cumple_meta": 0.4353
+    "cumple_meta": 0.4358
    },
    {
     "nombre": "Trauma",
     "registros": 10000,
     "ambulancias": 10000,
-    "tiempo_promedio": 17.66,
+    "tiempo_promedio": 17.63,
     "disponibilidad": 74.3,
-    "cumple_meta": 0.39
+    "cumple_meta": 0.3914
    },
    {
     "nombre": "Respiratoria",
     "registros": 10000,
     "ambulancias": 10000,
-    "tiempo_promedio": 18.16,
-    "disponibilidad": 74.2,
-    "cumple_meta": 0.3675
+    "tiempo_promedio": 18.15,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.3672
    },
    {
     "nombre": "Accidente vial",
     "registros": 10000,
     "ambulancias": 10000,
-    "tiempo_promedio": 18.58,
-    "disponibilidad": 74.3,
-    "cumple_meta": 0.3531
+    "tiempo_promedio": 18.59,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.348
    },
    {
     "nombre": "Obstetrica",
     "registros": 10000,
     "ambulancias": 10000,
-    "tiempo_promedio": 19.08,
+    "tiempo_promedio": 19.15,
     "disponibilidad": 74.2,
-    "cumple_meta": 0.3279
+    "cumple_meta": 0.3284
    }
   ],
   "tendencias": {
-   "Mejora": 19594,
-   "Estable": 17768,
-   "Deterioro": 12638
+   "Mejora": 19614,
+   "Estable": 17749,
+   "Deterioro": 12637
   },
-  "cumple_meta": 0.3748,
+  "cumple_meta": 0.3742,
   "tiempo_por_mes": [
    18.26,
    18.02,

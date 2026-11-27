@@ -69,13 +69,22 @@ AJUSTE_TIPO = {
 }
 
 # Hospitales base de las ambulancias en Toluca.
+# Los mismos hospitales que maneja el sistema (backend/app/genetico.py),
+# con su numero de ambulancias como peso para repartir las 10,000 simuladas.
 HOSPITALES = [
-    "IMSS HGR 220",
-    "Centro Medico ISSEMyM",
-    "Hospital General Nicolas San Juan",
-    "Hospital Materno Perinatal Monica Pretelini",
-    "Cruz Roja Toluca"
+    "Hospital IMSS 220",
+    "Hospital General Nicolás San Juan",
+    "Cruz Roja Toluca",
+    "Hospital General ISSSTE",
+    "Hospital IMSS 251",
+    "Cruz Roja Metepec",
+    "Cruz Roja San Mateo Atenco",
+    "Cruz Roja Lerma",
+    "Hospital Municipal Lerma"
 ]
+
+AMBULANCIAS_POR_HOSPITAL = [3, 2, 2, 1, 2, 1, 1, 1, 1]
+PESOS_HOSPITAL = [n / sum(AMBULANCIAS_POR_HOSPITAL) for n in AMBULANCIAS_POR_HOSPITAL]
 
 TOTAL_TIPOS = len(TIPOS_EMERGENCIA)
 
@@ -296,7 +305,7 @@ def main():
     tiempos_base = np.random.uniform(6, 30, TOTAL_AMBULANCIAS)
 
     # Hospital base de cada ambulancia.
-    hospitales = np.random.choice(HOSPITALES, TOTAL_AMBULANCIAS)
+    hospitales = np.random.choice(HOSPITALES, TOTAL_AMBULANCIAS, p=PESOS_HOSPITAL)
 
     registros = []
 

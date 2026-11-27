@@ -108,7 +108,50 @@ DEFINITIONS: dict[str, dict] = {
     },
     # Contadores internos para los id autoincrementales (sin validación)
     "counters": {"validator": None, "indexes": []},
+
+    # ── Colecciones de las prácticas de IA (backend/ia_sistema_inteligente y backend/ia_bigdata) ──
+    # Las llenan los scripts, no la API. Se declaran aquí para que existan con la misma
+    # validación e índices que crean los scripts (mismos nombres de índice, así no chocan).
+    # Análisis de emergencias con Random Forest, K-Means y PCA (p15, p18 y p19).
+    "analisis_emergencias_ia": {
+        "validator": _schema(
+            {"id_analisis": STR, "sistema": STR, "fecha_registro": "date"},
+            {"folio_emergencia": [STR, "null"], "id_atencion": STR, "etapa": NUM, "archivo_origen": STR},
+        ),
+        "indexes": [("id_analisis", True, "id_analisis_1"), ("fecha_registro", False, "fecha_registro_1"),
+                    ("prioridad", False, "prioridad_1"), ("clasificacion.critica", False, "clasificacion.critica_1"),
+                    ("folio_emergencia", False, "folio_emergencia_1")],
+    },
+    # Expediente de pacientes (p19): un documento por paciente.
+    "pacientes_ia": {
+        "validator": _schema({"id_paciente": STR}, {"nombre": STR, "fecha_creacion": "date"}),
+        "indexes": [("id_paciente", True, "id_paciente_1")],
+    },
+    # Atenciones con sus tomas de signos vitales (p19); folio_emergencia liga con emergencies.folio.
+    "atenciones_ia": {
+        "validator": _schema(
+            {"id_atencion": STR, "id_paciente": STR, "fecha_registro": "date"},
+            {"folio_emergencia": [STR, "null"], "id_analisis": STR, "sistema": STR, "tomas": "array"},
+        ),
+        "indexes": [("id_atencion", True, "id_atencion_1"),
+                    ([("id_paciente", ASCENDING), ("fecha_registro", DESCENDING)], False, "id_paciente_1_fecha_registro_-1"),
+                    ("folio_emergencia", False, "folio_emergencia_1")],
+    },
+    # 50,000 servicios sintéticos de Big Data (p20 → p21 → p22); hospital_base usa los
+    # mismos nombres que app/genetico.py.
+    "servicios_ambulancia_masivos": {
+        "validator": _schema(
+            {"id_lote": STR, "id_registro": NUM, "id_ambulancia": STR, "hospital_base": STR, "tipo_emergencia": STR},
+            {"fecha_carga": "date"},
+        ),
+        "indexes": [([("id_lote", ASCENDING), ("id_registro", ASCENDING)], True, "indice_lote_registro_unico"),
+                    ("id_ambulancia", False, "indice_ambulancia"), ("hospital_base", False, "indice_hospital"),
+                    ("tipo_emergencia", False, "indice_tipo")],
+    },
 }
+
+# Colecciones que llenan los scripts de prácticas (no la API).
+COLECCIONES_IA = ("analisis_emergencias_ia", "pacientes_ia", "atenciones_ia", "servicios_ambulancia_masivos")
 
 
 def ensure_schema() -> list[str]:
@@ -137,10 +180,15 @@ def ensure_schema() -> list[str]:
                     db.command("collMod", name, validator=validator, validationLevel="moderate")
                 except OperationFailure as exc:
                     log.warning("No se pudo actualizar la validación de %s: %s", name, exc)
-        for field, unique in spec["indexes"]:
-            direction = DESCENDING if field == "created_at" else ASCENDING
+        for index in spec["indexes"]:
+            field, unique = index[0], index[1]
+            if isinstance(field, list):            # índice compuesto: [(campo, dirección), ...]
+                keys = field
+            else:
+                keys = [(field, DESCENDING if field == "created_at" else ASCENDING)]
+            index_name = index[2] if len(index) > 2 else f"{field}_{'uniq' if unique else 'idx'}"
             try:
-                db[name].create_index([(field, direction)], unique=unique, name=f"{field}_{'uniq' if unique else 'idx'}")
+                db[name].create_index(keys, unique=unique, name=index_name)
             except OperationFailure as exc:
-                log.warning("No se pudo crear el índice %s.%s: %s", name, field, exc)
+                log.warning("No se pudo crear el índice %s.%s: %s", name, index_name, exc)
     return created

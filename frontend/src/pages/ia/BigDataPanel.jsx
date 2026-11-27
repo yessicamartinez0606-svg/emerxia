@@ -168,7 +168,7 @@ function Datos({ x }) {
     <section className="panel">
       <h3 className="iah-h3">Los {num(x.registros)} servicios analizados</h3>
       <p className="iah-desc">
-        {num(x.ambulancias)} ambulancias de 5 hospitales de Toluca, cada una con 5 tipos de emergencia y sus tiempos de 3 meses. Solo el
+        {num(x.ambulancias)} ambulancias repartidas en los {x.por_hospital.length} hospitales del sistema, cada una con 5 tipos de emergencia y sus tiempos de 3 meses. Solo el
         {' '}<b>{pct(x.cumple_meta)}</b> cumple la meta de 15 minutos en promedio.
       </p>
       <div className="ia-metricas bd-cinco">

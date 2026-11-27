@@ -76,18 +76,37 @@ La conexión ya viene configurada en `backend/.env` (`MONGO_URI`, `MONGO_DB=emer
 2. **crea las colecciones** (tablas) con validación de campos e índices si no existen,
 3. crea el usuario administrador la primera vez (`ADMIN_*` en `.env`).
 
-Colecciones:
+Colecciones (definidas en `backend/app/dbschema.py`):
 
 | Colección | Qué guarda | Campos principales | Único |
 |-----------|------------|--------------------|-------|
-| `users` | Quién puede iniciar sesión | `username`, `password_hash`, `full_name`, `role`, `active` | `username` |
-| `doctors` | Personal médico | `nombre`, `especialidad`, `telefono`, `estado` | `id` |
-| `ambulances` | Flota | `placa`, `tipo`, `conductor`, `estado` | `placa` |
-| `emergencies` | Emergencias | `folio` (EMG-0001…), `descripcion`, `prioridad`, `estado`, `ambulancia` | `folio` |
-| `operators` | Operadores de la central | `nombre`, `turno`, `extension`, `estado` | `id` |
-| `counters` | Contadores internos de `id` | — | — |
+| `users` | Cuentas que inician sesión | `username`, `password_hash`, `full_name`, `role`, `active` | `username` |
+| `ambulances` | Flota | `placa`, `tipo`, `estado`, `hospital`, `combustible_pct`, `emergencia_actual` | `placa` |
+| `emergencies` | Emergencias | `folio`, `descripcion`, `prioridad`, `estado`, `ambulancias`, `hospital_salida` | `folio` |
+| `operators` | Operadores (conductores) | `nombre`, `turno`, `estado`, `foto`, `rostro` | `id` |
+| `paramedics` | Paramédicos (TUM) | `nombre`, `nivel`, `turno`, `estado`, `ambulancia` | `id` |
+| `verificaciones` | Bitácora de Face ID | `operador`, `contexto`, `coincide`, `momento` | — |
+| `cargas_combustible` | Cargas de gasolina | `ambulancia`, `operador`, `litros` | `id` |
+| `historial` | Cambios de estatus, asignaciones y pasos | `tipo`, `detalle`, `ambulancia`, `emergencia` | `id` |
+| `password_resets` | Códigos para recuperar contraseña | `username` | — |
+| `counters` | Contadores internos de `id` | `seq` | — |
+| `analisis_emergencias_ia` | Análisis de IA (prácticas p15, p18 y p19) | `id_analisis`, `folio_emergencia`, `clasificacion`, `prioridad` | `id_analisis` |
+| `pacientes_ia` | Expedientes de pacientes (p19) | `id_paciente` | `id_paciente` |
+| `atenciones_ia` | Atenciones y tomas de signos vitales (p19) | `id_atencion`, `id_paciente`, `folio_emergencia` | `id_atencion` |
+| `servicios_ambulancia_masivos` | 50,000 servicios de Big Data (p22) | `id_lote`, `id_registro`, `id_ambulancia`, `hospital_base` | lote + registro |
 
-Todas llevan `id` autoincremental y `created_at`. Para ver las colecciones: abre MongoDB Compass y refresca.
+Las de las prácticas de IA las llenan los scripts de `backend/ia_sistema_inteligente` y
+`backend/ia_bigdata`, pero el backend las crea igual con su validación e índices. El campo
+`folio_emergencia` de los análisis apunta al `folio` de `emergencies`, y `hospital_base` usa
+los mismos nombres de hospital que el sistema.
+
+**Revisar que todo cuadre:** `python coherencia_bd.py` (desde `backend/`) revisa la base sin
+cambiar nada: colecciones e índices, contadores de `id`, estatus y hospitales de las ambulancias,
+ambulancias «Ocupada» con la emergencia ya cerrada, referencias rotas y los datos de las prácticas.
+Con `python coherencia_bd.py --aplicar` corrige lo seguro (nunca borra documentos); lo demás solo
+lo reporta para revisarlo a mano.
+
+Las del sistema llevan `id` autoincremental y `created_at`. Para ver las colecciones: abre MongoDB Compass y refresca.
 
 **Antes de la primera ejecución, en Atlas:** *Network Access → Add IP Address → Add current IP address*
 (sin esto Atlas rechaza la conexión). Si trabajas desde otra red, agrégala también.

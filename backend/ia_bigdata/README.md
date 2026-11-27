@@ -3,7 +3,8 @@
 Adaptación a Emergexia de las prácticas p20–p27 de Fundamentos de IA
 (originalmente con el caso SmartAcademy). En lugar de **estudiantes y
 calificaciones**, se trabaja con **ambulancias y tiempos de respuesta**
-de los hospitales de Toluca.
+de los hospitales de Toluca. Los registros usan los **mismos 9 hospitales del sistema**
+(`backend/app/genetico.py`), repartidos según cuántas ambulancias tiene cada uno.
 
 | SmartAcademy (original) | Emergexia (esta carpeta) |
 |---|---|
