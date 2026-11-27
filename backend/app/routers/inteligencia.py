@@ -31,11 +31,14 @@
 
     Práctica 09 (app/segmentacion.py): mapa de servicios con PCA
     GET  /api/ia/segmentacion/pca            varianza, cargas, componentes, reconstrucción y puntos
+
+    Prácticas 20 a 27 (app/bigdata.py, scripts en backend/ia_bigdata): Big Data y Deep Learning
+    GET  /api/ia/bigdata                     50,000 registros, CNN 1D vs Random Forest y alertas de 15 min
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from .. import a_tiempo, clima, eta, flota, optimizacion, readiness, segmentacion, triaje
+from .. import a_tiempo, bigdata, clima, eta, flota, optimizacion, readiness, segmentacion, triaje
 from ..repository import list_rows
 from ..security import OPERADOR, PARAMEDICO, PERSONAL, require_roles
 
@@ -330,3 +333,11 @@ def segmentacion_emergencia(emergencia_id: int, km: float | None = Query(None, g
         return {**segmentacion.clasificar(distancia, trafico, minutos, libres), "folio": em.get("folio"),
                 "tiempo_estimado": True}
     return _modelo(calcular)
+
+
+@router.get("/api/ia/bigdata", dependencies=[Depends(solo_personal)])
+def ver_bigdata():
+    try:
+        return bigdata.resumen()
+    except bigdata.SinResumen as exc:
+        raise HTTPException(404, str(exc)) from exc

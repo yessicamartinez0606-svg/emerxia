@@ -1,0 +1,168 @@
+{
+ "generado": "2026-11-27T19:16:00+00:00",
+ "meta_minutos": 15,
+ "practicas": [
+  {
+   "clave": "p20",
+   "titulo": "Generar 50,000 registros de servicios",
+   "listo": true
+  },
+  {
+   "clave": "p21",
+   "titulo": "Validar y procesar con Spark (Parquet)",
+   "listo": false
+  },
+  {
+   "clave": "p22",
+   "titulo": "Carga masiva a MongoDB Atlas",
+   "listo": false
+  },
+  {
+   "clave": "p23",
+   "titulo": "Preparar tensores para la CNN 1D",
+   "listo": false
+  },
+  {
+   "clave": "p24",
+   "titulo": "Entrenar la CNN 1D (tendencia)",
+   "listo": false
+  },
+  {
+   "clave": "p25",
+   "titulo": "Comparar CNN 1D contra Random Forest",
+   "listo": false
+  },
+  {
+   "clave": "p26",
+   "titulo": "Preparar datos para predecir el mes 3",
+   "listo": true
+  },
+  {
+   "clave": "p27",
+   "titulo": "CNN de regresion y alertas de 15 min",
+   "listo": false
+  }
+ ],
+ "datos": {
+  "registros": 50000,
+  "ambulancias": 10000,
+  "por_hospital": [
+   {
+    "nombre": "IMSS HGR 220",
+    "registros": 10120,
+    "ambulancias": 2024,
+    "tiempo_promedio": 17.91,
+    "disponibilidad": 74.4,
+    "cumple_meta": 0.3816
+   },
+   {
+    "nombre": "Centro Medico ISSEMyM",
+    "registros": 10440,
+    "ambulancias": 2088,
+    "tiempo_promedio": 17.98,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.3775
+   },
+   {
+    "nombre": "Hospital Materno Perinatal Monica Pretelini",
+    "registros": 10035,
+    "ambulancias": 2007,
+    "tiempo_promedio": 17.98,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.374
+   },
+   {
+    "nombre": "Cruz Roja Toluca",
+    "registros": 9705,
+    "ambulancias": 1941,
+    "tiempo_promedio": 18.09,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.3733
+   },
+   {
+    "nombre": "Hospital General Nicolas San Juan",
+    "registros": 9700,
+    "ambulancias": 1940,
+    "tiempo_promedio": 18.18,
+    "disponibilidad": 74.1,
+    "cumple_meta": 0.3669
+   }
+  ],
+  "por_tipo": [
+   {
+    "nombre": "Cardiovascular",
+    "registros": 10000,
+    "ambulancias": 10000,
+    "tiempo_promedio": 16.64,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.4353
+   },
+   {
+    "nombre": "Trauma",
+    "registros": 10000,
+    "ambulancias": 10000,
+    "tiempo_promedio": 17.66,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.39
+   },
+   {
+    "nombre": "Respiratoria",
+    "registros": 10000,
+    "ambulancias": 10000,
+    "tiempo_promedio": 18.16,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.3675
+   },
+   {
+    "nombre": "Accidente vial",
+    "registros": 10000,
+    "ambulancias": 10000,
+    "tiempo_promedio": 18.58,
+    "disponibilidad": 74.3,
+    "cumple_meta": 0.3531
+   },
+   {
+    "nombre": "Obstetrica",
+    "registros": 10000,
+    "ambulancias": 10000,
+    "tiempo_promedio": 19.08,
+    "disponibilidad": 74.2,
+    "cumple_meta": 0.3279
+   }
+  ],
+  "tendencias": {
+   "Mejora": 19594,
+   "Estable": 17768,
+   "Deterioro": 12638
+  },
+  "cumple_meta": 0.3748,
+  "tiempo_por_mes": [
+   18.26,
+   18.02,
+   17.79
+  ]
+ },
+ "spark": null,
+ "mongo": null,
+ "tensores": null,
+ "cnn": null,
+ "comparacion": null,
+ "preparacion_prediccion": {
+  "variables_entrada": [
+   "tiempo_m1",
+   "tiempo_m2",
+   "disponibilidad_m1",
+   "disponibilidad_m2"
+  ],
+  "variable_objetivo": "tiempo_m3",
+  "separacion": {
+   "entrenamiento": 0.7,
+   "validacion": 0.15,
+   "prueba": 0.15,
+   "metodo": "GroupShuffleSplit",
+   "grupo": "id_ambulancia"
+  }
+ },
+ "prediccion": null,
+ "advertencia": "Datos sinteticos con fines educativos; no son servicios reales."
+}
